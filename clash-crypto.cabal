@@ -74,6 +74,12 @@ library
     Clash.Crypto.Calculator.ISA
     Clash.Crypto.Calculator.Karatsuba
     Clash.Crypto.Calculator.Modulo
+    Clash.Crypto.Cipher.AES.Specification
+    Clash.Crypto.Cipher.AES.Specification.Properties
+    Clash.Crypto.Cipher.AES.Specification.Algorithm
+    Clash.Crypto.Cipher.AES.Specification.Constants
+    Clash.Crypto.Cipher.AES.Specification.Definitions
+    Clash.Crypto.Cipher.AES.Specification.Types
     Clash.Crypto.PubKey.ECDSA
     Clash.Crypto.PubKey.ECDSA.Nonce.Deterministic
     Clash.Crypto.Hash.SHA

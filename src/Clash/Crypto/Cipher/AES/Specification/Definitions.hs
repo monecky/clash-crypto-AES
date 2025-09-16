@@ -34,7 +34,6 @@ import Language.Haskell.Unicode (type (≤))
 
 import Clash.Crypto.Cipher.AES.Specification.Types
 import Clash.Crypto.Cipher.AES.Specification.Constants
-import Clash.Sized.Vector.Extra ((‼))
 import GHC.Show (Show)
 import GHC.TypeNats (Nat)
 import GHC.Generics (Generic)
@@ -132,7 +131,7 @@ inv b = foldl (•) 0X01 (list_binary_powers b)
 -- test matrix:
 testMatrix ∷ StateType alg
 testMatrix = (0x00 :> 0x10 :> 0x20 :> 0x30 :> Nil) :> (0x01 :> 0x11 :> 0x21 :> 0x31 :> Nil) :> (0x02 :> 0x12 :> 0x22 :> 0x32 :> Nil) :> (0x03 :> 0x13 :> 0x23 :> 0x33 :> Nil) :>Nil
--- Shift test 
+-- Shift test
 -- Clash.Crypto.Cipher.AES.Specification.Definitions.invShiftRows ( Clash.Crypto.Cipher.AES.Specification.Definitions.shiftRows Clash.Crypto.Cipher.AES.Specification.Definitions.test_matrix)
 -- should give the same back.
 -- Similiar for mixcolumns
@@ -141,7 +140,7 @@ testMatrix = (0x00 :> 0x10 :> 0x20 :> 0x30 :> Nil) :> (0x01 :> 0x11 :> 0x21 :> 0
 -- | 5.1.1 subBytes() (equation 5.2, 5.3, 5.4) but implemented with table 4
 subBytes ∷ StateType alg → StateType alg
 subBytes = map (map (sBox xySBox))
--- | the methode to select the right value from sBox that is given with it. 
+-- | the methode to select the right value from sBox that is given with it.
 sBox ∷ Vec (2 * ByteSize alg) (Vec (2 * ByteSize alg) (ByteType alg)) → ByteType alg → ByteType alg
 sBox m a = (m !! x_part a 0)  !! x_part a 1
     where
@@ -201,6 +200,3 @@ instance AESConstants AES128 where
     _Rcon alg = transpose (fmap (generateI xTimes) (_Rcon¹ alg))
 deriving via AES128 instance AESConstants AES192
 deriving via AES128 instance AESConstants AES256
-
-
-
