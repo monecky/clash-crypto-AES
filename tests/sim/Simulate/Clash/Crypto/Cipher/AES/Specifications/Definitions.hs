@@ -25,6 +25,7 @@ module Simulate.Clash.Crypto.Cipher.AES.Specifications.Definitions (tastyTests) 
 
 import Clash.Crypto.Cipher.AES
 import Clash.Prelude
+import Clash.Sized.Vector (unsafeFromList)
 -- import Data.Maybe (catMaybes, listToMaybe, fromMaybe)
 
 -- https://hackage.haskell.org/package/clash-prelude-hedgehog
