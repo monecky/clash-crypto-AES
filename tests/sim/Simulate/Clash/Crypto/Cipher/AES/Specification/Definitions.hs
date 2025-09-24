@@ -20,11 +20,7 @@ Test suite for 'Clash.Crypto.Cipher.AES'.
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 
-<<<<<<<< HEAD:tests/sim/Simulate/Clash/Crypto/Cipher/AES/Specifications/Definitions.hs
-module Simulate.Clash.Crypto.Cipher.AES.Specifications.Definitions (tastyTests) where
-========
 module Test.Clash.Crypto.Cipher.AES.Specification.Definitions (tastyTests) where
->>>>>>>> 6de9e2a (Adding test key-expansion AES192):tests/sim/Test/Clash/Crypto/Cipher/AES/Specification/Definitions.hs
 
 
 import Clash.Crypto.Cipher.AES
@@ -61,7 +57,7 @@ tastyTests = testGroup "Clash.Crypto.Cipher.AES.Specification.Definitions"
         testMixColumns a,
    localOption (HedgehogTestLimit (Just 10)) $
       testProperty "Functional with shiftRows" $ property $ do
-        a ← forAll $ genVec (genVec  genDefinedBitVector)
+        a ← forAll $ genVec (genVec genDefinedBitVector)
         testShiftRows a,
   localOption (HedgehogTestLimit (Just 10)) $
       testProperty "Generic functional with addRoundKey fully" $ property $ do
