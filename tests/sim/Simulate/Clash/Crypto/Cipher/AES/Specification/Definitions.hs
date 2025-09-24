@@ -20,7 +20,7 @@ Test suite for 'Clash.Crypto.Cipher.AES'.
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 
-module Test.Clash.Crypto.Cipher.AES.Specification.Definitions (tastyTests) where
+module Simulate.Clash.Crypto.Cipher.AES.Specification.Definitions (tastyTests) where
 
 
 import Clash.Crypto.Cipher.AES
