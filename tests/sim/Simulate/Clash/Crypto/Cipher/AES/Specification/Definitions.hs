@@ -20,7 +20,11 @@ Test suite for 'Clash.Crypto.Cipher.AES'.
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 
+<<<<<<<< HEAD:tests/sim/Simulate/Clash/Crypto/Cipher/AES/Specifications/Definitions.hs
 module Simulate.Clash.Crypto.Cipher.AES.Specifications.Definitions (tastyTests) where
+========
+module Test.Clash.Crypto.Cipher.AES.Specification.Definitions (tastyTests) where
+>>>>>>>> 6de9e2a (Adding test key-expansion AES192):tests/sim/Test/Clash/Crypto/Cipher/AES/Specification/Definitions.hs
 
 
 import Clash.Crypto.Cipher.AES
@@ -41,7 +45,7 @@ import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import Clash.Hedgehog.Sized.Vector
 import Clash.Hedgehog.Sized.Unsigned (genUnsigned)
 tastyTests ∷ TestTree
-tastyTests = testGroup "Clash.Crypto.Cipher.AES.Definitions"
+tastyTests = testGroup "Clash.Crypto.Cipher.AES.Specification.Definitions"
   [localOption (HedgehogTestLimit (Just 10)) $ -- Purpose is mainly to get familiar with testing.
       testProperty "Functional equality of XOR" $ property $ do
         a ← forAll $ genDefinedBitVector
