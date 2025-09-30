@@ -79,7 +79,7 @@ import Clash.Crypto.Calculator.ISA
 import Clash.Crypto.Calculator.Modulo (ℤₘ, PrimeField, ModSize, createMod)
 import Clash.Crypto.Cipher.AES
   ( AES(..), AESKeyExpansion(..), KnownAESStream(..), KnownAES(..), AESStreamFacts(..),
-   AESacts(..), InType, OutType, KeyType, aesECBencryption, aesECBdecryption
+   AESFacts(..), InType, OutType, KeyType, aesECBencryption, aesECBdecryption
   )
 
 import Test.Clash.Crypto.Calculator
