@@ -12,7 +12,7 @@ Test suite for 'Clash.Crypto.Cipher.AES.Streaming.Algorithm'.
 -}
 
 module Simulate.Clash.Crypto.Cipher.AES.Streaming.Algorithm (tastyTests) where
-import Clash.Prelude hiding (Mod)
+import Clash.Prelude
 import Clash.Signal.Channel
 import Data.Maybe (fromMaybe)
 import Data.Monoid (First(..))
@@ -83,8 +83,8 @@ cipherProperty cipherComp cipherComp1
             $ Keep : Keep : Release : List.repeat Keep
 
 type KeyExpansionComponent alg dom =
- HiddenClockResetEnable dom ⇒ 
- Channel dom (KeyType alg) → 
+ HiddenClockResetEnable dom ⇒
+ Channel dom (KeyType alg) →
  Channel dom (WType alg)
 type KeyExpansionRefComponent alg =
   Proxy alg -> KeyType alg → WType alg
@@ -92,7 +92,7 @@ keyExpansionProperty ∷ ∀ (alg ∷ AES). (KnownAES alg,KnownNat (Nr alg)) ⇒
 keyExpansionProperty keyComp keyComp1
   | AESFacts alg ← knownAES @alg
   = property $ do
-    keyAsInType   ← forAll $ genVec @(Nk alg) (genVec @(WordSize alg) genDefinedBitVector) 
+    keyAsInType   ← forAll $ genVec @(Nk alg) (genVec @(WordSize alg) genDefinedBitVector)
     let f' = compute keyAsInType
     f' === keyComp1 alg keyAsInType
     where
@@ -108,4 +108,3 @@ keyExpansionProperty keyComp keyComp1
             $ fmap (input, )
             $ fromList
             $ Keep : Keep : Release : List.repeat Keep
-
