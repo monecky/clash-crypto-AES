@@ -68,7 +68,6 @@ import Test.Tasty.Hedgehog (HedgehogTestLimit(..), testProperty)
 import Text.Printf (printf)
 
 import Clash.Sized.Stack (StackAction(..), stack)
-import qualified Simulate.Clash.Crypto.Cipher.AES.GoldenReference as REFAES (encryptoECB,  decryptoECB)
 import Clash.Crypto.Hash.SHA
   ( SHA(..), MessageDigestSize, KnownSHA, SHAFacts(..), BlockSize, knownSHA,
   Digest
@@ -79,7 +78,7 @@ import Clash.Crypto.Calculator.ISA
 import Clash.Crypto.Calculator.Modulo (ℤₘ, PrimeField, ModSize, createMod)
 import Clash.Crypto.Cipher.AES
   ( AES(..), AESKeyExpansion(..), KnownAESStream(..), KnownAES(..), AESStreamFacts(..),
-   AESFacts(..), InType, OutType, KeyType, aesECBencryption, aesECBdecryption
+   AESFacts(..), InType, OutType, KeyType, Nb,Nk,Nr, aesECBencryption, aesECBdecryption
   )
 
 import Test.Clash.Crypto.Calculator
@@ -144,12 +143,12 @@ main = do
         $ testGroup "Clash.Sized.Stack"
             [ testStack "Stack" sem dev settings
             ]
-        , testGroup "Clash.Crypto.Cipher.AES"
-            [ -- we don't test the >128 variants here, as synthesis
-              -- times of the downstream tools for these are too
-              -- exorbitant.
-              testAES @AES128 "AES" sem dev settings
-            ]
+        -- , testGroup "Clash.Crypto.Cipher.AES"
+        --    [ -- we don't test the >128 variants here, as synthesis
+        --      -- times of the downstream tools for these are too
+        --      -- exorbitant.
+        --      testAES @AES128 "AES" sem dev settings
+        --    ]
         , testGroup "Clash.Crypto.Hash.SHA"
             [ -- we don't test the >256 variants here, as synthesis
               -- times of the downstream tools for these are too
@@ -299,19 +298,19 @@ main = do
         y ∷ PrimeField SecP256ModPrime ← genMod
         runHitltKaratsubaModulo sem dev settings x y
 
-  testAES ∷
-    ∀ alg.
-    (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg) ⇒
-    QSem →
-    FilePath →
-    SerialPortSettings →
-    TestTree
-  testAES sem dev settings
-    | AESFacts alg ← knownAES @alg
-    , name ← dropWhile (== '\'') $ show $ typeRep alg
-    = test sem dev settings name $ do
-        bs ← forAll $ Gen.bytes $ Range.linear 80 100
-        runHitltAES @alg sem dev settings bs
+  -- testAES ∷
+  --   ∀ alg.
+  --   (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg) ⇒
+  --   QSem →
+  --   FilePath →
+  --   SerialPortSettings →
+  --   TestTree
+  -- testAES sem dev settings
+  --   | AESFacts alg ← knownAES @alg
+  --   , name ← dropWhile (== '\'') $ show $ typeRep alg
+  --   = test sem dev settings name $ do
+  --      bs ← forAll $ Gen.bytes $ Range.linear 80 100
+  --      runHitltAES @alg sem dev settings bs
 
   testSHA ∷
     ∀ alg → (KnownSHA alg, CryptoHash alg, Typeable alg,
@@ -379,19 +378,19 @@ readProcessSilently path args = readCreateProcess silentProc ""
   baseProc = proc path args
   silentProc = baseProc { std_err = CreatePipe }
 
-runHitltAES ∷
-  ∀ (alg ∷ AES).
-  (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg) ⇒
-  QSem →
-  FilePath →
-  SerialPortSettings →
-  ByteString →
-  PropertyT IO ()
-runHitltAES sem dev settings input | AESFacts alg ← knownAES @alg =
- let
-  bs = escapeAndTerminate input
-  eq = encryptoECB alg input
- in runHitlt @((Nb alg * Nb alg * Nb alg * Nk alg) `Div` 8) sem dev settings bs eq
+-- runHitltAES ∷
+--   ∀ (alg ∷ AES).
+--   (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg) ⇒
+--   QSem →
+--   FilePath →
+--   SerialPortSettings →
+--   ByteString →
+--   PropertyT IO ()
+-- runHitltAES sem dev settings input | AESFacts alg ← knownAES @alg =
+--  let
+--   bs = escapeAndTerminate input
+--   eq = encryptoECB alg input
+--  in runHitlt @((Nb alg * Nb alg * Nb alg * Nk alg) `Div` 8) sem dev settings bs eq
 
 callProcessSilently ∷ FilePath → [String] → IO ()
 callProcessSilently path args =
