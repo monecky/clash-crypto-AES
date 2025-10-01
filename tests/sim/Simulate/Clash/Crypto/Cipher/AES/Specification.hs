@@ -23,8 +23,7 @@ module Simulate.Clash.Crypto.Cipher.AES.Specification (tastyTests) where
 
 import Clash.Crypto.Cipher.AES
 import Clash.Prelude
-import Clash.Signal.Channel
-import Clash.Signal.DataStream
+
 import Clash.Sized.Vector (unsafeFromList)
 
 -- https://hackage.haskell.org/package/clash-prelude-hedgehog
@@ -35,20 +34,10 @@ import Hedgehog.Range as Range
 import Test.Tasty
 import Test.Tasty.Hedgehog
 
-import Data.Proxy (Proxy(..))
-import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
-import Clash.Hedgehog.Sized.Vector
-import Clash.Hedgehog.Sized.Unsigned (genUnsigned)
-import qualified Simulate.Clash.Crypto.Cipher.AES.Specification.Definitions as Def
-import qualified Simulate.Clash.Crypto.Cipher.AES.Specification.Algorithm as Alg
 -- Test AES128
 import Simulate.Clash.Crypto.Cipher.AES.GoldenReference as Reference
-
-import qualified Crypto.Random.Types as CRT
-
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as C8
 
 import qualified Clash.Crypto.Cipher.AES.Specification as Spec
 
@@ -73,8 +62,8 @@ tastyTests = testGroup "Clash.Crypto.Cipher.AES.Specification"
               key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
               input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
               aesPure key input
-        | (aesPure, algName, proxyAlg) <-
-            [ (testAESPure @Spec.AES192, "192", Proxy @Spec.AES192)
+        | (aesPure, algName) <-
+            [ (testAESPure @Spec.AES192, "192")
             ]
         ]
         ,
@@ -97,10 +86,6 @@ genKeyFor :: ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
 genKeyFor
   | AESFacts _ ← knownAES @alg = do
   BS.pack <$> Gen.list (Range.singleton (natToNum @( Spec.WordSize alg  * Spec.Nk alg ))) Gen.enumBounded
-
-type TestLen = 8
-testOplus ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
-testOplus a b = a ⊕ b === xor a b
 
 testAESPure ∷ ∀ (alg ∷ Spec.AES) m.
   (Monad m, KnownAES alg, CryptoAES alg) ⇒
