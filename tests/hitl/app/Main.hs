@@ -48,7 +48,7 @@ import Data.Tuple (swap)
 import Data.Typeable (Typeable, typeRep)
 import Data.Word (Word8)
 import GHC.IO.Handle (Handle)
-import Hedgehog (PropertyT, (===), property, forAll, MonadGen)
+import Hedgehog (PropertyT, (===), property, forAll, MonadGen, Gen)
 import Language.Haskell.Unicode (type (≤))
 import System.Exit (ExitCode, exitWith)
 import System.Environment (setEnv)
@@ -103,7 +103,7 @@ import qualified Data.ByteString     as BS
   )
 import qualified Data.List           as List
 import qualified System.Timeout      as TO (timeout)
-import qualified Hedgehog.Range      as Range (linear)
+import qualified Hedgehog.Range      as Range
 import qualified Hedgehog.Gen        as Gen
 import qualified Clash.Sized.Vector  as Vec
 import qualified Crypto.Hash         as Hash
@@ -148,11 +148,10 @@ main = do
             [ testStack "Stack" sem dev settings
             ]
         , testGroup "Clash.Crypto.Cipher.AES"
-           [ -- we don't test the >128 variants here, as synthesis
-             -- times of the downstream tools for these are too
-             -- exorbitant.
-             testAES SpecAES.AES128 sem dev settings
-           ]
+            [ testAES128 SpecAES.AES128 sem dev settings
+            , testAES192 SpecAES.AES192 sem dev settings
+            , testAES256 SpecAES.AES256 sem dev settings
+            ]
         , testGroup "Clash.Crypto.Hash.SHA"
             [ -- we don't test the >256 variants here, as synthesis
               -- times of the downstream tools for these are too
@@ -302,20 +301,55 @@ main = do
         y ∷ PrimeField SecP256ModPrime ← genMod
         runHitltKaratsubaModulo sem dev settings x y
 
-  testAES ∷
-    ∀ alg → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg, Typeable alg) ⇒
+  genInputBlock ∷ ∀ (alg ∷ SpecAES.AES) → SpecAES.KnownAES alg => Gen ByteString
+  genInputBlock alg
+      | AESFacts _ ← knownAES @alg =
+      BS.pack <$> Gen.list (Range.singleton (natToNum @(SpecAES.Nb alg * SpecAES.WordSize alg))) Gen.enumBounded
+  genKeyFor :: ∀ (alg ∷ SpecAES.AES) → SpecAES.KnownAES alg => Gen ByteString
+  genKeyFor alg
+    | AESFacts _ ← knownAES @alg = do
+    BS.pack <$> Gen.list (Range.singleton (natToNum @( SpecAES.WordSize alg  * SpecAES.Nk alg ))) Gen.enumBounded
+
+  testAES128 ∷
+    ∀ (alg :: AES) → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg, Typeable alg) ⇒
     QSem →
     FilePath →
     SerialPortSettings →
     TestTree
-  testAES alg sem dev settings
+  testAES128 alg sem dev settings
     | AESFacts aes ← knownAES @alg
     , name ← dropWhile (== '\'') $ show $ typeRep aes
     = test sem dev settings name $ do
-        input ← forAll $ Gen.bytes $ Range.linear 80 100
-        key ← forAll $ Gen.bytes $ Range.linear 80 100
-        runHitltAES (type alg) sem dev settings input key
+        key <- forAll $ genKeyFor SpecAES.AES128
+        input <- forAll $ genInputBlock SpecAES.AES128
+        runHitltAES alg sem dev settings input key
+  testAES192 ∷
+    ∀ (alg :: AES) → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg, Typeable alg) ⇒
+    QSem →
+    FilePath →
+    SerialPortSettings →
+    TestTree
+  testAES192 alg sem dev settings
+    | AESFacts aes ← knownAES @alg
+    , name ← dropWhile (== '\'') $ show $ typeRep aes
+    = test sem dev settings name $ do
+        key <- forAll $ genKeyFor SpecAES.AES192
+        input <- forAll $ genInputBlock SpecAES.AES192
+        runHitltAES alg sem dev settings input key
 
+  testAES256 ∷
+    ∀ (alg :: AES) → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg, Typeable alg) ⇒
+    QSem →
+    FilePath →
+    SerialPortSettings →
+    TestTree
+  testAES256 alg sem dev settings
+    | AESFacts aes ← knownAES @alg
+    , name ← dropWhile (== '\'') $ show $ typeRep aes
+    = test sem dev settings name $ do
+        key <- forAll $ genKeyFor SpecAES.AES256
+        input <- forAll $ genInputBlock SpecAES.AES256
+        runHitltAES alg sem dev settings input key
   testSHA ∷
     ∀ alg → (KnownSHA alg, CryptoHash alg, Typeable alg,
              Hash.HashAlgorithm (CryptoToHash alg)) ⇒
