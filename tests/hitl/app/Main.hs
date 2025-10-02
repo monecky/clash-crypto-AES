@@ -428,7 +428,8 @@ runHitltAES alg sem dev settings input key | AESFacts aes ← knownAES @alg =
  let
   bs = (append input key)
   eq = encryptoECB aes input key
- in runHitlt (type (WordSize alg * Nb alg)) sem dev settings bs eq
+--  in runHitlt @(WordSize alg * Nb alg) sem dev settings bs eq
+ in runHitlt (type ((Nr alg + 1) * 4)) sem dev settings bs eq
 
 callProcessSilently ∷ FilePath → [String] → IO ()
 callProcessSilently path args =
