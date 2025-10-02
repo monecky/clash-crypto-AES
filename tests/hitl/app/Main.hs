@@ -81,8 +81,8 @@ import Clash.Crypto.Calculator.ISA
   )
 import Clash.Crypto.Calculator.Modulo (ℤₘ, PrimeField, ModSize, createMod)
 import Clash.Crypto.Cipher.AES
-  ( AES(..), AESKeyExpansion(..), KnownAESStream(..), KnownAES(..), AESStreamFacts(..),
-   AESFacts(..), InType, OutType, KeyType, Nb,Nk,Nr,aesECBencryption, aesECBdecryption
+  ( AES(..), AESKeyExpansion(..), KnownAES(..),
+   AESFacts(..), InType, OutType, KeyType, WordSize, Nb,Nk,Nr,aesECBencryption, aesECBdecryption
   )
 
 import Test.Clash.Crypto.Calculator
@@ -308,10 +308,10 @@ main = do
   genKeyFor :: ∀ (alg ∷ SpecAES.AES) → SpecAES.KnownAES alg => Gen ByteString
   genKeyFor alg
     | AESFacts _ ← knownAES @alg = do
-    BS.pack <$> Gen.list (Range.singleton (natToNum @( SpecAES.WordSize alg  * SpecAES.Nk alg ))) Gen.enumBounded
+    BS.pack <$> Gen.list (Range.singleton (natToNum @(SpecAES.WordSize alg  * SpecAES.Nk alg ))) Gen.enumBounded
 
   testAES128 ∷
-    ∀ (alg :: AES) → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg, Typeable alg) ⇒
+    ∀ (alg :: AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
     QSem →
     FilePath →
     SerialPortSettings →
@@ -324,7 +324,7 @@ main = do
         input <- forAll $ genInputBlock SpecAES.AES128
         runHitltAES alg sem dev settings input key
   testAES192 ∷
-    ∀ (alg :: AES) → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg, Typeable alg) ⇒
+    ∀ (alg :: AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
     QSem →
     FilePath →
     SerialPortSettings →
@@ -338,7 +338,7 @@ main = do
         runHitltAES alg sem dev settings input key
 
   testAES256 ∷
-    ∀ (alg :: AES) → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg, Typeable alg) ⇒
+    ∀ (alg :: AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
     QSem →
     FilePath →
     SerialPortSettings →
@@ -417,7 +417,7 @@ readProcessSilently path args = readCreateProcess silentProc ""
   silentProc = baseProc { std_err = CreatePipe }
 
 runHitltAES ∷
-  ∀ (alg ∷ AES) → (KnownAES alg, KnownAESStream alg, AESKeyExpansion alg, CryptoAES alg) ⇒
+  ∀ (alg ∷ AES) → (KnownAES alg, CryptoAES alg) ⇒
   QSem →
   FilePath →
   SerialPortSettings →
@@ -426,9 +426,9 @@ runHitltAES ∷
   PropertyT IO ()
 runHitltAES alg sem dev settings input key | AESFacts aes ← knownAES @alg =
  let
-  bs = escapeAndTerminate (append input key)
+  bs = (append input key)
   eq = encryptoECB aes input key
- in runHitlt (type ((Nb alg * Nb alg * Nb alg * Nk alg) `Div` 8)) sem dev settings bs eq
+ in runHitlt (type (WordSize alg * Nb alg)) sem dev settings bs eq
 
 callProcessSilently ∷ FilePath → [String] → IO ()
 callProcessSilently path args =
