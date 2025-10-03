@@ -72,6 +72,7 @@ import qualified Clash.Crypto.Cipher.AES.Specification as SpecAES
 import Crypto.Cipher.AES as Reference (AES128, AES192, AES256)
 import Crypto.Cipher.Types
 import Crypto.Error
+
 import Clash.Crypto.Hash.SHA
   ( SHA(..), MessageDigestSize, KnownSHA, SHAFacts(..), BlockSize, knownSHA,
   Digest
@@ -82,7 +83,7 @@ import Clash.Crypto.Calculator.ISA
 import Clash.Crypto.Calculator.Modulo (ℤₘ, PrimeField, ModSize, createMod)
 import Clash.Crypto.Cipher.AES
   ( AES(..), AESKeyExpansion(..), KnownAES(..),
-   AESFacts(..), InType, OutType, KeyType, WordSize, Nb,Nk,Nr,aesECBencryption, aesECBdecryption
+   AESFacts(..), WordSize, Nb
   )
 
 import Test.Clash.Crypto.Calculator
