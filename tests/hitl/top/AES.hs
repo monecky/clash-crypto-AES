@@ -6,9 +6,9 @@ module AES (topEntity) where
 import Clash.Prelude
 import Clash.Annotations.TH (makeTopEntity)
 
-import Clash.Cores.LatticeSemi.ECP5.Domain (Dom48, Dom12)
-import Clash.Cores.LatticeSemi.ECP5.Pll (orangePll12)
-import Clash.Crypto.Hitlt.Uart (bulkRead, withUartRequestResponseHandler)
+import Hitl.Clash.Cores.LatticeSemi.ECP5.Domain (Dom48, Dom12)
+import Hitl.Clash.Cores.LatticeSemi.ECP5.Pll (orangePll12)
+import Hitl.Clash.Cores.Uart.Extra (bulkRead, withUartRequestResponseHandler)
 import Clash.Signal.Channel (cachedFromMaybe, newsfeed)
 
 import Clash.Crypto.Cipher.AES(AES(..), aesECBencryption)
