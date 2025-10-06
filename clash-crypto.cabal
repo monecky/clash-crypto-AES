@@ -70,6 +70,15 @@ library
     , ghc-typelits-proof-assist
     , template-haskell
   exposed-modules:
+    Clash.Crypto.PQC.SLH_DSA
+    Clash.Crypto.PQC.SLH_DSA.Specification
+    Clash.Crypto.PQC.SLH_DSA.Specification.Algorithm
+    Clash.Crypto.PQC.SLH_DSA.Specification.Constants
+    Clash.Crypto.PQC.SLH_DSA.Specification.Definitions
+    Clash.Crypto.PQC.SLH_DSA.Specification.Properties
+    Clash.Crypto.PQC.SLH_DSA.Specification.Types
+    Clash.Crypto.PQC.SLH_DSA.Streaming
+    Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm
     Clash.Crypto.Cipher.AES
     Clash.Crypto.Cipher.AES.Streaming
     Clash.Crypto.Cipher.AES.Streaming.Algorithm
@@ -102,7 +111,6 @@ library
     Clash.Sized.Vector.Extra
     Data.Constraint.Nat.Extra
     Language.Haskell.Unicode
-
 test-suite simulation
   import: common-options
   hs-source-dirs: tests/sim
@@ -110,6 +118,13 @@ test-suite simulation
   ghc-options: -threaded
   main-is: Main.hs
   other-modules:
+    Test.Clash.Crypto.PQC.SLH_DSA.GoldenReference
+    Test.Clash.Crypto.PQC.SLH_DSA.Specification.Definitions
+    Test.Clash.Crypto.PQC.SLH_DSA.Specification.Algorithm
+    Test.Clash.Crypto.PQC.SLH_DSA.Specification
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm
+    Test.Clash.Crypto.PQC.SLH_DSA
     Test.Clash.Crypto.Cipher.AES.GoldenReference
     Test.Clash.Crypto.Cipher.AES.Specification.Definitions
     Test.Clash.Crypto.Cipher.AES.Specification.Algorithm
