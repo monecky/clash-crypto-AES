@@ -8,6 +8,9 @@ Portability : POSIX
 Basic types covering the fundamentals of FIPS 205.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "[]" #-}
+{-# HLINT ignore "Use camelCase" #-}
 module Clash.Crypto.PQC.SLH_DSA.Specification.Types where
 import Clash.Class.BitPack (BitPack)
 import Clash.XException (NFDataX)
@@ -44,9 +47,59 @@ data SLH_DSA =
     , Bounded
     , Typeable
     )
+type TypeOfSHA ∷ Type
+data TypeOfSHA =
+      SHA
+    | SHAKE
+  deriving
+    ( Generic
+    , NFDataX
+    , BitPack
+    , Eq
+    , Ord
+    , Show
+    , Enum
+    , Bounded
+    , Typeable
+    )
+type SizeOfSHA ∷ Type
+data SizeOfSHA =
+      Size128
+    | Size192
+    | Size256
+  deriving
+    ( Generic
+    , NFDataX
+    , BitPack
+    , Eq
+    , Ord
+    , Show
+    , Enum
+    , Bounded
+    , Typeable
+    )
+type ModeOfSLH_DSA ∷ Type
+data ModeOfSLH_DSA =
+      S
+    | F
+  deriving
+    ( Generic
+    , NFDataX
+    , BitPack
+    , Eq
+    , Ord
+    , Show
+    , Enum
+    , Bounded
+    , Typeable
+    )
+class SpecificSLH_DSA (alg ∷ SLH_DSA) where
+  type TypeSHA alg ∷ TypeOfSHA
+  type SizeSHA alg ∷ SizeOfSHA
+  type ModeSLH_DSA alg ∷ ModeOfSLH_DSA
+
 type SLH_DSA_SHA ∷ SLH_DSA → SHA
-type family SLH_DSA_SHA alg where
-  SLH_DSA_SHA SLH_DSA_SHA2_256s = SHA256
-  SLH_DSA_SHA SLH_DSA_SHA2_256f = SHA256
-  SLH_DSA_SHA _                 = SHA256
- 
+class  SpecificSLH_DSA alg ⇒ SLH_DSA_SHA alg where
+  -- SLH_DSA_SHA SLH_DSA_SHA2_256s = SHA.SHA256
+  -- SLH_DSA_SHA SLH_DSA_SHA2_256f = SHA.SHA256
+  -- SLH_DSA_SHA _                 = SHA.SHA256
