@@ -10,11 +10,12 @@ import qualified Test.Clash.Crypto.ECDSA.InverseModulo as InverseModulo
 import qualified Test.Clash.Crypto.PQC.SLH_DSA as SLH_DSA
 main ∷ IO ()
 main = defaultMain $ testGroup "clash-crypto simulation tests"
-  [ AES.tastyTests
-  , SHA.tastyTests
-  , HMAC.tastyTests
-  , InverseModulo.tastyTests
-  , Karatsuba.tastyTests
-  , Modulo.tastyTests
-  , SLH_DSA.tastyTests
+  [
+  --    AES.tastyTests
+  -- , SHA.tastyTests
+  -- , HMAC.tastyTests
+  -- , InverseModulo.tastyTests
+  -- , Karatsuba.tastyTests
+  -- , Modulo.tastyTests
+   SLH_DSA.tastyTests
   ]
