@@ -31,5 +31,9 @@ TAGS
 *.log
 *.tar.gz
 *.DS_Store
+Trial_crypto.hs
+Trial_crypto2.hs
+Trial.hs
 _build/
 .gitignore
+errot.txt

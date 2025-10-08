@@ -348,23 +348,68 @@ type SIGᴴᵀType (alg ∷ SLH_DSA) = Vec ((N alg) * (H alg + (D alg) * (Len al
 -- according Table 2/ Figure 18 in FIPS205
 --
 ---------------------------------------------------------------------------
-type LayerAddressType  = Vec 1 ByteType
-type TreeAddressType   = Vec 8 ByteType
-type TypeType          = Vec 1 ByteType
-type DataType          = Vec 12 ByteType
-data ADRSᶜType         = ADRSᶜType {
-  layerAddress ∷ LayerAddressType,
-  treeAddress  ∷ TreeAddressType,
-  typeAddress  ∷ TypeType,
-  dataAddress  ∷ DataType
+type LayerAddressSize ∷ SLH_DSA → Nat
+type family LayerAddressSize (alg ∷ SLH_DSA) where
+  LayerAddressSize SLH_DSA_SHA2_128s  = 1
+  LayerAddressSize SLH_DSA_SHAKE_128s = 4
+  LayerAddressSize SLH_DSA_SHA2_128f  = 1
+  LayerAddressSize SLH_DSA_SHAKE_128f = 4
+  LayerAddressSize SLH_DSA_SHA2_192s  = 1
+  LayerAddressSize SLH_DSA_SHAKE_192s = 4
+  LayerAddressSize SLH_DSA_SHA2_192f  = 1
+  LayerAddressSize SLH_DSA_SHAKE_192f = 4
+  LayerAddressSize SLH_DSA_SHA2_256s  = 1
+  LayerAddressSize SLH_DSA_SHAKE_256s = 4
+  LayerAddressSize SLH_DSA_SHA2_256f  = 1
+  LayerAddressSize SLH_DSA_SHAKE_256f = 4
+  LayerAddressSize _                  = 1
+type LayerAddressType (alg ∷ SLH_DSA) = Vec (LayerAddressSize alg) ByteType
+type TreeAddressSize ∷ SLH_DSA → Nat
+type family TreeAddressSize (alg ∷ SLH_DSA) where
+  TreeAddressSize SLH_DSA_SHA2_128s  = 8
+  TreeAddressSize SLH_DSA_SHAKE_128s = 12
+  TreeAddressSize SLH_DSA_SHA2_128f  = 8
+  TreeAddressSize SLH_DSA_SHAKE_128f = 12
+  TreeAddressSize SLH_DSA_SHA2_192s  = 8
+  TreeAddressSize SLH_DSA_SHAKE_192s = 12
+  TreeAddressSize SLH_DSA_SHA2_192f  = 8
+  TreeAddressSize SLH_DSA_SHAKE_192f = 12
+  TreeAddressSize SLH_DSA_SHA2_256s  = 8
+  TreeAddressSize SLH_DSA_SHAKE_256s = 12
+  TreeAddressSize SLH_DSA_SHA2_256f  = 8
+  TreeAddressSize SLH_DSA_SHAKE_256f = 12
+  TreeAddressSize _                  = 8
+type TreeAddressType (alg ∷ SLH_DSA) = Vec (TreeAddressSize alg) ByteType
+type TypeSize ∷ SLH_DSA → Nat
+type family TypeSize (alg ∷ SLH_DSA) where
+  TypeSize SLH_DSA_SHA2_128s  = 1
+  TypeSize SLH_DSA_SHAKE_128s = 4
+  TypeSize SLH_DSA_SHA2_128f  = 1
+  TypeSize SLH_DSA_SHAKE_128f = 4
+  TypeSize SLH_DSA_SHA2_192s  = 1
+  TypeSize SLH_DSA_SHAKE_192s = 4
+  TypeSize SLH_DSA_SHA2_192f  = 1
+  TypeSize SLH_DSA_SHAKE_192f = 4
+  TypeSize SLH_DSA_SHA2_256s  = 1
+  TypeSize SLH_DSA_SHAKE_256s = 4
+  TypeSize SLH_DSA_SHA2_256f  = 1
+  TypeSize SLH_DSA_SHAKE_256f = 4
+  TypeSize _                  = 1
+type TypeType (alg ∷ SLH_DSA) = Vec (TypeSize alg) ByteType
+type DataType (alg ∷ SLH_DSA) = Vec 12 ByteType
+data ADRSType (alg ∷ SLH_DSA) = ADRSType {
+  layerAddress ∷ LayerAddressType alg,
+  treeAddress ∷ AUTHType alg,
+  typeAddress ∷ TypeType alg,
+  dataAddress ∷ DataType alg
 } deriving     ( Generic
               , Show
-              , Typeable
-              , BitPack 
-              , NFDataX 
-              , Eq      
-              , Ord     
+              , Typeable   
               )
+deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ BitPack (ADRSType alg)
+deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ NFDataX (ADRSType alg)
+deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ Eq      (ADRSType alg)
+deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ Ord     (ADRSType alg)
 
 ---------------------------------------------------------------------------
 -- WOTS that is define in SLH_DSA 
