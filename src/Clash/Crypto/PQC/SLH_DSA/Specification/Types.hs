@@ -21,7 +21,7 @@ import Data.Ord (Ord)
 import Data.Typeable (Typeable)
 import GHC.Show (Show)
 import GHC.Generics (Generic)
-import Clash.Crypto.Hash.SHA
+import Clash.Crypto.Hash.SHA as SHA
 type SLH_DSA ∷ Type
 data SLH_DSA =
     SLH_DSA_SHA2_128s
@@ -47,59 +47,9 @@ data SLH_DSA =
     , Bounded
     , Typeable
     )
-type TypeOfSHA ∷ Type
-data TypeOfSHA =
-      SHA
-    | SHAKE
-  deriving
-    ( Generic
-    , NFDataX
-    , BitPack
-    , Eq
-    , Ord
-    , Show
-    , Enum
-    , Bounded
-    , Typeable
-    )
-type SizeOfSHA ∷ Type
-data SizeOfSHA =
-      Size128
-    | Size192
-    | Size256
-  deriving
-    ( Generic
-    , NFDataX
-    , BitPack
-    , Eq
-    , Ord
-    , Show
-    , Enum
-    , Bounded
-    , Typeable
-    )
-type ModeOfSLH_DSA ∷ Type
-data ModeOfSLH_DSA =
-      S
-    | F
-  deriving
-    ( Generic
-    , NFDataX
-    , BitPack
-    , Eq
-    , Ord
-    , Show
-    , Enum
-    , Bounded
-    , Typeable
-    )
-class SpecificSLH_DSA (alg ∷ SLH_DSA) where
-  type TypeSHA alg ∷ TypeOfSHA
-  type SizeSHA alg ∷ SizeOfSHA
-  type ModeSLH_DSA alg ∷ ModeOfSLH_DSA
 
-type SLH_DSA_SHA ∷ SLH_DSA → SHA
-class  SpecificSLH_DSA alg ⇒ SLH_DSA_SHA alg where
-  -- SLH_DSA_SHA SLH_DSA_SHA2_256s = SHA.SHA256
-  -- SLH_DSA_SHA SLH_DSA_SHA2_256f = SHA.SHA256
-  -- SLH_DSA_SHA _                 = SHA.SHA256
+type SLH_DSA_SHA ∷ SLH_DSA → SHA.SHA
+type family SLH_DSA_SHA (alg ∷ SLH_DSA) where
+  SLH_DSA_SHA SLH_DSA_SHA2_256s = SHA.SHA256
+  SLH_DSA_SHA SLH_DSA_SHA2_256f = SHA.SHA256
+  SLH_DSA_SHA _                 = SHA.SHA256
