@@ -54,12 +54,10 @@ ceilXdivY x y = result + rounder
         rounder = if remainder /= (0b0 ∷ BitVector w) then (0b1 ∷ BitVector w) else (0b0 ∷ BitVector w)
 -- Ceil rounder from 2.3 according to page 9
 floorXdivY ∷ ∀ w . KnownNat w ⇒ BitVector w → BitVector w → BitVector w
-floorXdivY x y = result + rounder
-    where 
-        division = divMod x y
-        result = fst division
-        remainder = snd division
-        rounder = if remainder /= (0b0 ∷ BitVector w) then (0b0 ∷ BitVector w) else (0b1 ∷ BitVector w)
+floorXdivY x y = div x y
+
+
+
 -- mod function is already existing as it is.
 -- (^) power function
 (·) ∷ ∀ w . (KnownNat w) ⇒  BitVector w → BitVector w → BitVector w

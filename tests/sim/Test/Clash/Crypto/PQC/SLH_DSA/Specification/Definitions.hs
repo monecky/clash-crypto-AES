@@ -43,9 +43,7 @@ testPropertyCeilXdivY x y = if y /= (0b0 ∷ BitVector TestLen) then ceilXdivY x
         rounder = if remainder /= 0 then 1 else 0
 
 testPropertyFloorXdivY ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
-testPropertyFloorXdivY x y = if y /= (0b0 ∷ BitVector TestLen) then floorXdivY x y === fromInteger (result + rounder) else x === x
+testPropertyFloorXdivY x y = if y /= (0b0 ∷ BitVector TestLen) then floorXdivY x y === fromInteger result else x === x
     where 
-        division = divMod (toInteger x) (toInteger y)
-        result = fst division
-        remainder = snd division
-        rounder = if remainder /= 0 then 0 else 1
+        result = div (toInteger x) (toInteger y)
+ 
