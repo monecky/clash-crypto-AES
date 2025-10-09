@@ -15,13 +15,14 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.WOTSplus where
 import Clash.Prelude
 import Language.Haskell.Unicode (type (≤))
 import Clash.Crypto.PQC.SLH_DSA.General.General
-import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters
-import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Address
+import Clash.Crypto.PQC.SLH_DSA.Specification.Types
+
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions
 
-chain ∷ ∀ i s (alg ∷ SLH_DSA). (KnownNat i, KnownNat s, SLH_DSA_hash alg) ⇒ BitVector ℓ → PKSeed alg → ADRS alg
-chain x pkSeed adrs = ifoldl (function) tmp (iterateI @s (+1) (natToNum @i)) selection
+chain ∷ ∀ i s ℓ (alg ∷ SLH_DSA). (KnownNat ℓ, KnownNat i, KnownNat s, 1 ≤ i, s + 1 ≤ (ℓ - i) + 1, SLH_DSA_hash alg) ⇒ BitVector ℓ → PKSeedType alg → ADRSType alg → BitVector ℓ
+chain x pkSeed adrs = v2bv $ foldl (function) tmp (iterateI @s (+1) (natToNum @i @(Index ℓ))) (select @(ℓ - i) (SNat ∷ SNat i) (SNat ∷ SNat 1) (SNat ∷ SNat s) tmp)
     where
-        selection = select 
-        function j x = _F pkSeed (setHashAddress adrs j) x
-        tmp = x
+        function ∷ Vec ℓ Bit → Index n → Vec ℓ Bit
+        function x1 j = x1 -- TODO _F pkSeed (setHashAddress adrs j) x
+        tmp ∷ Vec ℓ Bit
+        tmp = bv2v x

@@ -31,6 +31,9 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , Len² 
   , Len 
   , SLH_DSA(..)
+  , PKSeedType
+  , SKSeedType
+  , PKRootType
   -- Address
   , ADRSType(..)
   -- Hash
