@@ -14,6 +14,8 @@ Basic definitions covering the fundamentals of FIPS 205.
 module Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics where
 import Clash.Prelude
 import Language.Haskell.Unicode (type (≤))
+import Clash.Crypto.PQC.SLH_DSA.General.General
+import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters
 -- 2.3 Mathematical Symbols
 (‖) ∷ Vec n a →  Vec m a → Vec (n + m) a 
 (‖) = (++)
@@ -33,8 +35,8 @@ import Language.Haskell.Unicode (type (≤))
 (∶) x s_p s_q = select @(n-p) @1 @(q-p) @p s_p (SNat :: SNat 1) (subSNat s_q s_p) x
 --Test example  (∶) ((1:>2:>3:>7:>8:>Nil) :: Vec 5 Int) (∶) (SNat :: SNat 2) (SNat :: SNat 3)
 
-truncₗ ∷ ∀ n m a ℓ. (KnownNat n, KnownNat m, KnownNat ℓ, ℓ+m ~ n) ⇒ Vec n a → SNat ℓ →  Vec ℓ a
-truncₗ x s_ℓ = take (s_ℓ) x
+truncₗ ∷ ∀ ℓ n m a . (KnownNat n, KnownNat m, KnownNat ℓ, ℓ+m ~ n) ⇒ Vec n a → Vec ℓ a
+truncₗ x = takeI @ℓ x
 
 
 (|·|) ∷ KnownNat n ⇒ Vec n a → SNat n 
@@ -77,14 +79,17 @@ floorXdivY x y = div x y
 
 -----------------------------------------------
 -- The following functions are convergene methodes,   
--- which are define in Algorithm 2 and 3 form FIPS205
+-- which are define in Algorithm 2, 3 and 4 form FIPS205
 -- The integer is a BitVector m since the Integer will
 -- be represent on hardware as a serie of bits.
 -- TODO: Verify no problems with big endian, otherwise a reverse will do the trick.
 -----------------------------------------------
---Algorithm 2 same name kept although the choicen instance is integer
+-- Algorithm 2 same name kept although the choicen instance is integer
 toInt ∷ ∀ n w m k s . (KnownNat n, KnownNat w, KnownNat m, KnownNat k, KnownNat s, n + k ~ m,  s ~ n* w) ⇒ Vec m (BitVector w) → BitVector s
 toInt = concatBitVector# . takeI
---Algorithm 3
+-- Algorithm 3
 toByte ∷ ∀ n w m k s . (KnownNat n, KnownNat w, KnownNat m, KnownNat k, KnownNat s, (n + k) * w ~ s) ⇒ BitVector s → Vec n (BitVector w)
 toByte = takeI . unconcatBitVector#
+-- Algorithm 4
+base_2ᵇ ∷ ∀ b out_len n m k s. (KnownNat b, KnownNat out_len, KnownNat n, KnownNat m, KnownNat s, KnownNat k, (out_len + k) * b ~ s * ByteSize) ⇒ Vec s ByteType → Vec (out_len) (BitVector b)
+base_2ᵇ =  unconcatBitVector# . resize. concatBitVector#

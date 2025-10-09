@@ -32,7 +32,9 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , Len 
   , SLH_DSA(..)
   -- Address
+  , ADRSType(..)
   -- Hash
+  , SLH_DSA_hash(..)
 )where
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)

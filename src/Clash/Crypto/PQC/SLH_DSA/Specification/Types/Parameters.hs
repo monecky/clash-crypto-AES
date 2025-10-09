@@ -33,6 +33,7 @@ import GHC.TypeLits
 import Data.Proxy (Proxy(..))
 import Data.Type.Bool (If)
 import Clash.Crypto.Hash.SHA as SHA
+import Clash.Crypto.PQC.SLH_DSA.General.General
 ---------------------------------------------------------------------------
 -- Parameters that define SLH_DSA defined in FIPS205
 -- Parameters according Table 2
@@ -253,14 +254,14 @@ type W ∷ SLH_DSA → Nat
 type W (alg ∷ SLH_DSA) = 2 ^ Lgʷ alg
 -- Equation 5.2 of FIPS205
 type Len¹ ∷ SLH_DSA → Nat
-type Len¹ (alg ∷ SLH_DSA) = If (8 * N alg `Mod` Lgʷ alg <=? (0 ∷ Nat)) (8 * N alg `Div` Lgʷ alg + 0) (8 * N alg `Div` Lgʷ alg + 1)
+type Len¹ (alg ∷ SLH_DSA) = CeilXdivY (8 * N alg) ( Lgʷ alg )
 -- Ceil Round If (a `Mod`b <=? (0 ∷ Nat)) (a `Div` b + 0) (a `Div` b + 1)
 -- Floor Round (a `Div` b)
 
 -- Equation 5.3
 --  This is also Algorithm 1, import is that Log2 is none floating point
 type Len² ∷ SLH_DSA → Nat
-type Len² (alg ∷ SLH_DSA) = (Log2 ((Len¹ alg) * (W alg - 1)) `Div` Lgʷ alg) + 1  
+type Len² (alg ∷ SLH_DSA) = FloorXdivY (Log2 ((Len¹ alg) * (W alg - 1))) (Lgʷ alg) + 1  
 -- Equation 5.4
 type Len ∷ SLH_DSA → Nat
 type Len (alg ∷ SLH_DSA) = Len¹ alg + Len² alg
