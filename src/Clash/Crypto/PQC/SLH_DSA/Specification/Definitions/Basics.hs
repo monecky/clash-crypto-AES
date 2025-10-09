@@ -9,9 +9,8 @@ Basic definitions covering the fundamentals of FIPS 205.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE MagicHash #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
 module Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics where
 import Clash.Prelude
 import Language.Haskell.Unicode (type (≤))
@@ -74,4 +73,18 @@ floorXdivY x y = div x y
 
 (≪) ∷ ∀ w . (KnownNat w) ⇒ BitVector w → BitVector w → BitVector w 
 (≪) a b = shiftL a (maxIndex# b)
-zzz = ceilXdivY  (0b1 :: BitVector 8) (0b1 :: BitVector 8)
+
+
+-----------------------------------------------
+-- The following functions are convergene methodes,   
+-- which are define in Algorithm 2 and 3 form FIPS205
+-- The integer is a BitVector m since the Integer will
+-- be represent on hardware as a serie of bits.
+-- TODO: Verify no problems with big endian, otherwise a reverse will do the trick.
+-----------------------------------------------
+--Algorithm 2 same name kept although the choicen instance is integer
+toInt ∷ ∀ n w m k s . (KnownNat n, KnownNat w, KnownNat m, KnownNat k, KnownNat s, n + k ~ m,  s ~ n* w) ⇒ Vec m (BitVector w) → BitVector s
+toInt = concatBitVector# . takeI
+--Algorithm 3
+toByte ∷ ∀ n w m k s . (KnownNat n, KnownNat w, KnownNat m, KnownNat k, KnownNat s, (n + k) * w ~ s) ⇒ BitVector s → Vec n (BitVector w)
+toByte = takeI . unconcatBitVector#
