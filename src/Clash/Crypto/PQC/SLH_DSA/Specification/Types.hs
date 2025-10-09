@@ -36,6 +36,14 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , PKRootType
   -- Address
   , ADRSType(..)
+  , ADRSTypeType(..)
+  , LayerAddressSize
+  , TreeAddressSize
+  , TypeSize
+  , LayerAddressType
+  , AUTHType
+  , TypeType
+  , DataType
   -- Hash
   , SLH_DSA_hash(..)
 )where

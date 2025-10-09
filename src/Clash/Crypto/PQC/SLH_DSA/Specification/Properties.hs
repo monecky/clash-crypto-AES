@@ -32,6 +32,9 @@ data SLH_DSAFacts (alg ∷ SLH_DSA) where
         , KnownNat (Len¹ alg)
         , KnownNat (Len² alg)
         , KnownNat (Len alg)
+        , KnownNat (LayerAddressSize alg)
+        , KnownNat (TreeAddressSize alg)
+        , KnownNat (TypeSize alg)
         -- Expected to be neded at some point.
         -- , PrivateKey alg
         -- , PublicKey alg

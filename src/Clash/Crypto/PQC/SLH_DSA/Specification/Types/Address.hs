@@ -100,3 +100,23 @@ deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), K
 deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ NFDataX (ADRSType alg)
 deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ Eq      (ADRSType alg)
 deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ Ord     (ADRSType alg)
+type ADRSTypeType ∷ Type
+data ADRSTypeType =
+    WOTS_HASH -- 0
+  | WOTS_PK -- 1
+  | TREE -- 2
+  | FORS_TREE -- 3
+  | FORS_ROOTS -- 4
+  | WOTS_PRF -- 5
+  | FORS_PRF -- 6
+  deriving
+    ( Generic
+    , NFDataX
+    , BitPack
+    , Eq
+    , Ord
+    , Show
+    , Enum
+    , Bounded
+    , Typeable
+    )
