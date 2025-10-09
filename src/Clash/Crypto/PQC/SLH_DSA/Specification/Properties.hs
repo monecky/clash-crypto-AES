@@ -17,6 +17,7 @@ import Data.Proxy (Proxy(..))
 
 import Clash.Prelude
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
+
 data SLH_DSAFacts (alg ∷ SLH_DSA) where
     SLH_DSAFacts ∷
         ( KnownNat (N alg)

@@ -72,11 +72,17 @@ library
   exposed-modules:
     Clash.Crypto.PQC.SLH_DSA
     Clash.Crypto.PQC.SLH_DSA.Specification
+    Clash.Crypto.PQC.SLH_DSA.Specification.Types
+    Clash.Crypto.PQC.SLH_DSA.Specification.Types.Address 
+    Clash.Crypto.PQC.SLH_DSA.Specification.Types.Hash
+    Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters
     Clash.Crypto.PQC.SLH_DSA.Specification.Algorithm
     Clash.Crypto.PQC.SLH_DSA.Specification.Constants
-    Clash.Crypto.PQC.SLH_DSA.Specification.Definitions
     Clash.Crypto.PQC.SLH_DSA.Specification.Properties
-    Clash.Crypto.PQC.SLH_DSA.Specification.Types
+    Clash.Crypto.PQC.SLH_DSA.Specification.Definitions
+    Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
+    Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
+    Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Hash
     Clash.Crypto.PQC.SLH_DSA.Streaming
     Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm
     Clash.Crypto.Cipher.AES
