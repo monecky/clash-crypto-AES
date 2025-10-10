@@ -26,63 +26,38 @@ setTreeAddress adrs t
       = adrs {treeAddress = toByte @(TreeAddressSize alg) @ByteSize @(TreeAddressSize alg * ByteSize) @0  (resize t)  ∷ TreeAddressType alg}
 
 setTypeAndClear ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg) ⇒ ADRSType alg → ADRSTypeType → ADRSType alg
-setTypeAndClear adrs WOTS_HASH 
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {  typeAddress              = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0b0  ∷ TypeType alg
-              , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
-              , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
-              , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
-              }
+setTypeAndClear adrs WOTS_HASH       
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x0 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs WOTS_PK   
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x1 ∷ TypeType alg
-              , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
-              , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
-              , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
-              }
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x1 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs TREE      
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x2 ∷ TypeType alg
-              , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
-              , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
-              , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
-              }
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x2 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs FORS_TREE 
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x3 ∷ TypeType alg
-              , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
-              , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
-              , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
-              }
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x3 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs FORS_ROOTS
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x4 ∷ TypeType alg
-              , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
-              , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
-              , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
-              }
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x4 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs WOTS_PRF  
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x5 ∷ TypeType alg
-              , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
-              , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
-              , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
-              }
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x5 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs FORS_PRF  
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x6 ∷ TypeType alg
-               , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
-              , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
-              , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
-              }
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x6 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs _         
-      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x7 ∷ TypeType alg
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = _setTypeAndClear adrs (0x7 ∷ BitVector (TypeSize alg * ByteSize))
+_setTypeAndClear ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg) ⇒ ADRSType alg → BitVector (TypeSize alg * ByteSize) → ADRSType alg
+_setTypeAndClear adrs l 
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg 
+      = adrs {   typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  l ∷ TypeType alg
               , keyPairAddress           = toByte @(KeyPairAddressSize alg) @ByteSize @(KeyPairAddressSize alg * ByteSize) @0  0b0  ∷ KeyPairAddressType alg
               , chainAddressTreeHeight   = toByte @(ChainAddressTreeHeightSize alg) @ByteSize @(ChainAddressTreeHeightSize alg * ByteSize) @0  0b0  ∷ ChainAddressTreeHeightType alg
               , hashAddressTreeIndexType = toByte @(HashAddressTreeIndexSize alg) @ByteSize @(HashAddressTreeIndexSize alg * ByteSize) @0  0b0  ∷ HashAddressTreeIndexType alg
               }
-
 setKeyPairAddress ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSA alg, KnownNat ℓ)⇒ ADRSType alg → BitVector ℓ →  ADRSType alg
 setKeyPairAddress adrs t 
       | SLH_DSAFacts{} <- knownSLH_DSA @alg     
