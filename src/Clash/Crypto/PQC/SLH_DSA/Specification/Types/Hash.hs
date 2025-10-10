@@ -17,11 +17,13 @@ defined in unicode. But for superscript there are.
 {-# HLINT ignore "Use camelCase" #-}
 
 module Clash.Crypto.PQC.SLH_DSA.Specification.Types.Hash where
+import Clash.Prelude
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)
 import Clash.Class.BitPack (BitPack)
 import Clash.XException (NFDataX)
 import Data.Eq (Eq)
+import Data.Type.Equality
 import Data.Enum (Enum, Bounded)
 import Data.Kind (Type)
 import Data.Ord (Ord)
@@ -35,6 +37,10 @@ import Data.Type.Bool (If)
 import Clash.Crypto.Hash.SHA as SHA
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Address
+import Clash.Signal.Channel
+import Clash.Signal.DataStream
+import Clash.Signal.Delayed.Extra
+import Clash.Signal.Extra (apWhen)
 ---------------------------------------------------------------------------
 -- Hashfunctions class that is discribed in section 4.1 of FIPS 205.
 -- This is only the interface.
@@ -47,3 +53,12 @@ class SLH_DSA_hash (alg ∷ SLH_DSA) where
   _Tˡ     ∷ (KnownNat ℓ, Div (688 + ((ℓ * 16) * 8)) 8 ~ 86 + (ℓ * 16)) ⇒ Proxy alg → PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
   _H      ∷ Proxy alg → PKSeedType alg → ADRSType alg → M²Type alg → HOutType alg
   _F      ∷ Proxy alg → PKSeedType alg → ADRSType alg → M¹Type alg → FOutType alg
+
+
+class SLH_DSA_hashStream (alg ∷ SLH_DSA) where
+  _PRFᵐˢᵍStream ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ Proxy alg → Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
+  _HᵐˢᵍStream   ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ Proxy alg → Channel dom (RType alg → PKSeedType alg → PKRootType alg → MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
+  _PRFStream    ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Proxy alg → Channel dom (PKSeedType alg,  SKSeedType alg, ADRSType alg) → PRFOutType alg
+  _TˡStream     ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
+  _HStream      ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
+  _FStream      ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M¹Type alg) → Channel dom (FOutType alg)
