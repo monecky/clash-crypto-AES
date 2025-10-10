@@ -26,6 +26,7 @@ module Clash.Signal.Channel
   , channel
   , cachedChannel
   , cachedFromMaybe
+  , channel2DataStream
     -- * Accessors
   , content
   , hasUpdates
@@ -57,7 +58,7 @@ import Clash.Prelude.Safe hiding (fold, unzip)
 import Data.Foldable (Foldable(..))
 import Data.Functor ((<&>), unzip)
 import GHC.Records (HasField(..))
-
+import Clash.Signal.DataStream
 -- | An extended option type that allows to differentiate between
 -- old and fresh data.
 data Content a = None | Fresh a | Old a
@@ -240,7 +241,13 @@ cachedFromMaybe ∷
   Channel dom a
 cachedFromMaybe =
   cachedChannel . fmap (maybe (undefined, Keep) (, Release))
-
+-- | Turns a channel into DataStream which only send Idle End
+channel2DataStream ∷ ∀ dom a . (BitPack a, HiddenClockResetEnable dom) ⇒ Channel dom a → DataStream dom () (Index (BitSize a)) (BitVector (BitSize a))
+channel2DataStream (Channel {getContent = s}) = fmap go s
+    where 
+        go None = Idle 
+        go (Fresh a) = End (natToNum @(BitSize a) @(Index (BitSize a))) (pack a)
+        go (Old _) = Idle 
 -- | Filters the content of a channel, where the filter is only
 -- evaluated at the points in time at which the content gets updated.
 filterC ∷
