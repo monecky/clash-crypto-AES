@@ -18,6 +18,8 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
 import Clash.Crypto.PQC.SLH_DSA.Specification.Properties
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
 import Data.Proxy (Proxy(..))
+import Data.Constraint.Nat.Extra
+import GHC.TypeNats.Proof (Rewrite(..), using)
 ------------------------------
 -- Setters
 ------------------------------
@@ -88,7 +90,14 @@ getKeyPairAddress ADRSType{keyPairAddress = keyPairAddress} = toInt keyPairAddre
 getTreeIndex ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg)⇒ ADRSType alg → BitVector (HashAddressTreeIndexSize alg * ByteSize) 
 getTreeIndex ADRSType{hashAddressTreeIndexType = hashAddressTreeIndexType} = toInt hashAddressTreeIndexType
 
-getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg, Div ((LayerAddressSize alg + (TreeAddressSize alg + (TypeSize alg + 12))) * 8) 8 ~ (LayerAddressSize alg + (TreeAddressSize alg + (TypeSize alg + 12))))⇒ ADRSType alg → BitVector (BitSize (ADRSType alg)) 
+getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg,  Div
+                          ((LayerAddressSize alg * 8
+                            + (TreeAddressSize alg * 8 + TypeSize alg * 8))
+                           + 96)
+                          8
+                        ~ (LayerAddressSize alg
+                           + (TreeAddressSize alg + (TypeSize alg + 12)))) -- Rewrite using mulitple is not working.
+                           ⇒ ADRSType alg → BitVector (BitSize (ADRSType alg)) 
 getADRSVector ADRSType{  layerAddress = layerAddress,
                         treeAddress = treeAddress,
                         typeAddress = typeAddress,
