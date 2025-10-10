@@ -35,6 +35,16 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , SKSeedType
   , PKRootType
   , ByteSize
+  , NBlockType
+  , M¹Type
+  , M²Type
+  , MˡType
+  , FOutType
+  , HOutType
+  , TˡOutType
+  , PRFOutType
+  , HᵐˢᵍOutType
+  , PRFᵐˢᵍOutType
   -- Address
   , ADRSType(..)
   , ADRSTypeType(..)

@@ -8,7 +8,9 @@ Portability : POSIX
 Implemenetation of function regards ADRS of Table 1 and 3 of FIPS 205.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
-
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MagicHash #-}
+{-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
 module Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address where
 import Clash.Prelude
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
@@ -90,19 +92,19 @@ getKeyPairAddress ADRSType{keyPairAddress = keyPairAddress} = toInt keyPairAddre
 getTreeIndex ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg)⇒ ADRSType alg → BitVector (HashAddressTreeIndexSize alg * ByteSize) 
 getTreeIndex ADRSType{hashAddressTreeIndexType = hashAddressTreeIndexType} = toInt hashAddressTreeIndexType
 
-getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg,  Div
-                          ((LayerAddressSize alg * 8
+getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg, Div
+                           ((LayerAddressSize alg * 8
+                             + (TreeAddressSize alg * 8 + TypeSize alg * 8))
+                            + 96)
+                           8
+                         * 8
+                        ~ (LayerAddressSize alg * 8
                             + (TreeAddressSize alg * 8 + TypeSize alg * 8))
-                           + 96)
-                          8
-                        ~ (LayerAddressSize alg
-                           + (TreeAddressSize alg + (TypeSize alg + 12)))) -- Rewrite using mulitple is not working.
-                           ⇒ ADRSType alg → BitVector (BitSize (ADRSType alg)) 
-getADRSVector ADRSType{  layerAddress = layerAddress,
-                        treeAddress = treeAddress,
-                        typeAddress = typeAddress,
-                        keyPairAddress = keyPairAddress,
-                        chainAddressTreeHeight = chainAddressTreeHeight,
-                        hashAddressTreeIndexType = hashAddressTreeIndexType} 
-                        | SLH_DSAFacts{} <- knownSLH_DSA @alg  
-                              = toInt @(BitSize (ADRSType alg) `Div` 8) @ByteSize  @0 (layerAddress ++ treeAddress ++  typeAddress ++  keyPairAddress ++  chainAddressTreeHeight ++ hashAddressTreeIndexType) 
+                           + 96) ⇒ ADRSType alg → Vec (Div (BitSize (ADRSType alg)) ByteSize) (BitVector (ByteSize))
+getADRSVector adrs
+            | SLH_DSAFacts{} <- knownSLH_DSA @alg  
+              = unconcatBitVector#  (getADRSBitVector adrs)
+getADRSBitVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg) ⇒ ADRSType alg → BitVector (BitSize (ADRSType alg)) 
+getADRSBitVector 
+            | SLH_DSAFacts{} <- knownSLH_DSA @alg  
+              = pack 
