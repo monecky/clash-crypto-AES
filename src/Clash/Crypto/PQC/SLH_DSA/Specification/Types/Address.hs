@@ -89,7 +89,7 @@ type TypeType (alg ∷ SLH_DSA) = Vec (TypeSize alg) ByteType
 type DataType (alg ∷ SLH_DSA) = Vec 12 ByteType
 data ADRSType (alg ∷ SLH_DSA) = ADRSType {
   layerAddress ∷ LayerAddressType alg,
-  treeAddress ∷ AUTHType alg,
+  treeAddress ∷ TreeAddressType alg,
   typeAddress ∷ TypeType alg,
   dataAddress ∷ DataType alg
 } deriving     ( Generic

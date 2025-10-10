@@ -88,7 +88,7 @@ floorXdivY x y = div x y
 toInt ∷ ∀ n w m k s . (KnownNat n, KnownNat w, KnownNat m, KnownNat k, KnownNat s, n + k ~ m,  s ~ n* w) ⇒ Vec m (BitVector w) → BitVector s
 toInt = concatBitVector# . takeI
 -- Algorithm 3
-toByte ∷ ∀ n w m k s . (KnownNat n, KnownNat w, KnownNat m, KnownNat k, KnownNat s, (n + k) * w ~ s) ⇒ BitVector s → Vec n (BitVector w)
+toByte ∷ ∀ n w s k . (KnownNat n, KnownNat w, KnownNat k, KnownNat s, (n + k) * w ~ s) ⇒ BitVector s → Vec n (BitVector w)
 toByte = takeI . unconcatBitVector#
 -- Algorithm 4
 base_2ᵇ ∷ ∀ b out_len n m k s. (KnownNat b, KnownNat out_len, KnownNat n, KnownNat m, KnownNat s, KnownNat k, (out_len + k) * b ~ s * ByteSize) ⇒ Vec s ByteType → Vec (out_len) (BitVector b)

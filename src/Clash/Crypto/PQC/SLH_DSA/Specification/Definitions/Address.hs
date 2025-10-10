@@ -15,17 +15,38 @@ import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
 import Clash.Crypto.PQC.SLH_DSA.Specification.Properties
+import Clash.Crypto.PQC.SLH_DSA.Specification.Types
 import Data.Proxy (Proxy(..))
 setLayerAddress ∷ ADRSType alg → LayerAddressType alg → ADRSType alg
 setLayerAddress adrs l = adrs {layerAddress = l }
+
+setTreeAddress ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSA alg, KnownNat ℓ)⇒ ADRSType alg → BitVector ℓ →  ADRSType alg
+setTreeAddress adrs t 
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {treeAddress = toByte @(TreeAddressSize alg) @ByteSize @(TreeAddressSize alg * ByteSize) @0  (resize t)  ∷ TreeAddressType alg}
+
 setTypeAndClear ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSA alg) ⇒ ADRSType alg → ADRSTypeType → ADRSType alg
 setTypeAndClear adrs WOTS_HASH 
       | SLH_DSAFacts{} <- knownSLH_DSA @alg     
-      = adrs {typeAddress = toByte @(TypeSize alg) 0b0 ∷ TypeType alg}
--- setTypeAndClear adrs WOTS_PK   = adrs {typeAddress = toByte @(TypeSize alg) 1}
--- setTypeAndClear adrs TREE      = adrs {typeAddress = toByte @(TypeSize alg) 2}
--- setTypeAndClear adrs FORS_TREE = adrs {typeAddress = toByte @(TypeSize alg) 3}
--- setTypeAndClear adrs FORS_ROOTS= adrs {typeAddress = toByte @(TypeSize alg) 4}
--- setTypeAndClear adrs WOTS_PRF  = adrs {typeAddress = toByte @(TypeSize alg) 5}
--- setTypeAndClear adrs FORS_PRF  = adrs {typeAddress = toByte @(TypeSize alg) 6}
--- setTypeAndClear adrs _         = adrs {typeAddress = toByte @(TypeSize alg) 7}
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0b0  ∷ TypeType alg}
+setTypeAndClear adrs WOTS_PK   
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x1 ∷ TypeType alg}
+setTypeAndClear adrs TREE      
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x2 ∷ TypeType alg}
+setTypeAndClear adrs FORS_TREE 
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x3 ∷ TypeType alg}
+setTypeAndClear adrs FORS_ROOTS
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x4 ∷ TypeType alg}
+setTypeAndClear adrs WOTS_PRF  
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x5 ∷ TypeType alg}
+setTypeAndClear adrs FORS_PRF  
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x6 ∷ TypeType alg}
+setTypeAndClear adrs _         
+      | SLH_DSAFacts{} <- knownSLH_DSA @alg     
+      = adrs {typeAddress = toByte @(TypeSize alg) @ByteSize @(TypeSize alg * ByteSize) @0  0x7 ∷ TypeType alg}

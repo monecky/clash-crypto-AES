@@ -34,6 +34,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , PKSeedType
   , SKSeedType
   , PKRootType
+  , ByteSize
   -- Address
   , ADRSType(..)
   , ADRSTypeType(..)
@@ -41,7 +42,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , TreeAddressSize
   , TypeSize
   , LayerAddressType
-  , AUTHType
+  , TreeAddressType
   , TypeType
   , DataType
   -- Hash
