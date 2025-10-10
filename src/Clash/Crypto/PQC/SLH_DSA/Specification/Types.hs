@@ -41,10 +41,15 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , LayerAddressSize
   , TreeAddressSize
   , TypeSize
+  , KeyPairAddressSize
+  , ChainAddressTreeHeightSize
+  , HashAddressTreeIndexSize
+  , KeyPairAddressType
+  , ChainAddressTreeHeightType
+  , HashAddressTreeIndexType
   , LayerAddressType
   , TreeAddressType
   , TypeType
-  , DataType
   -- Hash
   , SLH_DSA_hash(..)
 )where

@@ -85,13 +85,31 @@ type family TypeSize (alg ∷ SLH_DSA) where
   TypeSize SLH_DSA_SHA2_256f  = 1
   TypeSize SLH_DSA_SHAKE_256f = 4
   TypeSize _                  = 1
+type DataSize ∷ SLH_DSA → Nat
+type family DataSize (alg ∷ SLH_DSA) where
+  DataSize _  = 12
+
+type KeyPairAddressSize ∷ SLH_DSA → Nat
+type family KeyPairAddressSize (alg ∷ SLH_DSA) where
+  KeyPairAddressSize _  = 4
+type ChainAddressTreeHeightSize ∷ SLH_DSA → Nat
+type family ChainAddressTreeHeightSize (alg ∷ SLH_DSA) where
+  ChainAddressTreeHeightSize _  = 4
+type HashAddressTreeIndexSize ∷ SLH_DSA → Nat
+type family HashAddressTreeIndexSize (alg ∷ SLH_DSA) where
+  HashAddressTreeIndexSize _  = 4
 type TypeType (alg ∷ SLH_DSA) = Vec (TypeSize alg) ByteType
-type DataType (alg ∷ SLH_DSA) = Vec 12 ByteType
+type DataType (alg ∷ SLH_DSA) = Vec (DataSize alg) ByteType
+type KeyPairAddressType (alg ∷ SLH_DSA) = Vec (KeyPairAddressSize alg) ByteType
+type ChainAddressTreeHeightType (alg ∷ SLH_DSA) = Vec (ChainAddressTreeHeightSize alg) ByteType
+type HashAddressTreeIndexType (alg ∷ SLH_DSA) = Vec (HashAddressTreeIndexSize alg) ByteType
 data ADRSType (alg ∷ SLH_DSA) = ADRSType {
   layerAddress ∷ LayerAddressType alg,
   treeAddress ∷ TreeAddressType alg,
   typeAddress ∷ TypeType alg,
-  dataAddress ∷ DataType alg
+  keyPairAddress ∷ KeyPairAddressType alg,
+  chainAddressTreeHeight ∷ ChainAddressTreeHeightType alg,
+  hashAddressTreeIndexType ∷ HashAddressTreeIndexType alg
 } deriving     ( Generic
               , Show
               , Typeable   
