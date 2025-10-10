@@ -85,7 +85,7 @@ floorXdivY x y = div x y
 -- TODO: Verify no problems with big endian, otherwise a reverse will do the trick.
 -----------------------------------------------
 -- Algorithm 2 same name kept although the choicen instance is integer
-toInt ∷ ∀ n w m k s . (KnownNat n, KnownNat w, KnownNat m, KnownNat k, KnownNat s, n + k ~ m,  s ~ n* w) ⇒ Vec m (BitVector w) → BitVector s
+toInt ∷ ∀ n w k . (KnownNat n, KnownNat w, KnownNat k ) ⇒ Vec (n + k) (BitVector w) → BitVector (n * w)
 toInt = concatBitVector# . takeI
 -- Algorithm 3
 toByte ∷ ∀ n w s k . (KnownNat n, KnownNat w, KnownNat k, KnownNat s, (n + k) * w ~ s) ⇒ BitVector s → Vec n (BitVector w)
