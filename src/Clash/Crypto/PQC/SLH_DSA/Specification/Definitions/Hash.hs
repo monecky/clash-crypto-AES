@@ -54,7 +54,7 @@ instance SLH_DSA_hash SLH_DSA_SHA2_128s where
                 @SHA256 
                 @(M alg) -- maskLen
                 @((N alg + N alg + Div (MessageDigestSize SHA256) ByteSize) * ByteSize) -- ℓ 
-                @(MessageDigestSize SHA256)
+                @(MessageDigestSize SHA256) -- hLen
                     (toInt @(N alg + N alg + Div (MessageDigestSize SHA256) ByteSize) @ByteSize @0 
                     (r ‖ pkSeed ‖ hashed r pkSeed pkRoot m))))
     --         where
