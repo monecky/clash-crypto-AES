@@ -57,7 +57,14 @@ instance SLH_DSA_hash SLH_DSA_SHA2_128s where
                 @(MessageDigestSize SHA256) -- hLen
                     (toInt @(N alg + N alg + Div (MessageDigestSize SHA256) ByteSize) @ByteSize @0 
                     (r ‖ pkSeed ‖ hashed r pkSeed pkRoot m))))
-    --         where
+            where
+                hashed ∷ ∀ (alg :: SLH_DSA) (ℓ ∷ Nat) . ( alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg, KnownNat ℓ, Div ((48 + ℓ) * 8) 8 ~ (48 + ℓ)) ⇒ RType alg → PKSeedType alg → PKRootType alg → MType ℓ → Vec (Div (MessageDigestSize SHA256) ByteSize) ByteType
+                hashed r pkSeed pkRoot m
+                    = unconcatBitVector# (Spec.hash 
+                    @SHA256 
+                    @((N alg + N alg + N alg + ℓ) * ByteSize) 
+                        (toInt @(Div ((N alg + N alg + N alg + ℓ) * ByteSize)  ByteSize) @ByteSize @0 
+                        (r ‖ pkSeed ‖ pkRoot ‖ m)))
 
     _PRF    ∷ ∀ (alg :: SLH_DSA).  ( alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg) ⇒ Proxy alg → PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
     _PRF   _ pkSeed skSeed adrs 
@@ -140,10 +147,3 @@ instance SLH_DSA_hash SLH_DSA_SHA2_128s where
 
 
 
-hashed ∷ ∀ (alg :: SLH_DSA) (ℓ ∷ Nat) . ( alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg, KnownNat ℓ, Div ((48 + ℓ) * 8) 8 ~ (48 + ℓ)) ⇒ RType alg → PKSeedType alg → PKRootType alg → MType ℓ → Vec (Div (MessageDigestSize SHA256) ByteSize) ByteType
-hashed r pkSeed pkRoot m
-    = unconcatBitVector# (Spec.hash 
-    @SHA256 
-    @((N alg + N alg + N alg + ℓ) * ByteSize) 
-        (toInt @(Div ((N alg + N alg + N alg + ℓ) * ByteSize)  ByteSize) @ByteSize @0 
-        (r ‖ pkSeed ‖ pkRoot ‖ m)))
