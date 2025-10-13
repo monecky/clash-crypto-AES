@@ -30,6 +30,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , Len¹ 
   , Len² 
   , Len 
+  , ByteType
   , SLH_DSA(..)
   , PKSeedType
   , SKSeedType

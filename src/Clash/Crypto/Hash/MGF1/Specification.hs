@@ -5,7 +5,28 @@ Maintainer  : QBayLogic B.V.
 Stability   : experimental
 Portability : POSIX
 
-Streaming based blockcipher algorithms according to
+MGF1 is a mask generation function based on a hash function.
 [MGF1 from Appendix B.2.1 of RFC 8017: MGF1](https://doi.org/10.6028/NIST.FIPS.197-upd1).
 -}
-module Clash.Crypto.Hash.MGF1.Specification where
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MagicHash #-}
+module Clash.Crypto.Hash.MGF1.Specification (
+    mgf1
+) where
+import Clash.Prelude
+
+import Clash.Crypto.Hash.SHA.Specification
+import Clash.Crypto.PQC.SLH_DSA.Specification.Types (ByteSize, ByteType)
+import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
+
+mgf1 ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)  (hLen ∷ Nat).
+ (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg) 
+ ⇒ BitVector ℓ → BitVector (maskLen * ByteSize)
+mgf1 mgfSeed
+    | SHAFacts {} ← knownSHA @alg 
+    = resize (concatBitVector# (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ ByteType))))
+    where 
+        go ∷ ByteType → Digest alg
+        go x = hash @alg (mgfSeed ++# c @4 x)
+        c ∷ ∀ xLen . KnownNat xLen ⇒ ByteType → BitVector (ByteSize * xLen)
+        c x = resize x ∷  BitVector (ByteSize * xLen)

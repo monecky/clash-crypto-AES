@@ -13,3 +13,4 @@ Basic types covering the fundamentals of FIPS 180-4.
 {-# LANGUAGE Safe #-}
 
 module Clash.Crypto.Hash.MGF1.Specification.Types where
+-- Type level function 
