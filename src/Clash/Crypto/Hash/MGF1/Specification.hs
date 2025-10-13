@@ -4,8 +4,9 @@ Copyright   : Copyright © 2025 QBayLogic B.V.
 Maintainer  : QBayLogic B.V.
 Stability   : experimental
 Portability : POSIX
-
+Functional implementation
 MGF1 is a mask generation function based on a hash function.
+In this specific case SHA hash.
 [MGF1 from Appendix B.2.1 of RFC 8017: MGF1](https://doi.org/10.6028/NIST.FIPS.197-upd1).
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
