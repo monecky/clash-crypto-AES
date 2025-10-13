@@ -35,7 +35,7 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters
 (∶) x s_p s_q = select @(n-p) @1 @(q-p) @p s_p (SNat :: SNat 1) (subSNat s_q s_p) x
 --Test example  (∶) ((1:>2:>3:>7:>8:>Nil) :: Vec 5 Int) (∶) (SNat :: SNat 2) (SNat :: SNat 3)
 
-truncˡ ∷ ∀ ℓ n m a . (KnownNat n, KnownNat m, KnownNat ℓ, ℓ+m ~ n) ⇒ Vec n a → Vec ℓ a
+truncˡ ∷ ∀ ℓ a n m. (KnownNat n, KnownNat m, KnownNat ℓ, ℓ+m ~ n) ⇒ Vec n a → Vec ℓ a
 truncˡ x = takeI @ℓ x
 
 

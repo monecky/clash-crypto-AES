@@ -48,9 +48,9 @@ import Clash.Signal.Extra (apWhen)
 ---------------------------------------------------------------------------
 class SLH_DSA_hash (alg ∷ SLH_DSA) where
   _PRFᵐˢᵍ ∷ (KnownNat ℓ) ⇒ Proxy alg → SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
-  _Hᵐˢᵍ   ∷ (KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
+  _Hᵐˢᵍ   ∷ (KnownNat ℓ, Div ((48 + ℓ) * 8) 8 ~ 48 + ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
   _PRF    ∷ Proxy alg → PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
-  _Tˡ     ∷ (KnownNat ℓ, Div (688 + ((ℓ * 16) * 8)) 8 ~ 86 + (ℓ * 16)) ⇒ Proxy alg → PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
+  _Tˡ     ∷ (KnownNat ℓ, Div (688 + ((ℓ * 16) * ByteSize)) ByteSize ~ 86 + (ℓ * 16)) ⇒ Proxy alg → PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
   _H      ∷ Proxy alg → PKSeedType alg → ADRSType alg → M²Type alg → HOutType alg
   _F      ∷ Proxy alg → PKSeedType alg → ADRSType alg → M¹Type alg → FOutType alg
 
