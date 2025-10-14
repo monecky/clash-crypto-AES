@@ -124,7 +124,7 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
         Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
     _TˡStream   _ input
         | SLH_DSAFacts {} ← knownSLH_DSA @alg
-        = fmap makeOutput (SHA.sha @SHA256 (serialize @ByteSize transfer))
+        = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
             where
             transfer = fmap go input
             makeOutput output = truncˡ (unconcatBitVector# output)
@@ -137,7 +137,7 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
         Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
     _HStream _ input
         | SLH_DSAFacts {} ← knownSLH_DSA @alg
-        = fmap makeOutput (SHA.sha @SHA256 (serialize @ByteSize transfer))
+        = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
             where
             transfer = fmap go input
             makeOutput output = truncˡ (unconcatBitVector# output)
@@ -155,7 +155,7 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
         Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M¹Type alg) → Channel dom (FOutType alg)
     _FStream _ input
         | SLH_DSAFacts {} ← knownSLH_DSA @alg
-        = fmap makeOutput (SHA.sha @SHA256 (serialize @ByteSize transfer))
+        = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
             where
             transfer = fmap go input
             makeOutput output = truncˡ (unconcatBitVector# output)
@@ -167,13 +167,13 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
 
 -- TODO a function that convert a Channel (BitVector ℓ) to DataStream  dom (Index n) (BitVector n)
 -- Inspiration can be taken of a mealy machine and hmac serialisation is taken.
-serialize ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+serializeHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
     Channel  dom a → 
     -- ^ streamed input that needs to be split up.
     DataStream dom () (Index n) (BitVector n)
-serialize input
+serializeHash input
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
   , Rewrite ← using @(CancelMultiple (BitSize a) n)
     = leToPlusKN @1 @(BitSize a `Div` n)
@@ -198,8 +198,39 @@ serialize input
   -- a value that should never be evaluated
   neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
 
+-- serializeHMAC ∷ ∀ (alg ∷ SHA) (n ∷ Nat) (dom ∷ Domain) k i . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+--     ( BitPack k, KnownNat (BitSize k), KnownNat n
+--   , 1 ≤ n, 1 ≤ BitSize k, BitSize k `Mod` n ~ 0) ⇒ 
+--       ( BitPack i, KnownNat (BitSize i), KnownNat n
+--   , 1 ≤ n, 1 ≤ BitSize i, BitSize i `Mod` n ~ 0) ⇒ 
+--     Channel  dom (k, i) → 
+--     -- ^ streamed input that needs to be split up.
+--     DataStream dom (Index ((BlockSize alg `Div` 8) + 1)) () (BitVector n)
+-- serializeHMAC input
+--   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize k) n)
+--   , Rewrite ← using @(CancelMultiple (BitSize k) n)
+--   , Rewrite ← using @(KeepsPositiveIfMultiple (BitSize i) n)
+--   , Rewrite ← using @(CancelMultiple (BitSize i) n)
+--   , SHAFacts _ ← knownSHA @alg
+--     = leToPlusKN @1 @(BitSize k `Div` n)
+--     $ leToPlusKN @1 @(BitSize i `Div` n)
+--     $ mealy (~~>)
+--       ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
+--       , 0 ∷ Index ((BitSize a `Div` n) + 1)
+--       ) (liftA2 (,) (content input) (hasUpdates input))
+--  where
+--   (buf, n) ~~> (Just _, False) | n > 0 = -- 
+--     ((buf <<+ neval, satPred SatBound n), frame $ head buf)
+--    where
+--     frame | n == maxBound = Start ()
+--           | n > 1         = Middle
+--           | otherwise     = End 0
 
+--   _ ~~> (Just x, True)  = -- (Just x, True) equivalent to 
+--     ((bitCoerce x, maxBound), Idle)
 
+--   (buf, n) ~~> _ =
+--     ((buf, n), if n > 0 then NoData else Idle)
 
-
-
+--   -- a value that should never be evaluated
+--   neval = error "Clash.Crypto.PQC.SLH_DSA.Specification.Defintions.Hash.serializeEn: Mealy"
