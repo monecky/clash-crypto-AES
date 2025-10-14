@@ -1,5 +1,5 @@
 {-|
-Module      : Clash.Crypto.Cipher.AES
+Module      : Clash.Crypto.Hash.MGF1.Specification
 Copyright   : Copyright © 2025 QBayLogic B.V.
 Maintainer  : QBayLogic B.V.
 Stability   : experimental
