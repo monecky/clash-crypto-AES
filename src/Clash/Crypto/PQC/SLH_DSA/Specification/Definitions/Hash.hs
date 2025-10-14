@@ -118,22 +118,21 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
 --     --                 (toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (SKSeedType alg)) 8) @ByteSize @0 
 --     --                 (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed))))
   
-    _TˡStream     ∷ ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg, KnownNat ℓ) ⇒ 
-         Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
+    _TˡStream     ∷ ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg, KnownNat ℓ, 
+         Div (688 + ((ℓ * 16) * 8)) 8
+                        ~ (86 + (ℓ * 16)) , Mod ((86 + (ℓ * 16)) * 8) 8 ~ 0) ⇒ 
+        Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
     _TˡStream   _ input
         | SLH_DSAFacts {} ← knownSLH_DSA @alg
-        , Rewrite ← lemma₀ @alg @ℓ
         = fmap makeOutput (SHA.sha @SHA256 (serialize @ByteSize transfer))
             where
             transfer = fmap go input
             makeOutput output = truncˡ (unconcatBitVector# output)
+            go ∷ ∀ ℓ . (KnownNat ℓ, Div (688 + ((ℓ * 16) * 8)) 8
+                        ~ (86 + (ℓ * 16))) ⇒ (PKSeedType alg, ADRSType alg, MˡType ℓ alg)  → BitVector ((86 + (ℓ * 16)) * 8)
             go (pkSeed, adrs, ml) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (MˡType ℓ alg)) ByteSize) @ByteSize @0 
                 (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ ml)
-            lemma₀ ∷
-                ∀ alg' n.
-                Rewrite ((Div (BitSize (PKSeedType alg')  + 64 * ByteSize - BitSize (NBlockType alg') + BitSize (ADRSType alg') + BitSize (MˡType ℓ alg')) ByteSize) ~ (86 + (ℓ * 16)),
-                        (Div (BitSize (PKSeedType alg')  + 64 * ByteSize - BitSize (NBlockType alg') + BitSize (ADRSType alg') + BitSize (MˡType ℓ alg')) ByteSize) ~ 0 )
-            lemma₀ = unsafeCoerce (Rewrite ∷ Rewrite (1 ≤ 1))
+
     _HStream      ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg) ⇒ 
         Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
     _HStream _ input

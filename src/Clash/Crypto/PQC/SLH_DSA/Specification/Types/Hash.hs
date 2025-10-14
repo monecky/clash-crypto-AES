@@ -59,6 +59,7 @@ class SLH_DSA_hashStream (alg ∷ SLH_DSA) where
   _PRFᵐˢᵍStream ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ Proxy alg → Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
   _HᵐˢᵍStream   ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ Proxy alg → Channel dom (RType alg → PKSeedType alg → PKRootType alg → MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
   _PRFStream    ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Proxy alg → Channel dom (PKSeedType alg,  SKSeedType alg, ADRSType alg) → PRFOutType alg
-  _TˡStream     ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
+  _TˡStream     ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, Div (688 + ((ℓ * 16) * 8)) 8
+                        ~ (86 + (ℓ * 16)), Mod ((86 + (ℓ * 16)) * 8) 8 ~ 0) ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
   _HStream      ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
   _FStream      ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M¹Type alg) → Channel dom (FOutType alg)
