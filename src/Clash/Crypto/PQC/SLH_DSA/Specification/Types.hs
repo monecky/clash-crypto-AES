@@ -35,6 +35,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , PKSeedType
   , SKSeedType
   , PKRootType
+  , SKPrfType
   , ByteSize
   , NBlockType
   , MType
@@ -42,6 +43,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , M²Type
   , MˡType
   , RType
+  , Opt_randType
   , FOutType
   , HOutType
   , TˡOutType
