@@ -197,40 +197,57 @@ serializeHash input
 
   -- a value that should never be evaluated
   neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
+type ChunksPerInput a n = Div (BitSize a) n
 
--- serializeHMAC ∷ ∀ (alg ∷ SHA) (n ∷ Nat) (dom ∷ Domain) k i . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
---     ( BitPack k, KnownNat (BitSize k), KnownNat n
---   , 1 ≤ n, 1 ≤ BitSize k, BitSize k `Mod` n ~ 0) ⇒ 
---       ( BitPack i, KnownNat (BitSize i), KnownNat n
---   , 1 ≤ n, 1 ≤ BitSize i, BitSize i `Mod` n ~ 0) ⇒ 
---     Channel  dom (k, i) → 
---     -- ^ streamed input that needs to be split up.
---     DataStream dom (Index ((BlockSize alg `Div` 8) + 1)) () (BitVector n)
--- serializeHMAC input
---   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize k) n)
---   , Rewrite ← using @(CancelMultiple (BitSize k) n)
---   , Rewrite ← using @(KeepsPositiveIfMultiple (BitSize i) n)
---   , Rewrite ← using @(CancelMultiple (BitSize i) n)
---   , SHAFacts _ ← knownSHA @alg
---     = leToPlusKN @1 @(BitSize k `Div` n)
---     $ leToPlusKN @1 @(BitSize i `Div` n)
---     $ mealy (~~>)
---       ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
---       , 0 ∷ Index ((BitSize a `Div` n) + 1)
---       ) (liftA2 (,) (content input) (hasUpdates input))
---  where
---   (buf, n) ~~> (Just _, False) | n > 0 = -- 
---     ((buf <<+ neval, satPred SatBound n), frame $ head buf)
---    where
---     frame | n == maxBound = Start ()
---           | n > 1         = Middle
---           | otherwise     = End 0
 
---   _ ~~> (Just x, True)  = -- (Just x, True) equivalent to 
---     ((bitCoerce x, maxBound), Idle)
+serializeHMAC
+  ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a
+   . ( KnownDomain dom
+     , HiddenClockResetEnable dom
+     , BitPack a
+     , KnownNat (BitSize a)
+     , KnownNat n
+     , 1 ≤ n
+     , 1 ≤ BitSize a
+     , BitSize a `Mod` n ~ 0
+     , BitSize a ~ Div (BitSize a) n * n
+     )
+  ⇒ Channel dom a
+  → DataStream dom (Index n) () (BitVector n)
+serializeHMAC input
+  | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
+  , Rewrite ← using @(CancelMultiple (BitSize a) n)
+  = leToPlusKN @1 @(ChunksPerInput a n)
+  $ mealy step
+      ( repeat poison ∷ Vec (ChunksPerInput a n) (BitVector n)
+      , 0 ∷ Index (ChunksPerInput a n + 1)
+      )
+      (liftA2 (,) (content input) (hasUpdates input))
+ where
 
---   (buf, n) ~~> _ =
---     ((buf, n), if n > 0 then NoData else Idle)
 
---   -- a value that should never be evaluated
---   neval = error "Clash.Crypto.PQC.SLH_DSA.Specification.Defintions.Hash.serializeEn: Mealy"
+  step ∷ (Vec (ChunksPerInput a n) (BitVector n), Index (ChunksPerInput a n + 1))
+       → (Maybe a, Bool)
+       → ( (Vec (ChunksPerInput a n) (BitVector n), Index (ChunksPerInput a n + 1))
+         , Frame (Index n) () (BitVector n)
+         )
+
+  step (buf, i) (Just _, False) | i > 0 =
+    let chunk = buf !! 0
+        buf'  = buf <<+ poison
+        i'    = satPred SatBound i
+        idx   = fromIntegral (natToNum @(ChunksPerInput a n) - i)
+        frame
+          | i == natToNum @(ChunksPerInput a n) = Start idx chunk
+          | i == 1                              = End () chunk
+          | otherwise                           = Middle chunk
+    in ((buf' , i'), frame)
+
+  step _ (Just x, True) =
+    let chunks = bitCoerce x :: Vec (ChunksPerInput a n) (BitVector n)
+    in ((chunks, maxBound), Idle)
+
+  step st@(_, i) _ =
+    (st, if i > 0 then NoData else Idle)
+
+  poison = errorX "serializeHMAC: unreachable poison value"
