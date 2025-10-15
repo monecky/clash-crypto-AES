@@ -19,15 +19,59 @@ import Clash.Prelude
 import Clash.Crypto.Hash.SHA
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types (ByteSize, ByteType)
 import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
-
-mgf1Streaming ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)  (hLen ∷ Nat).
- (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg) 
- ⇒ DataStream () (Index ℓ) (BitVector ℓ) → Channel (BitVector (maskLen * ByteSize))
+import Clash.Signal.DataStream
+import Clash.Signal.Channel
+import GHC.TypeNats.Proof (Rewrite(..), using)
+import Data.Constraint.Nat.Extra
+  ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
+  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
+  )
+import Language.Haskell.Unicode (type (≤))
+mgf1Streaming ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)
+  (hLen ∷ Nat) dom.
+ (ByteSize <= BlockSize alg, Mod (BlockSize alg) 8 ~ 0, Mod (ℓ + 32) 8 ~ 0, KnownDomain dom, HiddenClockResetEnable dom, KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg) 
+ ⇒ Channel dom (BitVector ℓ) → Channel dom (BitVector (maskLen * ByteSize))
 mgf1Streaming mgfSeed
     | SHAFacts {} ← knownSHA @alg 
-    = resize (concatBitVector# (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ ByteType))))
+    = fmap (\x → resize x) (concatMapC (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ ByteType))))
     where 
-        go ∷ ByteType → Digest alg
-        go x = sha @alg (fmap  (\x → (x ++# c @4 x)) mgfSeed)
+        go ∷ ByteType → Channel dom (Digest alg)
+        go x = sha @alg (serializeHash @ByteSize (fmap  (\y → (y ++# c @4 x)) mgfSeed))
         c ∷ ∀ xLen . KnownNat xLen ⇒ ByteType → BitVector (ByteSize * xLen)
         c x = resize x ∷  BitVector (ByteSize * xLen)
+
+serializeHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+    ( BitPack a, KnownNat (BitSize a), KnownNat n
+  , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
+    Channel  dom a → 
+    -- ^ streamed input that needs to be split up.
+    DataStream dom () (Index n) (BitVector n)
+serializeHash input
+  | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
+  , Rewrite ← using @(CancelMultiple (BitSize a) n)
+    = leToPlusKN @1 @(BitSize a `Div` n)
+  $ mealy (~~>)
+      ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
+      , 0 ∷ Index ((BitSize a `Div` n) + 1)
+      ) (liftA2 (,) (content input) (hasUpdates input))
+ where
+  (buf, n) ~~> (Just _, False) | n > 0 = -- 
+    ((buf <<+ neval, satPred SatBound n), frame $ head buf)
+   where
+    frame | n == maxBound = Start ()
+          | n > 1         = Middle
+          | otherwise     = End 0
+
+  _ ~~> (Just x, True)  = -- (Just x, True) equivalent to 
+    ((bitCoerce x, maxBound), Idle)
+
+  (buf, n) ~~> _ =
+    ((buf, n), if n > 0 then NoData else Idle)
+
+  -- a value that should never be evaluated
+  neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
+
+concatMapC ∷ ∀ ℓ n dom . (KnownNat ℓ, KnownNat n) ⇒  Vec n (Channel dom (BitVector ℓ)) -> Channel dom (BitVector (ℓ * n))
+concatMapC Nil = errorX "Invalid vector"
+concatMapC ( x `Cons` Nil) = x 
+concatMapC (x `Cons` xs) = liftA2 (++#) x (concatMapC xs)

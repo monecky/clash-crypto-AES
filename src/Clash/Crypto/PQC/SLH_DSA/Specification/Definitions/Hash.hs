@@ -120,7 +120,7 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
                 makeOutput output = truncˡ (unconcatBitVector# output)
                 go ∷ ∀ ℓ . (KnownNat ℓ, Div (1152 + (ℓ * 8)) 8 ~ (144 + ℓ),  Div (640 + (ℓ * 8)) 8 ~  80 + ℓ) ⇒ (PKSeedType alg, Opt_randType alg, MType ℓ)  → BitVector (1152 + (ℓ * 8))
                 go (skPrf, opt_rand, m) = toInt @(Div ((BlockSize SHA512)  +  BitSize (Opt_randType alg) + BitSize (MType ℓ)) ByteSize) @ByteSize @0 
-                    (toByte @(Div (BlockSize SHA512) ByteSize) (resize (pack skPrf)) ‖  opt_rand ‖  m)
+                    (toByte @(Div (BlockSize SHA512) ByteSize) @ByteSize @1024 (resize (pack skPrf)) ‖  opt_rand ‖  m)
 --   _HᵐˢᵍStream   ∷ (KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
 --   _HᵐˢᵍStream _ r pkSeed pkRoot m = 
 --     _PRFStream    ∷ ∀ (alg :: SLH_DSA).  ( alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg) ⇒ Proxy alg → PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
@@ -227,41 +227,42 @@ serializeHMAC
      , BitSize a ~ Div (BitSize a) n * n
      )
   ⇒ Channel dom a
-  → DataStream dom (Index n) () (BitVector n)
+  → DataStream dom (Index (Div (BlockSize SHA512) 8 + 1)) () (BitVector n)
 serializeHMAC input
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
   , Rewrite ← using @(CancelMultiple (BitSize a) n)
-  = leToPlusKN @1 @(ChunksPerInput a n)
-  $ mealy step
-      ( repeat poison ∷ Vec (ChunksPerInput a n) (BitVector n)
-      , 0 ∷ Index (ChunksPerInput a n + 1)
-      )
-      (liftA2 (,) (content input) (hasUpdates input))
- where
+  = errorX "TODO: Not implemented yet"
+--     leToPlusKN @1 @(ChunksPerInput a n)
+--   $ mealy step
+--       ( repeat poison ∷ Vec (ChunksPerInput a n) (BitVector n)
+--       , 0 ∷ Index (ChunksPerInput a n + 1)
+--       )
+--       (liftA2 (,) (content input) (hasUpdates input))
+--  where
 
 
-  step ∷ (Vec (ChunksPerInput a n) (BitVector n), Index (ChunksPerInput a n + 1))
-       → (Maybe a, Bool)
-       → ( (Vec (ChunksPerInput a n) (BitVector n), Index (ChunksPerInput a n + 1))
-         , Frame (Index n) () (BitVector n)
-         )
+--   step ∷ (Vec (ChunksPerInput a n) (BitVector n), Index (ChunksPerInput a n + 1))
+--        → (Maybe a, Bool)
+--        → ( (Vec (ChunksPerInput a n) (BitVector n), Index (ChunksPerInput a n + 1))
+--          , Frame (Index n) () (BitVector n)
+--          )
 
-  step (buf, i) (Just _, False) | i > 0 =
-    let chunk = buf !! 0
-        buf'  = buf <<+ poison
-        i'    = satPred SatBound i
-        idx   = fromIntegral (natToNum @(ChunksPerInput a n) - i)
-        frame
-          | i == natToNum @(ChunksPerInput a n) = Start idx chunk
-          | i == 1                              = End () chunk
-          | otherwise                           = Middle chunk
-    in ((buf' , i'), frame)
+--   step (buf, i) (Just _, False) | i > 0 =
+--     let chunk = buf !! 0
+--         buf'  = buf <<+ poison
+--         i'    = satPred SatBound i
+--         idx   = fromIntegral (natToNum @(ChunksPerInput a n) - i)
+--         frame
+--           | i == natToNum @(ChunksPerInput a n) = Start idx chunk
+--           | i == 1                              = End () chunk
+--           | otherwise                           = Middle chunk
+--     in ((buf' , i'), frame)
 
-  step _ (Just x, True) =
-    let chunks = bitCoerce x :: Vec (ChunksPerInput a n) (BitVector n)
-    in ((chunks, maxBound), Idle)
+--   step _ (Just x, True) =
+--     let chunks = bitCoerce x :: Vec (ChunksPerInput a n) (BitVector n)
+--     in ((chunks, maxBound), Idle)
 
-  step st@(_, i) _ =
-    (st, if i > 0 then NoData else Idle)
+--   step st@(_, i) _ =
+--     (st, if i > 0 then NoData else Idle)
 
-  poison = errorX "serializeHMAC: unreachable poison value"
+--   poison = errorX "serializeHMAC: unreachable poison value"

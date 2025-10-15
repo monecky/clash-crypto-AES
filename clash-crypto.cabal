@@ -98,6 +98,7 @@ library
     Clash.Crypto.Cipher.AES.Specification.Types
     Clash.Crypto.Hash.MGF1
     Clash.Crypto.Hash.MGF1.Specification
+    Clash.Crypto.Hash.MGF1.Streaming
     Clash.Crypto.ECDSA.Fraction
     Clash.Crypto.ECDSA.InverseModulo.Internal
     Clash.Crypto.ECDSA.InverseModulo
