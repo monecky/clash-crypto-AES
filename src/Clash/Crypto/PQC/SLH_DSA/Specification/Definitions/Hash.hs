@@ -34,9 +34,10 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Hash
 import Clash.Crypto.Hash.SHA.Specification as Spec
-import Clash.Crypto.Hash.MGF1.Specification as MGF1
+import Clash.Crypto.Hash.MGF1.Specification as MGF1Spec
 import Clash.Crypto.Hash.SHA as SHA
 import Clash.Crypto.MAC.HMAC as HMAC
+import Clash.Crypto.Hash.MGF1.Streaming as MGF1
 import GHC.TypeNats.Proof (Rewrite(..), using)
 import Data.Constraint.Nat.Extra
   ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
@@ -53,7 +54,7 @@ instance SLH_DSA_hash SLH_DSA_SHA2_128s where
     _Hᵐˢᵍ _ r pkSeed pkRoot m   
         | SLH_DSAFacts {} ← knownSLH_DSA @alg
         = truncˡ 
-            (unconcatBitVector#   (MGF1.mgf1 
+            (unconcatBitVector#   (MGF1Spec.mgf1 
                 @SHA256 
                 @(M alg) -- maskLen
                 @((N alg + N alg + Div (MessageDigestSize SHA256) ByteSize) * ByteSize) -- ℓ 
@@ -121,17 +122,18 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
                 go ∷ ∀ ℓ . (KnownNat ℓ, Div (1152 + (ℓ * 8)) 8 ~ (144 + ℓ),  Div (640 + (ℓ * 8)) 8 ~  80 + ℓ) ⇒ (PKSeedType alg, Opt_randType alg, MType ℓ)  → BitVector (1152 + (ℓ * 8))
                 go (skPrf, opt_rand, m) = toInt @(Div ((BlockSize SHA512)  +  BitSize (Opt_randType alg) + BitSize (MType ℓ)) ByteSize) @ByteSize @0 
                     (toByte @(Div (BlockSize SHA512) ByteSize) @ByteSize @1024 (resize (pack skPrf)) ‖  opt_rand ‖  m)
---   _HᵐˢᵍStream   ∷ (KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
---   _HᵐˢᵍStream _ r pkSeed pkRoot m = 
---     _PRFStream    ∷ ∀ (alg :: SLH_DSA).  ( alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg) ⇒ Proxy alg → PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
---     _PRFStream   _ pkSeed skSeed adrs 
---         | SLH_DSAFacts {} ← knownSLH_DSA @alg
---         = truncˡ (unconcatBitVector# (Spec.hash 
---                 @SHA256 
---                 @(BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (SKSeedType alg)) 
---                     (toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (SKSeedType alg)) 8) @ByteSize @0 
---                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed))))
-  
+    -- _HᵐˢᵍStream   ∷ (KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
+    -- _HᵐˢᵍStream _ r pkSeed pkRoot m = 
+    _PRFStream    ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg) ⇒  Proxy alg → Channel dom (PKSeedType alg, SKSeedType alg, ADRSType alg) → Channel dom (PRFOutType alg)
+    _PRFStream   _  input
+        | SLH_DSAFacts {} ← knownSLH_DSA @alg
+        = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
+            where
+            transfer = fmap go input
+            makeOutput output = truncˡ (unconcatBitVector# output)
+            go (pkSeed, skSeed, adrs) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (SKSeedType alg)) 8) @ByteSize @0 
+                    (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed)
+
     _TˡStream     ∷ ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg, KnownNat ℓ, 
          Div (688 + ((ℓ * 16) * 8)) 8
                         ~ (86 + (ℓ * 16)) , Mod ((86 + (ℓ * 16)) * 8) 8 ~ 0) ⇒ 
