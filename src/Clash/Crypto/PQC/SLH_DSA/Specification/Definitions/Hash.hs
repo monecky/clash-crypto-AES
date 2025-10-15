@@ -122,8 +122,28 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
                 go ∷ ∀ ℓ . (KnownNat ℓ, Div (1152 + (ℓ * 8)) 8 ~ (144 + ℓ),  Div (640 + (ℓ * 8)) 8 ~  80 + ℓ) ⇒ (PKSeedType alg, Opt_randType alg, MType ℓ)  → BitVector (1152 + (ℓ * 8))
                 go (skPrf, opt_rand, m) = toInt @(Div ((BlockSize SHA512)  +  BitSize (Opt_randType alg) + BitSize (MType ℓ)) ByteSize) @ByteSize @0 
                     (toByte @(Div (BlockSize SHA512) ByteSize) @ByteSize @1024 (resize (pack skPrf)) ‖  opt_rand ‖  m)
-    -- _HᵐˢᵍStream   ∷ (KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
-    -- _HᵐˢᵍStream _ r pkSeed pkRoot m = 
+    _HᵐˢᵍStream   ∷  ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat) . (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg,  KnownNat ℓ
+                        ,  1 <= Div (384 + (ℓ * 8)) 8 * 8, Div (384 + (ℓ * 8)) 8 ~ (48 + ℓ), Mod (384 + (ℓ * 8)) 8 ~ 0) 
+                ⇒ Proxy alg → Channel dom (RType alg, PKSeedType alg, PKRootType alg , MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
+    _HᵐˢᵍStream _ input
+        | SLH_DSAFacts {} ← knownSLH_DSA @alg
+        = fmap makeOutput (MGF1.mgf1Stream @SHA256 @(M alg) transfer)
+            where 
+                shaResult =  (SHA.sha @SHA256 (serializeHash @ByteSize transfer⁰))
+                    where
+                        transfer⁰ = fmap go⁰ input
+                        go⁰ ∷ ∀ ℓ . (KnownNat ℓ, Div (384 + (ℓ * 8)) 8 ~ (48 + ℓ)) ⇒ (RType alg, PKSeedType alg, PKRootType alg, MType ℓ)  → BitVector (384 + (ℓ * 8))
+                        go⁰ (r⁰, pkSeed⁰, pkRoot⁰, m⁰) = toInt @(Div (BitSize (RType alg)  + BitSize (PKSeedType alg) + BitSize (PKRootType alg) + BitSize (MType ℓ)) ByteSize) @ByteSize @0 
+                            (r⁰ ‖ pkSeed⁰ ‖ pkRoot⁰ ‖ m⁰)
+                transfer = liftA2 (++#) (fmap go input) (shaResult)
+                makeOutput output = truncˡ (unconcatBitVector# output)
+                -- go ∷ ∀ ℓ . (KnownNat ℓ, Div (688 + ((ℓ * 16) * 8)) 8
+                --             ~ (86 + (ℓ * 16))) ⇒ (RType alg → PKSeedType alg → PKRootType alg → MType ℓ)  → BitVector ((86 + (ℓ * 16)) * 8)
+                go (r, pkSeed, pkRoot, m) = toInt @(Div (BitSize (RType alg)  + BitSize (PKSeedType alg)) ByteSize) @ByteSize @0 
+                        (r ‖ pkSeed)
+
+
+
     _PRFStream    ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg) ⇒  Proxy alg → Channel dom (PKSeedType alg, SKSeedType alg, ADRSType alg) → Channel dom (PRFOutType alg)
     _PRFStream   _  input
         | SLH_DSAFacts {} ← knownSLH_DSA @alg

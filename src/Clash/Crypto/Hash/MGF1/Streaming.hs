@@ -12,7 +12,7 @@ In this specific case SHA hash.
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MagicHash #-}
 module Clash.Crypto.Hash.MGF1.Streaming (
-    mgf1Streaming
+    mgf1Stream
 ) where
 import Clash.Prelude
 
@@ -27,11 +27,11 @@ import Data.Constraint.Nat.Extra
   , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
   )
 import Language.Haskell.Unicode (type (≤))
-mgf1Streaming ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)
+mgf1Stream ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)
   (hLen ∷ Nat) dom.
  (ByteSize <= BlockSize alg, Mod (BlockSize alg) 8 ~ 0, Mod (ℓ + 32) 8 ~ 0, KnownDomain dom, HiddenClockResetEnable dom, KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg) 
  ⇒ Channel dom (BitVector ℓ) → Channel dom (BitVector (maskLen * ByteSize))
-mgf1Streaming mgfSeed
+mgf1Stream mgfSeed
     | SHAFacts {} ← knownSHA @alg 
     = fmap (\x → resize x) (concatMapC (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ ByteType))))
     where 
