@@ -1,5 +1,5 @@
 {-|
-Module      : Clash.Crypto.PQC.SLH_DSA.Specification.Properties
+Module      : Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters
 Copyright   : Copyright © 2025 QBayLogic B.V.
 Maintainer  : QBayLogic B.V.
 Stability   : experimental
@@ -12,14 +12,14 @@ specification.
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "[]" #-}
 {-# HLINT ignore "Use camelCase" #-}
-module Clash.Crypto.PQC.SLH_DSA.Specification.Properties where
+module Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters where
 import Data.Proxy (Proxy(..))
 
 import Clash.Prelude
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
-import Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters
-data SLH_DSAFacts (alg ∷ SLH_DSA) where
-    SLH_DSAFacts ∷
+
+data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
+    SLH_DSAParametersFacts ∷
         ( KnownNat (N alg)
         , KnownNat (H alg)
         , KnownNat (D alg)
@@ -49,20 +49,19 @@ data SLH_DSAFacts (alg ∷ SLH_DSA) where
         , Len¹ alg ~ 2 * N alg
         , Len² alg ~ 3
         , Len alg ~ 2 * N alg + 3
-        , KnownSLH_DSAParameters alg 
         ) ⇒
         Proxy alg →
-        SLH_DSAFacts alg
+        SLH_DSAParametersFacts alg
 
 -- | We utilize the type checker to provide evidence for all of the
 -- required properties, which are proven automatically for each
 -- instance of the class.
-class    KnownSLH_DSA alg                    where knownSLH_DSA ∷ SLH_DSAFacts alg
-instance KnownSLH_DSA SLH_DSA_SHA2_128s      where knownSLH_DSA = SLH_DSAFacts Proxy
-instance KnownSLH_DSA SLH_DSA_SHA2_128f      where knownSLH_DSA = SLH_DSAFacts Proxy
-instance KnownSLH_DSA SLH_DSA_SHA2_192s      where knownSLH_DSA = SLH_DSAFacts Proxy
-instance KnownSLH_DSA SLH_DSA_SHA2_192f      where knownSLH_DSA = SLH_DSAFacts Proxy
-instance KnownSLH_DSA SLH_DSA_SHA2_256s      where knownSLH_DSA = SLH_DSAFacts Proxy
-instance KnownSLH_DSA SLH_DSA_SHA2_256f      where knownSLH_DSA = SLH_DSAFacts Proxy
+class    KnownSLH_DSAParameters alg                    where knownSLH_DSAParameters ∷ SLH_DSAParametersFacts alg
+instance KnownSLH_DSAParameters SLH_DSA_SHA2_128s      where knownSLH_DSAParameters = SLH_DSAParametersFacts Proxy
+instance KnownSLH_DSAParameters SLH_DSA_SHA2_128f      where knownSLH_DSAParameters = SLH_DSAParametersFacts Proxy
+instance KnownSLH_DSAParameters SLH_DSA_SHA2_192s      where knownSLH_DSAParameters = SLH_DSAParametersFacts Proxy
+instance KnownSLH_DSAParameters SLH_DSA_SHA2_192f      where knownSLH_DSAParameters = SLH_DSAParametersFacts Proxy
+instance KnownSLH_DSAParameters SLH_DSA_SHA2_256s      where knownSLH_DSAParameters = SLH_DSAParametersFacts Proxy
+instance KnownSLH_DSAParameters SLH_DSA_SHA2_256f      where knownSLH_DSAParameters = SLH_DSAParametersFacts Proxy
   {-TODO:When the right implementation exist of SHA other algorithms can be added-}
 

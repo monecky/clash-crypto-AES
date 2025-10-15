@@ -11,4 +11,7 @@ Streaming based secure hash algorithms according to
 
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Clash.Crypto.Hash.MGF1 where
+module Clash.Crypto.Hash.MGF1 (
+    mgf1Stream
+)where
+import Clash.Crypto.Hash.MGF1.Streaming

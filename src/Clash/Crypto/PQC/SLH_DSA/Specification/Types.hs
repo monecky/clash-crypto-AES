@@ -67,7 +67,6 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , TypeType
   -- Hash
   , SLH_DSA_hash(..)
-  , SLH_DSA_hashStream(..)
 )where
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)
