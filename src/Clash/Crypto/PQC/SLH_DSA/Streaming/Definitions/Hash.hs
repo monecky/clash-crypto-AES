@@ -93,7 +93,7 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
             go (pkSeed, skSeed, adrs) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (SKSeedType alg)) 8) @ByteSize @0 
                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed)
 
-    _TˡStream     ∷ ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg, KnownNat ℓ, 
+    _TˡStream     ∷ ∀  (alg :: SLH_DSA) dom  (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg, KnownNat ℓ, 
          Div (688 + ((ℓ * 16) * 8)) 8
                         ~ (86 + (ℓ * 16)) , Mod ((86 + (ℓ * 16)) * 8) 8 ~ 0) ⇒ 
         Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
