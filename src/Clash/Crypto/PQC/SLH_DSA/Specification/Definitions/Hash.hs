@@ -81,7 +81,7 @@ instance SLH_DSA_hash SLH_DSA_SHA2_128s where
   
     _Tˡ     ∷ ∀ (alg :: SLH_DSA) ℓ.  ( alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSA alg, KnownNat ℓ,  Div (688 + ((ℓ * 16) * ByteSize)) ByteSize ~ 86 + (ℓ * 16)) ⇒ Proxy alg → PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
     _Tˡ   _ pkSeed adrs ml
-        | SLH_DSAFacts alg ← knownSLH_DSA @alg
+        | SLH_DSAFacts {} ← knownSLH_DSA @alg
         = truncˡ (unconcatBitVector# (Spec.hash 
                 @SHA256 
                 @(BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (MˡType ℓ alg)) 

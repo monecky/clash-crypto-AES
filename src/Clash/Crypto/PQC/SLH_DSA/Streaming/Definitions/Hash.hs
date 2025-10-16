@@ -33,7 +33,6 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Types
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
-import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Hash
 import Clash.Crypto.Hash.SHA.Specification as Spec
 import Clash.Crypto.Hash.MGF1.Specification as MGF1Spec
 import Clash.Crypto.Hash.SHA as SHA
