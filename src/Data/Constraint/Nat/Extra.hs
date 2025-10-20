@@ -37,6 +37,8 @@ module Data.Constraint.Nat.Extra
   , CLog2IsLessProduct
   , PositiveResultCond0
   , CLog2LECond0
+  , DivTimes
+  , ModTimes
   ) where
 
 import Clash.Prelude
@@ -547,3 +549,40 @@ CLog2LECond0 a b
           2 ^ (m * suc (n / m)) ∎
 /-}
 instance CLog2LECond0 a b ⇒ QED (CLog2LECond0 a b)
+
+instance
+  ( 1 <= b
+  ) ⇒ DivTimes a b
+class
+  ( (a * b) `Div` b ~ a
+  ) ⇒ DivTimes a b
+-- ^ Evidence for
+--
+-- prop> ∀ a b ∈ ℕ. (a · b) div b ≡ a
+--
+{-/ Proof (Coq): DivTimes
+  Require Import Arith.
+  Import Nat.
+  intros a b bpos.
+  rewrite <- neq_0_le_1 in bpos.
+  replace (a * b / b) with (a * b / (1 * b))%nat by now rewrite mul_1_l.
+  rewrite  (Div0.div_mul_cancel_r a 1 b bpos).
+  apply div_1_r.
+/-}
+instance DivTimes a b ⇒ QED (DivTimes a b)
+
+instance ModTimes a b
+class
+  ( (a * b) `Mod` b ~ 0
+  ) ⇒ ModTimes a b
+-- ^ Evidence for
+--
+-- prop> ∀ a b ∈ ℕ. (a · b) mod b ≡ 0
+--
+{-/ Proof (Coq): ModTimes
+  Require Import Arith.
+  Import Nat.
+  intros a b.
+  apply Div0.mod_mul.
+/-}
+instance ModTimes a b ⇒ QED (ModTimes a b)
