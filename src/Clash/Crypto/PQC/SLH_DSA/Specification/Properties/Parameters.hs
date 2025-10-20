@@ -44,6 +44,7 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- , SK alg
         -- , PK alg
         , N alg ≤ 64 -- This constain is needed for Tˡ, PRF, F and H, for SLH_DSA based on SHA
+        , KnownNat(m), N alg + m ~ 32-- This constain is at least needed for Tˡ, PRF, F and H, for SLH_DSA based on SHA
         -- Properties according p.17, TODO it can be delete since it holds for many more cases.
         -- This works as verification methode that the calculation is done right on Type level.
         -- , Lgʷ alg ~ 4
