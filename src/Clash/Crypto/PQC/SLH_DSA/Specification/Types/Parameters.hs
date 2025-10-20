@@ -257,17 +257,17 @@ type W ∷ SLH_DSA → Nat
 type W (alg ∷ SLH_DSA) = 2 ^ Lgʷ alg
 -- Equation 5.2 of FIPS205
 type Len¹ ∷ SLH_DSA → Nat
--- type Len¹ (alg ∷ SLH_DSA) = CeilXDivY (8 * N alg) ( Lgʷ alg )
-type Len¹ (alg ∷ SLH_DSA) = 2 * (N alg)
+type Len¹ (alg ∷ SLH_DSA) = CeilXDivY (8 * N alg) ( Lgʷ alg )
+-- type Len¹ (alg ∷ SLH_DSA) = 2 * (N alg)
 -- Ceil Round If (a `Mod`b <=? (0 ∷ Nat)) (a `Div` b + 0) (a `Div` b + 1)
 -- Floor Round (a `Div` b)
 
 -- Equation 5.3
 --  This is also Algorithm 1, import is that Log2 is none floating point
 type Len² ∷ SLH_DSA → Nat
--- type Len² (alg ∷ SLH_DSA) = FloorXDivY (Log2 ((Len¹ alg) * (W alg - 1))) (Lgʷ alg) + 1  
-type family Len² (alg ∷ SLH_DSA) where
-  Len² _                  = 3
+type Len² (alg ∷ SLH_DSA) = FloorXDivY (Log2 ((Len¹ alg) * (W alg - 1))) (Lgʷ alg) + 1  
+-- type family Len² (alg ∷ SLH_DSA) where
+  -- Len² _                  = 3
 -- Equation 5.4
 type Len ∷ SLH_DSA → Nat
 type Len (alg ∷ SLH_DSA) = Len¹ alg + Len² alg
