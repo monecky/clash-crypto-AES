@@ -46,21 +46,20 @@ import Language.Haskell.Unicode (type (≤))
 
 instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where 
   -- TODO make a DataStream as input because algorithm 19
-    _PRFᵐˢᵍStream ∷  ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat) . (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg, KnownNat ℓ
-            , Mod (1152 + (ℓ * 8)) 8 ~ 0
-            , Div (1152 + (ℓ * 8)) 8 ~ (144 + ℓ)
-            , Div (640 + (ℓ * 8)) 8 ~ (80 + ℓ)
-            , Mod (640 + (ℓ * 8)) 8 ~ 0) 
+    _PRFᵐˢᵍStream ∷  ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat) . (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg, KnownNat ℓ) 
             ⇒ Proxy alg → Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
     _PRFᵐˢᵍStream _ input  
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = fmap makeOutput (HMAC.hmac @SHA512 (serializeHMAC @ByteSize transfer))
+        , Rewrite ← using @(ModTimes (BlockSize SHA256 + N alg + ℓ) ByteSize) 
+        , Rewrite ← using @(DivTimes (BlockSize SHA256 + N alg + ℓ) ByteSize) 
+            = fmap makeOutput (HMAC.hmac @SHA256 (serializeHMAC @ByteSize transfer))
                 where
                 transfer = fmap go input
-                makeOutput output = truncˡ (unconcatBitVector# output)
-                go ∷ ∀ ℓ . (KnownNat ℓ, Div (1152 + (ℓ * 8)) 8 ~ (144 + ℓ),  Div (640 + (ℓ * 8)) 8 ~  80 + ℓ) ⇒ (PKSeedType alg, Opt_randType alg, MType ℓ)  → BitVector (1152 + (ℓ * 8))
-                go (skPrf, opt_rand, m) = toInt @(Div ((BlockSize SHA512)  +  BitSize (Opt_randType alg) + BitSize (MType ℓ)) ByteSize) @ByteSize @0 
-                    (toByte @(Div (BlockSize SHA512) ByteSize) @ByteSize @1024 (resize (pack skPrf)) ‖  opt_rand ‖  m)
+                makeOutput output = truncˡ (unconcatBitVector# output)                                
+                go ∷ (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ (SKPrfType alg, Opt_randType alg, MType ℓ) → BitVector ((BlockSize SHA256 + N alg + ℓ) * ByteSize)
+                go (skPrf, opt_rand, m)
+                    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                    = concatBitVector# (skPrf ‖ unconcatBitVector# @(BlockSize SHA256 - N alg) @ByteSize 0x0 ‖ opt_rand ‖ m)
   -- TODO make a DataStream as input because algorithm 19, 20
     _HᵐˢᵍStream   ∷  ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat) . (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg,  KnownNat ℓ) 
                 ⇒ Proxy alg → Channel dom (RType alg, PKSeedType alg, PKRootType alg , MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
@@ -192,7 +191,7 @@ serializeHMAC
      , BitSize a ~ Div (BitSize a) n * n
      )
   ⇒ Channel dom a
-  → DataStream dom (Index (Div (BlockSize SHA512) 8 + 1)) () (BitVector n)
+  → DataStream dom (Index (Div (BlockSize SHA256) 8 + 1)) () (BitVector n)
 serializeHMAC input
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
   , Rewrite ← using @(CancelMultiple (BitSize a) n)

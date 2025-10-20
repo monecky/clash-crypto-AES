@@ -45,8 +45,7 @@ import Clash.Signal.Delayed.Extra
 import Clash.Signal.Extra (apWhen)
 class SLH_DSA_hashStream (alg ∷ SLH_DSA) where
   -- Since a DataStream is used for flexible size messages and that is neded for algorithm 19, 20, PRFᵐˢᵍ and Hᵐˢᵍ, need to take a stream as input.
-  _PRFᵐˢᵍStream ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ , Div (640 + (ℓ * 8)) 8 ~  80 + ℓ
-                  , Mod (640 + (ℓ * 8)) 8 ~ 0, Mod (1152 + (ℓ * 8)) 8 ~ 0, Div (1152 + (ℓ * 8)) 8 ~ (144 + ℓ)) 
+  _PRFᵐˢᵍStream ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) 
                   ⇒ Proxy alg → Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
   _HᵐˢᵍStream   ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) 
                   ⇒ Proxy alg → Channel dom (RType alg, PKSeedType alg, PKRootType alg, MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
