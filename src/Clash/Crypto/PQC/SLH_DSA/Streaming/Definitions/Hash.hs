@@ -126,13 +126,13 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
                 (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ m1)
 
 
-go⁰ ∷  ∀ (alg :: SLH_DSA) ℓ . (KnownNat ℓ, KnownSLH_DSAParameters alg, KnownNat (N alg), N alg ≤ 64) ⇒ (PKSeedType alg, ADRSType alg, MˡType ℓ alg)  → BitVector ((64 + ADRSTypeVectorSize alg + ℓ * N alg) * ByteSize)
+go⁰ ∷  ∀ (alg :: SLH_DSA) ℓ . (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒ (PKSeedType alg, ADRSType alg, MˡType ℓ alg)  → BitVector ((64 + ADRSTypeVectorSize alg + ℓ * N alg) * ByteSize)
 go⁰ (pkSeed, adrs, ml) 
-    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    = concatBitVector# sub
-    where 
-      sub ∷ (KnownNat ℓ) ⇒ Vec (64 + ADRSTypeVectorSize alg + ℓ * N alg) ByteType
-      sub = pkSeed ‖ unconcatBitVector# @(64 - N alg) @ByteSize 0x0 ‖ getADRSVector adrs ‖ ml
+    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+    = concatBitVector# (pkSeed ‖ unconcatBitVector# @(64 - N alg) @ByteSize 0x0 ‖ getADRSVector adrs ‖ ml)
+    -- where 
+    --   sub ∷ (KnownNat ℓ) ⇒ Vec (64 + ADRSTypeVectorSize alg + ℓ * N alg) ByteType
+    --   sub = 
 -- TODO a function that convert a Channel (BitVector ℓ) to DataStream  dom (Index n) (BitVector n)
 -- Inspiration can be taken of a mealy machine and hmac serialisation is taken.
 serializeHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 

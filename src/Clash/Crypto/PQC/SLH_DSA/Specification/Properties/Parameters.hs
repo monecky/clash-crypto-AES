@@ -43,7 +43,7 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- , PublicKey alg
         -- , SK alg
         -- , PK alg
-        , KnownNat (N alg), N alg ≤ 64
+        , N alg ≤ 64
         -- Properties according p.17, TODO it can be delete since it holds for many more cases.
         -- This works as verification methode that the calculation is done right on Type level.
         -- , Lgʷ alg ~ 4
