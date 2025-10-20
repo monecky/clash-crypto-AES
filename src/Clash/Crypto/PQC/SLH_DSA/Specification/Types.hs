@@ -54,6 +54,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   -- Address
   , ADRSType(..)
   , ADRSTypeType(..)
+  , ADRSTypeVectorSize
   , LayerAddressSize
   , TreeAddressSize
   , TypeSize

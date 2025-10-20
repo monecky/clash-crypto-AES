@@ -22,6 +22,11 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Types
 import Data.Proxy (Proxy(..))
 import Data.Constraint.Nat.Extra
 import GHC.TypeNats.Proof (Rewrite(..), using)
+import GHC.TypeNats.Proof (Rewrite(..), using)
+import Data.Constraint.Nat.Extra
+  ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
+  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple, DivTimes, ModTimes
+  )
 ------------------------------
 -- Setters
 ------------------------------
@@ -92,18 +97,17 @@ getKeyPairAddress ADRSType{keyPairAddress = keyPairAddress} = toInt keyPairAddre
 getTreeIndex ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg)⇒ ADRSType alg → BitVector (HashAddressTreeIndexSize alg * ByteSize) 
 getTreeIndex ADRSType{hashAddressTreeIndexType = hashAddressTreeIndexType} = toInt hashAddressTreeIndexType
 
-getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg, Div
-                           ((LayerAddressSize alg * 8
-                             + (TreeAddressSize alg * 8 + TypeSize alg * 8))
-                            + 96)
-                           8
-                         * 8
-                        ~ (LayerAddressSize alg * 8
-                            + (TreeAddressSize alg * 8 + TypeSize alg * 8))
-                           + 96) ⇒ ADRSType alg → Vec (Div (BitSize (ADRSType alg)) ByteSize) (BitVector (ByteSize))
-getADRSVector adrs
+getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg → Vec (ADRSTypeVectorSize alg) ByteType
+getADRSVector ADRSType{
+              layerAddress             = layerAddress             
+            , treeAddress              = treeAddress              
+            , typeAddress              = typeAddress              
+            , keyPairAddress           = keyPairAddress           
+            , chainAddressTreeHeight   = chainAddressTreeHeight   
+            , hashAddressTreeIndexType = hashAddressTreeIndexType } 
             | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg  
-              = unconcatBitVector#  (getADRSBitVector adrs)
+            -- , Rewrite ← using @(DivTimes (((LayerAddressSize alg * ByteSize) + ((TreeAddressSize alg * ByteSize) + (TypeSize alg * ByteSize))) + 96) ByteSize)
+              = layerAddress ++ treeAddress ++ typeAddress ++ keyPairAddress ++ chainAddressTreeHeight ++ hashAddressTreeIndexType
 getADRSBitVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg → BitVector (BitSize (ADRSType alg)) 
 getADRSBitVector 
             | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg  

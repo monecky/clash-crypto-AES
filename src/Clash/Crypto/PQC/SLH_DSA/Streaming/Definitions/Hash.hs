@@ -40,7 +40,7 @@ import Clash.Crypto.Hash.MGF1.Streaming as MGF1
 import GHC.TypeNats.Proof (Rewrite(..), using)
 import Data.Constraint.Nat.Extra
   ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
-  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
+  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple, DivTimes, ModTimes
   )
 import Language.Haskell.Unicode (type (≤))
 
@@ -82,7 +82,8 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
 
 
 
-    _PRFStream    ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg) ⇒  Proxy alg → Channel dom (PKSeedType alg, SKSeedType alg, ADRSType alg) → Channel dom (PRFOutType alg)
+    _PRFStream    ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg) 
+                  ⇒  Proxy alg → Channel dom (PKSeedType alg, SKSeedType alg, ADRSType alg) → Channel dom (PRFOutType alg)
     _PRFStream   _  input
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
@@ -92,23 +93,18 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
             go (pkSeed, skSeed, adrs) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (SKSeedType alg)) 8) @ByteSize @0 
                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed)
 
-    _TˡStream     ∷ ∀  (alg :: SLH_DSA) dom  (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg, KnownNat ℓ, 
-         Div (688 + ((ℓ * 16) * 8)) 8
-                        ~ (86 + (ℓ * 16)) , Mod ((86 + (ℓ * 16)) * 8) 8 ~ 0) ⇒ 
-        Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
-    _TˡStream   _ input
-        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-        = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
-            where
-            transfer = fmap go input
-            makeOutput output = truncˡ (unconcatBitVector# output)
-            go ∷ ∀ ℓ . (KnownNat ℓ, Div (688 + ((ℓ * 16) * 8)) 8
-                        ~ (86 + (ℓ * 16))) ⇒ (PKSeedType alg, ADRSType alg, MˡType ℓ alg)  → BitVector ((86 + (ℓ * 16)) * 8)
-            go (pkSeed, adrs, ml) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (MˡType ℓ alg)) ByteSize) @ByteSize @0 
-                (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ ml)
+    -- _TˡStream     ∷ ∀  (alg :: SLH_DSA) dom  (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg, KnownNat ℓ) 
+    --               ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
+    -- _TˡStream   _ input
+    --     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    --     = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
+    --         where
+    --         transfer = fmap go input
+    --         makeOutput output = truncˡ (unconcatBitVector# output)
 
-    _HStream      ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg) ⇒ 
-        Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
+
+    _HStream      ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg) 
+                  ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
     _HStream _ input
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
@@ -118,8 +114,8 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
             go (pkSeed, adrs, m2) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M²Type alg)) ByteSize) @ByteSize @0 
                 (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ m2)
 
-    _FStream      ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg) ⇒ 
-        Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M¹Type alg) → Channel dom (FOutType alg)
+    _FStream      ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg) 
+                  ⇒ Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M¹Type alg) → Channel dom (FOutType alg)
     _FStream _ input
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
@@ -130,7 +126,13 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
                 (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ m1)
 
 
-
+go⁰ ∷  ∀ (alg :: SLH_DSA) ℓ . (KnownNat ℓ, KnownSLH_DSAParameters alg, KnownNat (N alg), N alg ≤ 64) ⇒ (PKSeedType alg, ADRSType alg, MˡType ℓ alg)  → BitVector ((64 + ADRSTypeVectorSize alg + ℓ * N alg) * ByteSize)
+go⁰ (pkSeed, adrs, ml) 
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    = concatBitVector# sub
+    where 
+      sub ∷ (KnownNat ℓ) ⇒ Vec (64 + ADRSTypeVectorSize alg + ℓ * N alg) ByteType
+      sub = pkSeed ‖ unconcatBitVector# @(64 - N alg) @ByteSize 0x0 ‖ getADRSVector adrs ‖ ml
 -- TODO a function that convert a Channel (BitVector ℓ) to DataStream  dom (Index n) (BitVector n)
 -- Inspiration can be taken of a mealy machine and hmac serialisation is taken.
 serializeHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 

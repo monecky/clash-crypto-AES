@@ -118,6 +118,7 @@ deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), K
 deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ NFDataX (ADRSType alg)
 deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ Eq      (ADRSType alg)
 deriving anyclass instance (KnownNat (TreeAddressSize alg), KnownNat (H' alg), KnownNat (LayerAddressSize alg), KnownNat (TypeSize alg), KnownNat (N alg)) ⇒ Ord     (ADRSType alg)
+type ADRSTypeVectorSize alg = LayerAddressSize alg + TreeAddressSize alg + TypeSize alg + KeyPairAddressSize alg + ChainAddressTreeHeightSize alg + HashAddressTreeIndexSize alg
 type ADRSTypeType ∷ Type
 data ADRSTypeType =
     WOTS_HASH -- 0
