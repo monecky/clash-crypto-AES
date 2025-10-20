@@ -39,7 +39,7 @@ chain tmp
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg) 
                     → BitVector (ChainAddressTreeHeightSize alg * ByteSize)
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg)
-                function alg x1 j = liftA3 (,,) (_FStream alg (fmap (go j) x1)) pkSeed adrs
+                function alg x1 j = zip3C (_FStream alg (fmap (go j) x1)) pkSeed adrs
                     where 
                         pkSeed ∷ Channel dom (PKSeedType alg)
                         pkSeed = sndOf3C x1
