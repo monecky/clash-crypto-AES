@@ -115,15 +115,8 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
             where
             transfer = fmap go input
             makeOutput output = truncˡ (unconcatBitVector# output)
-            go (pkSeed, adrs, m2) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M²Type alg)) 8) @ByteSize @0 
+            go (pkSeed, adrs, m2) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M²Type alg)) ByteSize) @ByteSize @0 
                 (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ m2)
-                -- 16, 64 - 16 , 32, 16 = 64 + 32 + 16 * 8 896
-
-        -- = truncˡ (unconcatBitVector# (Spec.hash 
-        --         @SHA256 
-        --         @(BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M²Type alg)) 
-        --             (toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M²Type alg)) 8) @ByteSize @0 
-        --             (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ m2))))
 
     _FStream      ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, alg ~ SLH_DSA_SHA2_128s, KnownSLH_DSAParameters alg) ⇒ 
         Proxy alg → Channel dom (PKSeedType alg, ADRSType alg, M¹Type alg) → Channel dom (FOutType alg)
@@ -133,9 +126,8 @@ instance SLH_DSA_hashStream SLH_DSA_SHA2_128s where
             where
             transfer = fmap go input
             makeOutput output = truncˡ (unconcatBitVector# output)
-            go (pkSeed, adrs, m1) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M¹Type alg)) 8) @ByteSize @0 
+            go (pkSeed, adrs, m1) = toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M¹Type alg)) ByteSize) @ByteSize @0 
                 (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ m1)
-                -- 16, 64 - 16 , 32, 16 = 64 + 32 + 16 * 8 896
 
 
 
