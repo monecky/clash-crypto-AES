@@ -122,6 +122,7 @@ library
     Clash.Crypto.Hash.SHA.Streaming.Padding
     Clash.Crypto.MAC.HMAC
     Clash.Signal.Channel
+    Clash.Signal.Channel.Extra
     Clash.Signal.Delayed.Extra
     Clash.Signal.DataStream
     Clash.Signal.Extra
