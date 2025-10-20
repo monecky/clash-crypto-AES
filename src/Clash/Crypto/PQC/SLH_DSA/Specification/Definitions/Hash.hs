@@ -13,37 +13,29 @@ in section 4 and 11 regards Hash functions of FIPS 205.
 {-# LANGUAGE MagicHash #-}
 {-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
 module  Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Hash where
-import Clash.Prelude
-import Clash.Signal.Channel
-import Clash.Signal.DataStream
-import Clash.Signal.Delayed.Extra
-import Clash.Signal.Extra (apWhen)
+
 import Clash.Prelude.Safe hiding (fold, unzip)
 
-import Data.Foldable (Foldable(..))
-import Data.Functor ((<&>), unzip)
-import GHC.Records (HasField(..))
 
-import Unsafe.Coerce (unsafeCoerce)
 
 import Data.Proxy (Proxy(..))
-import Clash.Prelude
+
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
 import Clash.Crypto.PQC.SLH_DSA.Specification.Properties
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
-import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Hash
+
 import Clash.Crypto.Hash.SHA.Specification as Spec
 import Clash.Crypto.Hash.MGF1.Specification as MGF1Spec
-import Clash.Crypto.Hash.SHA as SHA
-import Clash.Crypto.MAC.HMAC as HMAC
-import Clash.Crypto.Hash.MGF1.Streaming as MGF1
-import GHC.TypeNats.Proof (Rewrite(..), using)
-import Data.Constraint.Nat.Extra
-  ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
-  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
-  )
-import Language.Haskell.Unicode (type (≤))
+-- import Clash.Crypto.Hash.SHA as SHA
+-- import Clash.Crypto.MAC.HMAC as HMAC
+-- import Clash.Crypto.Hash.MGF1.Streaming as MGF1
+-- import GHC.TypeNats.Proof (Rewrite(..), using)
+-- import Data.Constraint.Nat.Extra
+--   ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
+--   , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
+--   )
+-- import Language.Haskell.Unicode (type (≤))
 instance SLH_DSA_hash SLH_DSA_SHA2_128s where 
     -- No functional function of HMAC sha exists.
     -- _PRFᵐˢᵍ ∷ (KnownNat ℓ) ⇒ Proxy alg → SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg

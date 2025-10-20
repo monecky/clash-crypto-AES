@@ -20,8 +20,7 @@ import Clash.Signal.Delayed.Extra
 import Clash.Signal.Extra (apWhen)
 import Clash.Prelude.Safe hiding (fold, unzip)
 
-import Data.Foldable (Foldable(..))
-import Data.Functor ((<&>), unzip)
+
 import GHC.Records (HasField(..))
 
 import Unsafe.Coerce (unsafeCoerce)

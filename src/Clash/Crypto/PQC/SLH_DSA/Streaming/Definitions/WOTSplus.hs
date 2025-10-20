@@ -23,9 +23,10 @@ import Clash.Crypto.PQC.SLH_DSA.Streaming.Types.Hash
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
 import Clash.Signal.Channel
+import Clash.Signal.Channel.Extra 
+    (fstOf3C, sndOf3C, thdOf3C, zip3C)
 import Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters
 import Data.Proxy (Proxy(..))
-
 -- Algorithm 5
 chain ∷ ∀ i s (alg ∷ SLH_DSA) dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg,
          KnownNat i, KnownNat s, 0 ≤ i, SLH_DSA_hashStream alg) 
@@ -50,62 +51,50 @@ chain tmp
                 go j (x, pkSeed, adrs) = (pkSeed, setHashAddress adrs j, x)
 -- Algorithm 6
 wots_pkGen ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg
+        , Mod ((688 + ((N alg * ((2 * N alg) + 3)) * 16)) * 8) 8 ~ 0
         , Mod ((86 + ((N alg * ((2 * N alg) + 3)) * 16)) * 8) 8 ~ 0
         , Div (688 + (((N alg * ((2 * N alg) + 3)) * 16) * 8)) 8 ~ (86 + ((N alg * ((2 * N alg) + 3)) * 16)))
     ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) → Channel dom (NBlockType alg)
 wots_pkGen input
         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
         -- postscanl representing the for loop on line code 4-9 
-        = _TˡStream @alg @dom @(N alg * Len alg) alg (zip3C pkSeed wotspkADRS² (tmp alg))
+        = _TˡStream @alg @dom @(Len alg) alg (zip3C (pkSeed input) wotspkADRS² (tmp alg))
             where 
-                adrs ∷ Channel dom (ADRSType alg)
-                adrs   = thdOf3C input 
-                pkSeed ∷ Channel dom (PKSeedType alg)
-                pkSeed = fstOf3C input 
-                skSeed ∷ Channel dom (SKSeedType alg)
-                skSeed = sndOf3C input 
-                -- Code line 1
-                skADRS¹ ∷ Channel dom (ADRSType alg)
-                skADRS¹ = adrs
-                -- Code line 2
-                skADRS² ∷ Channel dom (ADRSType alg)
-                skADRS² = fmap (`setTypeAndClear` WOTS_PRF) skADRS¹
-                -- Code line 3
-                skADRS³ ∷ Channel dom (ADRSType alg)
-                skADRS³ = liftA2 (\ad ad²  → setKeyPairAddress ad² (getKeyPairAddress ad)) skADRS² adrs
+                adrs ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) → Channel dom (ADRSType alg)
+                adrs input  = thdOf3C input 
+                pkSeed ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) →  Channel dom (PKSeedType alg)
+                pkSeed input = fstOf3C input 
+                skSeed ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) → Channel dom (SKSeedType alg)
+                skSeed input = sndOf3C input 
+                -- Code line 1- 3
+                skADRS³ ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) → Channel dom (ADRSType alg)
+                skADRS³ input = liftA2 (\ad ad²  → setKeyPairAddress ad² (getKeyPairAddress ad)) (fmap (`setTypeAndClear` WOTS_PRF) adrs¹) adrs¹
+                    where 
+                        adrs¹ = adrs input
                 --Code line 5 -8 for in the for loop
                 function ∷ (KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
                     ⇒  Proxy alg → BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
-                function alg i = chain @0  @(W alg - 1) @alg (zip3C (sk alg i)  pkSeed adrs)
+                function alg i = chain @0  @(W alg - 1) @alg (zip3C (sk alg i)  (pkSeed input) (adrs input))
                     where
-                        sk alg i = _PRFStream alg (liftA2 (\(sk, pk, _) ad → (pk, sk, ad)) input (fmap (`setChainAddress` i) adrs))
+                        sk alg i = _PRFStream alg (liftA2 (\(sk, pk, _) ad → (pk, sk, ad)) input (fmap (`setChainAddress` i) (adrs input)))
                 -- Variable define on line 8
                 tmp ∷ (KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ Proxy alg → Channel dom (Vec (Len alg * N alg) (ByteType))
                 tmp alg = fmap concat (concatMapC @alg @(Len alg) (tmp⁰ alg))
                 tmp⁰ ∷ (KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ Proxy alg → Vec (Len alg) (Channel dom (NBlockType alg))
-                tmp⁰ alg = map  (function alg) (iterateI @(Len alg) (+1) (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize)))
-                -- Code line 10
-                wotspkADRS⁰ ∷ Channel dom (ADRSType alg)
-                wotspkADRS⁰ = adrs
-                -- Code line 11
-                wotspkADRS¹ ∷ Channel dom (ADRSType alg)
-                wotspkADRS¹ = fmap (`setTypeAndClear` WOTS_PK) skADRS¹ 
-                -- Code line 12
+                tmp⁰ alg 
+                        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg    
+                      = map  (function alg) (iterateI @(Len alg) (+1) (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize)))
+                -- Code line 10 - 12
                 wotspkADRS² ∷ Channel dom (ADRSType alg)
-                wotspkADRS² = liftA2 (\ad ad¹  → setKeyPairAddress ad¹ (getKeyPairAddress ad)) wotspkADRS¹ adrs
+                wotspkADRS² = liftA2 (\ad ad¹  → setKeyPairAddress ad¹ (getKeyPairAddress ad)) (fmap (`setTypeAndClear` WOTS_PK) adrs¹) adrs¹
+                    where 
+                        adrs¹ = adrs input
 
 
 
-fstOf3C ∷ Channel dom (a,b,c) → Channel dom a
-fstOf3C = fmap (\ (a, _, _) -> a)
-sndOf3C ∷ Channel dom (a,b,c) → Channel dom b
-sndOf3C = fmap (\ (_, b, _) -> b)
-thdOf3C ∷ Channel dom (a,b,c) → Channel dom c
-thdOf3C = fmap (\ (_, _, c) -> c)
-zip3C ∷ Channel dom a → Channel dom b → Channel dom c → Channel dom (a,b,c)
-zip3C = liftA3 (,,) 
 
-concatMapC ∷ ∀ alg ℓ dom . (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒  Vec ℓ (Channel dom (NBlockType alg)) -> Channel dom (Vec ℓ (NBlockType alg))
+
+concatMapC ∷ ∀ alg ℓ dom . (KnownNat ℓ, KnownSLH_DSAParameters alg, KnownNat (N alg)) ⇒  Vec ℓ (Channel dom (NBlockType alg)) -> Channel dom (Vec ℓ (NBlockType alg))
 concatMapC Nil 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
             = errorX "Invalid vector"
