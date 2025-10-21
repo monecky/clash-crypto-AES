@@ -91,5 +91,5 @@ toInt = concatBitVector# . takeI
 toByte ∷ ∀ n w s k . (KnownNat n, KnownNat w, KnownNat k, KnownNat s, (n + k) * w ~ s) ⇒ BitVector s → Vec n (BitVector w)
 toByte = takeI . unconcatBitVector#
 -- Algorithm 4
-base_2ᵇ ∷ ∀ b out_len n m k s. (KnownNat b, KnownNat out_len, KnownNat n, KnownNat m, KnownNat s, KnownNat k, (out_len + k) * b ~ s * ByteSize) ⇒ Vec s ByteType → Vec (out_len) (BitVector b)
+base_2ᵇ ∷ ∀ b out_len s k. (KnownNat b, KnownNat out_len, KnownNat s, KnownNat k, (out_len + k) * b ~ s * ByteSize) ⇒ Vec s ByteType → Vec (out_len) (BitVector b)
 base_2ᵇ =  unconcatBitVector# . resize. concatBitVector#

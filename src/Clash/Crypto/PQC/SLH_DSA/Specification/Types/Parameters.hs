@@ -257,7 +257,7 @@ type W ∷ SLH_DSA → Nat
 type W (alg ∷ SLH_DSA) = 2 ^ Lgʷ alg
 -- Equation 5.2 of FIPS205
 type Len¹ ∷ SLH_DSA → Nat
-type Len¹ (alg ∷ SLH_DSA) = CeilXDivY (8 * N alg) ( Lgʷ alg )
+type Len¹ (alg ∷ SLH_DSA) = CeilXDivY (ByteSize * N alg) ( Lgʷ alg )
 -- type Len¹ (alg ∷ SLH_DSA) = 2 * (N alg)
 -- Ceil Round If (a `Mod`b <=? (0 ∷ Nat)) (a `Div` b + 0) (a `Div` b + 1)
 -- Floor Round (a `Div` b)
