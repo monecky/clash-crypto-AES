@@ -32,42 +32,42 @@ setLayerAddressC ∷  ∀ (alg ∷ SLH_DSA) dom . KnownSLH_DSAParameters alg ⇒
 setLayerAddressC adrs l 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
       = fmap (`setLayerAddress` l) adrs
-setTreeAddressC ∷ ∀ (alg ∷ SLH_DSA) ℓ dom . (KnownSLH_DSAParameters alg, KnownNat ℓ)⇒ Channel dom (ADRSType alg) → BitVector ℓ →  Channel dom (ADRSType alg)
+setTreeAddressC ∷ ∀ (alg ∷ SLH_DSA) ℓ dom . (KnownSLH_DSAParameters alg, KnownNat ℓ)⇒ Channel dom (ADRSType alg) → Channel dom (BitVector ℓ) →  Channel dom (ADRSType alg)
 setTreeAddressC adrs t 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
-      = fmap (`setTreeAddress` t) adrs
+      = liftA2 setTreeAddress adrs t
 
 setTypeAndClearC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg) ⇒ Channel dom (ADRSType alg) → ADRSTypeType → Channel dom (ADRSType alg)
 setTypeAndClearC adrs adrstype       
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
-      = fmap (`setTypeAndClear` adrstype) adrs
+      = fmap (`setTypeAndClear` adrstype) adrs 
 
-_setTypeAndClearC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg) ⇒ Channel dom (ADRSType alg) → BitVector (TypeSize alg * ByteSize) → Channel dom (ADRSType alg)
+_setTypeAndClearC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg) ⇒ Channel dom (ADRSType alg) → Channel dom (BitVector (TypeSize alg * ByteSize)) → Channel dom (ADRSType alg)
 _setTypeAndClearC adrs l 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
-      = fmap (`_setTypeAndClear` l) adrs
+      = _setTypeAndClear <$> adrs <*> l
 
-setKeyPairAddressC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) → BitVector (ChainAddressTreeHeightSize alg * ByteSize) →  Channel dom (ADRSType alg)
+setKeyPairAddressC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) →  Channel dom (BitVector (ChainAddressTreeHeightSize alg * ByteSize)) →  Channel dom (ADRSType alg)
 setKeyPairAddressC adrs i 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
-      = fmap (`setKeyPairAddress` i) adrs
-setChainAddressC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) → BitVector (ChainAddressTreeHeightSize alg * ByteSize) →  Channel dom (ADRSType alg)
+      = liftA2 setKeyPairAddress adrs i
+setChainAddressC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) →  Channel dom (BitVector (ChainAddressTreeHeightSize alg * ByteSize)) →  Channel dom (ADRSType alg)
 setChainAddressC adrs i 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
-      = fmap (`setChainAddress` i) adrs
-setTreeHeightC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) → BitVector (ChainAddressTreeHeightSize alg * ByteSize) →  Channel dom (ADRSType alg)
+      = liftA2 setChainAddress adrs i
+setTreeHeightC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) →  Channel dom (BitVector (ChainAddressTreeHeightSize alg * ByteSize)) →  Channel dom (ADRSType alg)
 setTreeHeightC adrs i
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
-      = fmap (`setTreeHeight` i) adrs
+      = liftA2 setTreeHeight adrs i
 
-setHashAddressC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) → BitVector (ChainAddressTreeHeightSize alg * ByteSize) →  Channel dom (ADRSType alg)
+setHashAddressC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) →  Channel dom (BitVector (ChainAddressTreeHeightSize alg * ByteSize)) →  Channel dom (ADRSType alg)
 setHashAddressC adrs i 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
-      = fmap (`setHashAddress` i) adrs
-setTreeIndexC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) → BitVector (ChainAddressTreeHeightSize alg * ByteSize) →  Channel dom (ADRSType alg)
+      = liftA2 setHashAddress adrs i
+setTreeIndexC ∷ ∀ (alg ∷ SLH_DSA) dom . (KnownSLH_DSAParameters alg)⇒ Channel dom (ADRSType alg) → Channel dom (BitVector (ChainAddressTreeHeightSize alg * ByteSize)) →  Channel dom (ADRSType alg)
 setTreeIndexC adrs i
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
-      = fmap (`setTreeIndex` i) adrs
+      = liftA2 setTreeIndex adrs i
 ------------------------------
 -- Getters
 ------------------------------
