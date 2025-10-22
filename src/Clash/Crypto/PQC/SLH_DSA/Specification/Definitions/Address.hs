@@ -114,8 +114,8 @@ getADRSBitVector
               = pack 
 
 
-getADRSZero ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg 
-getADRSZero             
+getInitADRS ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg 
+getInitADRS             
             | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg  
             = ADRSType{
               layerAddress             = unconcatBitVector# ( 0x0)            
