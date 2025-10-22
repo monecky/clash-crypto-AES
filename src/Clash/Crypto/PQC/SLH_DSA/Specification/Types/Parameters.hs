@@ -385,8 +385,8 @@ type NodeType (alg ∷ SLH_DSA) = NBlockType alg
 -- according Figure 11 in FIPS205
 --
 ---------------------------------------------------------------------------
-type AUTHType (alg ∷ SLH_DSA) = Vec (H' alg) (Vec (N alg) ByteType) -- 0 .. h'- 1
-data XMSSType (alg ∷ SLH_DSA) = XMSSType {
+type AUTHType (alg ∷ SLH_DSA) = Vec (H' alg) (NBlockType alg) -- 0 .. h'- 1
+data XMSSType (alg ∷ SLH_DSA) = XmssType {
   sig_ots ∷ SIGʷᵒᵗˢPlusType alg,
   auth ∷ AUTHType alg
   } deriving     ( Generic

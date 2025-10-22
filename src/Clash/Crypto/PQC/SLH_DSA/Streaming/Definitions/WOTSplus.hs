@@ -16,7 +16,7 @@ Basic WOTS definitions covering the fundamentals of FIPS 205.
 {-# HLINT ignore "Use camelCase" #-}
 module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus where
 import Clash.Prelude
-
+import Clash.Sized.Internal.BitVector
 import Language.Haskell.Unicode (type (≤))
 import Clash.Crypto.PQC.SLH_DSA.General.General
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
@@ -272,7 +272,32 @@ xmss_node input i z = if (z == 0x00) then ifthen else ifelse
                 adrs = thdOf3C input
                 adrs¹ ∷ Channel dom (ADRSType alg)
                 adrs¹ = fmap (\x → setTreeIndex (setTreeHeight x z) i) (setTypeAndClearC adrs TREE)
-
+-- Algorithm 10
+xmss_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+    ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
+     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- idx
+     → Channel dom (XMSSType alg)
+xmss_sign input idx 
+    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+    = liftA2 object sig_ots auth
+    where 
+        object ∷  ∀ (alg ∷ SLH_DSA) . ( KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg)
+                ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → XMSSType alg
+        object x y 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = XmssType {sig_ots = x, auth = y}
+        k ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize) → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- k
+        k x = xor# (0 +>>. x)  1 -- k ← ⌊idx/2j⌋ ⊕ 1
+        auth ∷ Channel dom (AUTHType alg)
+        auth
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = concatMapC (map (\(k⁰, j⁰) → xmss_node input⁰ k⁰ j⁰) (iterateI @(H' alg) (\(x, y) → (k x,y+1)) (idx, 0x0 ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize))))
+            where
+                input⁰ = fmap (\(_,s,p,a) → (s,p,a)) input
+        sig_ots ∷ Channel dom (SIGʷᵒᵗˢPlusType alg)
+        sig_ots = wots_sign input⁰
+            where
+                input⁰ = fmap (\(m,s,p,a) → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) idx)) input
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
 concatMapC Nil = errorX "Invalid vector"
 concatMapC ( x `Cons` Nil) = fmap singleton  x 
