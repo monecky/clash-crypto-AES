@@ -124,7 +124,7 @@ wots_pkGen input
                     ⇒  Proxy alg → BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
                 function alg i = chain @0  @(W alg - 1) @alg (zip3C (sk alg i)  (pkSeed input) (adrs input))
                     where
-                        sk alg i = _PRFStream alg (liftA2 (\(sk, pk, _) ad → (pk, sk, ad)) input (fmap (`setChainAddress`i) (adrs input)))
+                        sk alg i⁰ = _PRFStream alg (liftA2 (\(sk⁰, pk, _) ad → (pk, sk⁰, ad)) input (fmap (`setChainAddress` i⁰) (adrs input)))
                 -- Variable define on line 8
                 tmp ∷ (KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ Proxy alg → Channel dom (Vec (Len alg * N alg) (ByteType))
                 tmp alg 
@@ -159,7 +159,7 @@ wots_sign input
                             = fmap (base_2ᵇ @(Lgʷ alg) @(Len¹ alg) @(N alg) @(((N alg * ByteSize) `Div` (Lgʷ alg)) - Len¹ alg))  m
                         csum ∷ (KnownSLH_DSAParameters alg) ⇒  Channel dom (BitVector((Len² alg) * (Lgʷ alg) + ByteSize))
                         csum 
-                            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                             = fmap (foldl go (0x00 ∷ BitVector((Len² alg) * (Lgʷ alg) + ByteSize))) msg⁰
                             where 
                                 go ∷ (KnownSLH_DSAParameters alg) ⇒  BitVector((Len² alg) * (Lgʷ alg) + ByteSize) → BitVector (Lgʷ alg) → BitVector ((Len² alg) * (Lgʷ alg) + ByteSize)
@@ -183,7 +183,7 @@ wots_sign input
                                     ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
                                 go i 
                                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                 = chain² @(2^Lgʷ alg) (zip3C (sk i) pkSeed adrs) (fmap (\ x →  0x0 ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize)) msg¹)  (fmap (\ x → resize (x !! i)) msg¹)
+                                 = chain² @(2^Lgʷ alg) (zip3C (sk i) pkSeed adrs) (fmap (\x →  0x0 ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize)) msg¹)  (fmap (\ x → resize (x !! i)) msg¹)
                                     where
                                         sk ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (PRFOutType alg)
                                         sk i⁰
@@ -211,7 +211,7 @@ wots_pkFromSig input
                             = fmap (base_2ᵇ @(Lgʷ alg) @(Len¹ alg) @(N alg) @(((N alg * ByteSize) `Div` (Lgʷ alg)) - Len¹ alg))  m
                         csum ∷ (KnownSLH_DSAParameters alg) ⇒  Channel dom (BitVector((Len² alg) * (Lgʷ alg) + ByteSize))
                         csum 
-                            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                             = fmap (foldl go (0x00 ∷ BitVector((Len² alg) * (Lgʷ alg) + ByteSize))) msg⁰
                             where 
                                 go ∷ (KnownSLH_DSAParameters alg) ⇒  BitVector((Len² alg) * (Lgʷ alg) + ByteSize) → BitVector (Lgʷ alg) → BitVector ((Len² alg) * (Lgʷ alg) + ByteSize)
@@ -232,16 +232,16 @@ wots_pkFromSig input
                                 go ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
                                     ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
                                 go i 
-                                 | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                  = chain² @(2^Lgʷ alg) (zip3C (sigⁱ i) pkSeed adrs) (fmap (\ x → resize (x !! i)) msg¹)  (fmap (\x → (natToNum @(W alg - 1)) - (resize (x !! i))) msg¹)  
                                     where
                                         sigⁱ ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
                                         sigⁱ i⁰
-                                            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                             = fmap (\x → x !! i⁰) sig 
                         wotspkADRS ∷ Channel dom (ADRSType alg)
                         wotspkADRS 
-                                | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                                | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                 = transferAddressC (fmap (`setChainAddress` (natToNum @(Len alg) - 1)) adrs) WOTS_PK
 
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
