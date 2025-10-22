@@ -112,3 +112,15 @@ getADRSBitVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ AD
 getADRSBitVector 
             | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg  
               = pack 
+
+
+getADRSZero ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg 
+getADRSZero             
+            | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg  
+            = ADRSType{
+              layerAddress             = unconcatBitVector# ( 0x0)            
+            , treeAddress              = unconcatBitVector# ( 0x0)            
+            , typeAddress              = unconcatBitVector# ( 0x0)            
+            , keyPairAddress           = unconcatBitVector# ( 0x0)            
+            , chainAddressTreeHeight   = unconcatBitVector# ( 0x0)            
+            , hashAddressTreeIndexType = unconcatBitVector# ( 0x0)            } 
