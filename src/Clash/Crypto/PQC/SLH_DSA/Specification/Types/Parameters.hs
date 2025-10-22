@@ -386,23 +386,23 @@ type NodeType (alg ∷ SLH_DSA) = NBlockType alg
 --
 ---------------------------------------------------------------------------
 type AUTHType (alg ∷ SLH_DSA) = Vec (H' alg) (NBlockType alg) -- 0 .. h'- 1
-data XMSSType (alg ∷ SLH_DSA) = XmssType {
+data SIGˣᵐˢˢType (alg ∷ SLH_DSA) = XMSSType {
   sig_ots ∷ SIGʷᵒᵗˢPlusType alg,
   auth ∷ AUTHType alg
   } deriving     ( Generic
       , Show
       , Typeable
       )
-deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ BitPack (XMSSType alg)
-deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ NFDataX (XMSSType alg)
-deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ Eq      (XMSSType alg)
-deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ Ord     (XMSSType alg)
+deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ BitPack (SIGˣᵐˢˢType alg)
+deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ NFDataX (SIGˣᵐˢˢType alg)
+deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ Eq      (SIGˣᵐˢˢType alg)
+deriving anyclass instance (KnownNat (N alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ Ord     (SIGˣᵐˢˢType alg)
 ---------------------------------------------------------------------------
 -- HT that is define in SLH_DSA 
 -- according Figure 13 in FIPS205
 --
 ---------------------------------------------------------------------------
-type HTType (alg ∷ SLH_DSA) = Vec (D alg)  (XMSSType alg)-- 0 .. d- 1
+type HTType (alg ∷ SLH_DSA) = Vec (D alg)  (SIGˣᵐˢˢType alg)-- 0 .. d- 1
 ---------------------------------------------------------------------------
 -- FORS that is define in SLH_DSA 
 -- according Figure 14 in FIPS205

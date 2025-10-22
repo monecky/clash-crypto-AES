@@ -276,16 +276,16 @@ xmss_node input i z = if (z == 0x00) then ifthen else ifelse
 xmss_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
     ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
      → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- idx
-     → Channel dom (XMSSType alg)
+     → Channel dom (SIGˣᵐˢˢType alg)
 xmss_sign input idx 
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
     = liftA2 object sig_ots auth
     where 
         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg)
-                ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → XMSSType alg
+                ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → SIGˣᵐˢˢType alg
         object x y 
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = XmssType {sig_ots = x, auth = y}
+            = XMSSType {sig_ots = x, auth = y}
         k ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize) → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- k
         k x = xor# (0 +>>. x)  1 -- k ← ⌊idx/2j⌋ ⊕ 1
         auth ∷ Channel dom (AUTHType alg)
@@ -298,6 +298,56 @@ xmss_sign input idx
         sig_ots = wots_sign input⁰
             where
                 input⁰ = fmap (\(m,s,p,a) → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) idx)) input
+
+-- Algorithm 11
+xmss_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+    ⇒ Channel dom (SIGˣᵐˢˢType alg, NBlockType alg, PKSeedType alg, ADRSType alg) 
+     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- idx
+     → Channel dom (NodeType alg)
+xmss_pkFromSig input idx
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    = node¹
+    where
+        adrs ∷ Channel dom (ADRSType alg)
+        adrs = frtOf4C input
+        sigˣᵐˢˢ ∷  Channel dom (SIGˣᵐˢˢType alg)
+        sigˣᵐˢˢ = fstOf4C input
+        m = sndOf4C input
+        pkSeed = thdOf4C input
+        -- line 1-2
+        adrs¹² ∷ Channel dom (ADRSType alg)
+        adrs¹² = fmap (`setKeyPairAddress` idx) (setTypeAndClearC adrs WOTS_HASH)
+        -- line 3
+        sig ∷ SIGˣᵐˢˢType alg → SIGʷᵒᵗˢPlusType alg
+        sig (XMSSType {sig_ots = x}) = x
+        -- line 4
+        auth ∷ SIGˣᵐˢˢType alg → AUTHType alg
+        auth (XMSSType {auth = y}) = y
+        -- line 5
+        node⁰ = wots_pkFromSig (zip4C (fmap sig sigˣᵐˢˢ) m pkSeed adrs¹²)
+        -- line 6 - 7
+        adrs⁶⁷ ∷ Channel dom (ADRSType alg)
+        adrs⁶⁷ = fmap (`setTreeIndex` idx) (setTypeAndClearC adrs¹² TREE)
+        node¹ ∷ Channel dom (NodeType alg)
+        node¹ 
+         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+         = foldl function node⁰ (iterateI @(H' alg) (+1) (natToNum @0)) 
+            where
+                function ∷ Channel dom (NBlockType alg) → BitVector (HashAddressTreeIndexSize alg * ByteSize) → Channel dom (NBlockType alg)
+                function node k 
+                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                     = _HStream alg (zip3C pkSeed (adrs¹⁰ k) (swap node k))
+                     where 
+                        addOne ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize)  → BitVector (HashAddressTreeIndexSize alg * ByteSize)
+                        addOne k 
+                            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                            = if testBit idx (bitCoerce (resize k)) then 0x1 else 0x0
+                        swap ∷ Channel dom (NodeType alg) → BitVector (HashAddressTreeIndexSize alg * ByteSize) → Channel dom (M²Type alg)
+                        swap node k 
+                            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                            = if testBit idx (bitCoerce (resize k)) then liftA2 (‖) node (fmap (!! k) (fmap auth sigˣᵐˢˢ)) else liftA2 (‖) (fmap (!! k) (fmap auth sigˣᵐˢˢ)) node
+                        adrs¹⁰ k = fmap (\x → setTreeIndex  (setTreeHeight x (k+1)) ((getTreeIndex (setTreeHeight x (k+ 1))) + (addOne k) `div` 2)) adrs⁶⁷
+
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
 concatMapC Nil = errorX "Invalid vector"
 concatMapC ( x `Cons` Nil) = fmap singleton  x 
