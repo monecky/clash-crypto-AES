@@ -22,7 +22,7 @@ import Clash.Crypto.PQC.SLH_DSA.General.General
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Types.Hash
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
-
+import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
 import Clash.Signal.Channel
 import Clash.Signal.Channel.Extra 
 import Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters
@@ -243,6 +243,35 @@ wots_pkFromSig input
                         wotspkADRS 
                                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                 = transferAddressC (fmap (`setChainAddress` (natToNum @(Len alg) - 1)) adrs) WOTS_PK
+-- Algorithm 9
+xmss_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) 
+     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- i 
+     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- z
+     → Channel dom (NodeType alg)
+xmss_node input i z = if (z == 0x00) then ifthen else ifelse
+    where
+        ifthen ∷ Channel dom (NodeType alg)
+        ifthen = wots_pkGen (fmap (\(s,t,v) → (s,t, setKeyPairAddress (setTypeAndClear v WOTS_HASH) i)) input)
+        ifelse ∷ Channel dom (NodeType alg)
+        ifelse 
+          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+          = _HStream alg (zip3C pkSeed adrs¹ ( (‖) <$> lnode <*> rnode))
+            where
+                -- line 6
+                lnode ∷ Channel dom (NodeType alg)
+                lnode = xmss_node input (2 * i) (z-1)
+                -- line 7 
+                rnode ∷ Channel dom (NodeType alg)
+                rnode = xmss_node input (2 * i + 1) (z-1)
+                skSeed ∷ Channel dom (PKSeedType alg)
+                skSeed = fstOf3C input
+                pkSeed ∷ Channel dom (PKSeedType alg)
+                pkSeed = sndOf3C input
+                adrs ∷ Channel dom (ADRSType alg)
+                adrs = thdOf3C input
+                adrs¹ ∷ Channel dom (ADRSType alg)
+                adrs¹ = fmap (\x → setTreeIndex (setTreeHeight x z) i) (setTypeAndClearC adrs TREE)
 
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
 concatMapC Nil = errorX "Invalid vector"

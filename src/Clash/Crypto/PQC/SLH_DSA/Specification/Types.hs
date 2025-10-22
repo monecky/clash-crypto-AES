@@ -52,6 +52,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , PRFᵐˢᵍOutType
   , SIGʷᵒᵗˢPlusType
   , PKˢⁱᵍType
+  , NodeType
   -- Address
   , ADRSType(..)
   , ADRSTypeType(..)

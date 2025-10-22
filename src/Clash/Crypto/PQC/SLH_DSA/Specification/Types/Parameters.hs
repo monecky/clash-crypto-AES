@@ -378,7 +378,8 @@ type SIGᴴᵀType (alg ∷ SLH_DSA) = Vec ((N alg) * (H alg + (D alg) * (Len al
 type SIGʷᵒᵗˢPlusType (alg ∷ SLH_DSA) = Vec (Len alg) (Vec (N alg) ByteType) -- 0 .. len -1
 -- Return from algorithm 8 
 type PKˢⁱᵍType (alg ∷ SLH_DSA) = TˡOutType alg
-
+-- Return from algorithm 9
+type NodeType (alg ∷ SLH_DSA) = NBlockType alg
 ---------------------------------------------------------------------------
 -- XMSS that is define in SLH_DSA 
 -- according Figure 11 in FIPS205
