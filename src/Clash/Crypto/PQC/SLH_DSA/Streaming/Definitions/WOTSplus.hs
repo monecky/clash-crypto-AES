@@ -278,20 +278,20 @@ xmss_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEna
      → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- idx
      → Channel dom (XMSSType alg)
 xmss_sign input idx 
-    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
     = liftA2 object sig_ots auth
     where 
-        object ∷  ∀ (alg ∷ SLH_DSA) . ( KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg)
+        object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg)
                 ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → XMSSType alg
         object x y 
-            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
             = XmssType {sig_ots = x, auth = y}
         k ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize) → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- k
         k x = xor# (0 +>>. x)  1 -- k ← ⌊idx/2j⌋ ⊕ 1
         auth ∷ Channel dom (AUTHType alg)
         auth
-            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = concatMapC (map (\(k⁰, j⁰) → xmss_node input⁰ k⁰ j⁰) (iterateI @(H' alg) (\(x, y) → (k x,y+1)) (idx, 0x0 ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize))))
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = concatMapC (map (uncurry (xmss_node input⁰)) (iterateI @(H' alg) (\(x, y) → (k x,y+1)) (idx, 0x0 ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize))))
             where
                 input⁰ = fmap (\(_,s,p,a) → (s,p,a)) input
         sig_ots ∷ Channel dom (SIGʷᵒᵗˢPlusType alg)
