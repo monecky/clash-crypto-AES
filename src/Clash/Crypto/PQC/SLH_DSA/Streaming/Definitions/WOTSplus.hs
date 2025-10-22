@@ -143,7 +143,7 @@ wots_sign ∷ ∀ alg dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownS
             ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) → Channel dom (SIGʷᵒᵗˢPlusType alg)
 wots_sign input                               
                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg  
-                = concatMapC (repeat (fstOf4C input))
+                = sig
                     where
                         m ∷ Channel dom (NBlockType alg)
                         m = fstOf4C input
