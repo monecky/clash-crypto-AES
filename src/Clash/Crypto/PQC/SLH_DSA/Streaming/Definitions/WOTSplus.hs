@@ -250,11 +250,11 @@ xmss_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEna
      → Channel dom (IdxType alg) -- i 
      → Channel dom (IdxType alg) -- z
      → Channel dom (NodeType alg)
-xmss_node input i z =  mux  (fmap (\x → (x == 0x00)) z)  ifthen ifelse
+xmss_node input i z =  mux  (fmap (== 0x00) z) ifthen ifelse
                                                         -- $ apWhen input.hasUpdates (const (FLTSquare, maxBound))
     where
         ifthen ∷ Channel dom (NodeType alg)
-        ifthen = wots_pkGen (fmap (\(s,t,v) → (s,t, setKeyPairAddress (setTypeAndClear v WOTS_HASH) i)) input)
+        ifthen = wots_pkGen (liftA2 (\(s,t,v) w → (s,t, setKeyPairAddress (setTypeAndClear v WOTS_HASH) w)) input i)
         ifelse ∷ Channel dom (NodeType alg)
         ifelse 
           | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
