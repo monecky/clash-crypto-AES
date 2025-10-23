@@ -30,6 +30,7 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics (base_2ᵇ)
 import Data.Proxy (Proxy(..))
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Address 
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address 
+import Clash.Signal.Extra(apWhen)
 -- -- Algorithm 5
 chain ∷ ∀ i s (alg ∷ SLH_DSA) dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg,
          KnownNat i, KnownNat s, 0 ≤ i, SLH_DSA_hashStream alg) 
@@ -40,7 +41,7 @@ chain tmp
             where
                 function ∷ Proxy alg 
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg) 
-                    → BitVector (ChainAddressTreeHeightSize alg * ByteSize)
+                    → IdxType alg
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg)
                 function alg x1 j = zip3C (_FStream alg (fmap (go j) x1)) pkSeed adrs
                     where 
@@ -48,7 +49,7 @@ chain tmp
                         pkSeed = sndOf3C x1
                         adrs ∷ Channel dom (ADRSType alg)
                         adrs = thdOf3C x1
-                go ∷  BitVector (ChainAddressTreeHeightSize alg * ByteSize) 
+                go ∷  IdxType alg 
                     → (NBlockType alg, PKSeedType alg, ADRSType alg)
                     → (PKSeedType alg, ADRSType alg, NBlockType alg)
                 go j (x, pkSeed, adrs) = (pkSeed, setHashAddress adrs j, x)
@@ -62,7 +63,7 @@ chain¹ tmp s
             where
                 function ∷ Proxy alg 
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg) 
-                    → BitVector (ChainAddressTreeHeightSize alg * ByteSize)
+                    → IdxType alg
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg)
                 function alg x1 j = zip3C (_FStream alg (fmap (go j) x1)) pkSeed adrs
                     where 
@@ -70,14 +71,14 @@ chain¹ tmp s
                         pkSeed = sndOf3C x1
                         adrs ∷ Channel dom (ADRSType alg)
                         adrs = thdOf3C x1
-                go ∷  BitVector (ChainAddressTreeHeightSize alg * ByteSize) 
+                go ∷  IdxType alg 
                     → (NBlockType alg, PKSeedType alg, ADRSType alg)
                     → (PKSeedType alg, ADRSType alg, NBlockType alg)
                 go j (x, pkSeed, adrs) = (pkSeed, setHashAddress adrs j, x)
 chain² ∷ ∀ bound (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, KnownNat bound, SLH_DSA_hashStream alg) 
     ⇒ Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg)
-     → Channel dom (BitVector (HashAddressTreeIndexSize alg * ByteSize)) 
-     → Channel dom (BitVector (HashAddressTreeIndexSize alg * ByteSize)) 
+     → Channel dom (IdxType alg) 
+     → Channel dom (IdxType alg) 
      → Channel dom (NBlockType alg)
 chain² tmp s i 
         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
@@ -85,7 +86,7 @@ chain² tmp s i
             where
                 function ∷ Proxy alg 
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg) 
-                    → Channel dom (BitVector (ChainAddressTreeHeightSize alg * ByteSize))
+                    → Channel dom (IdxType alg)
                     → Channel dom (NBlockType alg, PKSeedType alg, ADRSType alg)
                 function alg x1 j = zip3C (_FStream alg go) pkSeed adrs
                     where 
@@ -121,7 +122,7 @@ wots_pkGen input
                         adrs¹ = adrs input
                 --Code line 5 -8 for in the for loop
                 function ∷ (KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
-                    ⇒  Proxy alg → BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
+                    ⇒  Proxy alg → IdxType alg → Channel dom (NBlockType alg)
                 function alg i = chain @0  @(W alg - 1) @alg (zip3C (sk alg i)  (pkSeed input) (adrs input))
                     where
                         sk alg i⁰ = _PRFStream alg (liftA2 (\(sk⁰, pk, _) ad → (pk, sk⁰, ad)) input (fmap (`setChainAddress` i⁰) (adrs input)))
@@ -133,7 +134,7 @@ wots_pkGen input
                 tmp⁰ ∷ (KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ Vec (Len alg) (Channel dom (NBlockType alg))
                 tmp⁰ 
                         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg    
-                      = map (function alg) (iterateI @(Len alg) (+1) (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize)))
+                      = map (function alg) (iterateI @(Len alg) (+1) (0x0 ∷ IdxType alg))
                 -- Code line 10 - 12
                 wotspkADRS² ∷ Channel dom (ADRSType alg)
                 wotspkADRS² = transferAddressC (adrs input) WOTS_PK
@@ -180,12 +181,12 @@ wots_sign input
                             = concatMapC (map go  (iterateI @(Len alg ) (+1) (natToNum @0)))
                             where
                                 go ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
-                                    ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
+                                    ⇒ IdxType alg → Channel dom (NBlockType alg)
                                 go i 
                                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                 = chain² @(2^Lgʷ alg) (zip3C (sk i) pkSeed adrs) (fmap (\x →  0x0 ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize)) msg¹)  (fmap (\ x → resize (x !! i)) msg¹)
+                                 = chain² @(2^Lgʷ alg) (zip3C (sk i) pkSeed adrs) (fmap (\x →  0x0 ∷ IdxType alg) msg¹)  (fmap (\ x → resize (x !! i)) msg¹)
                                     where
-                                        sk ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (PRFOutType alg)
+                                        sk ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ IdxType alg → Channel dom (PRFOutType alg)
                                         sk i⁰
                                             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                                             = _PRFStream alg (zip3C pkSeed skSeed ( fmap (`setChainAddress` i⁰) skADRS)) 
@@ -230,12 +231,12 @@ wots_pkFromSig input
                             = fmap concat (concatMapC (map go  (iterateI @(Len alg) (+1) (natToNum @0))))
                             where
                                 go ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
-                                    ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
+                                    ⇒ IdxType alg → Channel dom (NBlockType alg)
                                 go i 
                                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                  = chain² @(2^Lgʷ alg) (zip3C (sigⁱ i) pkSeed adrs) (fmap (\ x → resize (x !! i)) msg¹)  (fmap (\x → (natToNum @(W alg - 1)) - (resize (x !! i))) msg¹)  
                                     where
-                                        sigⁱ ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ BitVector (ChainAddressTreeHeightSize alg * ByteSize) → Channel dom (NBlockType alg)
+                                        sigⁱ ∷ (HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) ⇒ IdxType alg → Channel dom (NBlockType alg)
                                         sigⁱ i⁰
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                             = fmap (\x → x !! i⁰) sig 
@@ -246,10 +247,11 @@ wots_pkFromSig input
 -- Algorithm 9
 xmss_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
     ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) 
-     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- i 
-     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- z
+     → Channel dom (IdxType alg) -- i 
+     → Channel dom (IdxType alg) -- z
      → Channel dom (NodeType alg)
-xmss_node input i z = if (z == 0x00) then ifthen else ifelse
+xmss_node input i z = apWhen (fmap (\x → (x == 0x00)) z) (\x → ifthen) ifelse
+                                                        -- $ apWhen input.hasUpdates (const (FLTSquare, maxBound))
     where
         ifthen ∷ Channel dom (NodeType alg)
         ifthen = wots_pkGen (fmap (\(s,t,v) → (s,t, setKeyPairAddress (setTypeAndClear v WOTS_HASH) i)) input)
@@ -260,10 +262,10 @@ xmss_node input i z = if (z == 0x00) then ifthen else ifelse
             where
                 -- line 6
                 lnode ∷ Channel dom (NodeType alg)
-                lnode = xmss_node input (2 * i) (z-1)
+                lnode =  xmss_node input ((2*) <$> i) (fmap (\x → x - 1) z)
                 -- line 7 
                 rnode ∷ Channel dom (NodeType alg)
-                rnode = xmss_node input (2 * i + 1) (z-1)
+                rnode = xmss_node input (fmap (\x → 2 * x + 1) i) (fmap (\x → x - 1) z)
                 skSeed ∷ Channel dom (PKSeedType alg)
                 skSeed = fstOf3C input
                 pkSeed ∷ Channel dom (PKSeedType alg)
@@ -271,83 +273,93 @@ xmss_node input i z = if (z == 0x00) then ifthen else ifelse
                 adrs ∷ Channel dom (ADRSType alg)
                 adrs = thdOf3C input
                 adrs¹ ∷ Channel dom (ADRSType alg)
-                adrs¹ = fmap (\x → setTreeIndex (setTreeHeight x z) i) (setTypeAndClearC adrs TREE)
--- Algorithm 10
-xmss_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
-    ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
-     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- idx
-     → Channel dom (SIGˣᵐˢˢType alg)
-xmss_sign input idx 
-    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    = liftA2 object sig_ots auth
-    where 
-        object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg)
-                ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → SIGˣᵐˢˢType alg
-        object x y 
-            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = XMSSType {sig_ots = x, auth = y}
-        k ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize) → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- k
-        k x = xor# (0 +>>. x)  1 -- k ← ⌊idx/2j⌋ ⊕ 1
-        auth ∷ Channel dom (AUTHType alg)
-        auth
-            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = concatMapC (map (uncurry (xmss_node input⁰)) (iterateI @(H' alg) (\(x, y) → (k x,y+1)) (idx, 0x0 ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize))))
-            where
-                input⁰ = fmap (\(_,s,p,a) → (s,p,a)) input
-        sig_ots ∷ Channel dom (SIGʷᵒᵗˢPlusType alg)
-        sig_ots = wots_sign input⁰
-            where
-                input⁰ = fmap (\(m,s,p,a) → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) idx)) input
+                adrs¹ = liftA3 (\s t v → setTreeIndex (setTreeHeight s t) v) (setTypeAndClearC adrs TREE) z i
+-- -- Algorithm 10
+-- xmss_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+--     ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
+--      → IdxType alg -- idx
+--      → Channel dom (SIGˣᵐˢˢType alg)
+-- xmss_sign input idx 
+--     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--     = liftA2 object sig_ots auth
+--     where 
+--         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg)
+--                 ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → SIGˣᵐˢˢType alg
+--         object x y 
+--             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--             = XMSSType {sig_ots = x, auth = y}
+--         k ∷ IdxType alg → IdxType alg -- k
+--         k x = xor# (0 +>>. x)  1 -- k ← ⌊idx/2j⌋ ⊕ 1
+--         auth ∷ Channel dom (AUTHType alg)
+--         auth
+--             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--             = concatMapC (map (uncurry (xmss_node input⁰)) (iterateI @(H' alg) (\(x, y) → (k x,y+1)) (idx, 0x0 ∷ IdxType alg)))
+--             where
+--                 input⁰ = fmap (\(_,s,p,a) → (s,p,a)) input
+--         sig_ots ∷ Channel dom (SIGʷᵒᵗˢPlusType alg)
+--         sig_ots = wots_sign input⁰
+--             where
+--                 input⁰ = fmap (\(m,s,p,a) → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) idx)) input
 
--- Algorithm 11
-xmss_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
-    ⇒ Channel dom (SIGˣᵐˢˢType alg, NBlockType alg, PKSeedType alg, ADRSType alg) 
-     → BitVector (HashAddressTreeIndexSize alg * ByteSize) -- idx
-     → Channel dom (NodeType alg)
-xmss_pkFromSig input idx
-    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    = node¹
-    where
-        adrs ∷ Channel dom (ADRSType alg)
-        adrs = frtOf4C input
-        sigˣᵐˢˢ ∷  Channel dom (SIGˣᵐˢˢType alg)
-        sigˣᵐˢˢ = fstOf4C input
-        m = sndOf4C input
-        pkSeed = thdOf4C input
-        -- line 1-2
-        adrs¹² ∷ Channel dom (ADRSType alg)
-        adrs¹² = fmap (`setKeyPairAddress` idx) (setTypeAndClearC adrs WOTS_HASH)
-        -- line 3
-        sig ∷ SIGˣᵐˢˢType alg → SIGʷᵒᵗˢPlusType alg
-        sig (XMSSType {sig_ots = x}) = x
-        -- line 4
-        auth ∷ SIGˣᵐˢˢType alg → AUTHType alg
-        auth (XMSSType {auth = y}) = y
-        -- line 5
-        node⁰ = wots_pkFromSig (zip4C (fmap sig sigˣᵐˢˢ) m pkSeed adrs¹²)
-        -- line 6 - 7
-        adrs⁶⁷ ∷ Channel dom (ADRSType alg)
-        adrs⁶⁷ = fmap (`setTreeIndex` idx) (setTypeAndClearC adrs¹² TREE)
-        node¹ ∷ Channel dom (NodeType alg)
-        node¹ 
-         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-         = foldl function node⁰ (iterateI @(H' alg) (+1) (natToNum @0)) 
-            where
-                function ∷ Channel dom (NBlockType alg) → BitVector (HashAddressTreeIndexSize alg * ByteSize) → Channel dom (NBlockType alg)
-                function node k 
-                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                     = _HStream alg (zip3C pkSeed (adrs¹⁰ k) (swap node k))
-                     where 
-                        addOne ∷ BitVector (HashAddressTreeIndexSize alg * ByteSize)  → BitVector (HashAddressTreeIndexSize alg * ByteSize)
-                        addOne k 
-                            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                            = if testBit idx (bitCoerce (resize k)) then 0x1 else 0x0
-                        swap ∷ Channel dom (NodeType alg) → BitVector (HashAddressTreeIndexSize alg * ByteSize) → Channel dom (M²Type alg)
-                        swap node k 
-                            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                            = if testBit idx (bitCoerce (resize k)) then liftA2 (‖) node (fmap (!! k) (fmap auth sigˣᵐˢˢ)) else liftA2 (‖) (fmap (!! k) (fmap auth sigˣᵐˢˢ)) node
-                        adrs¹⁰ k = fmap (\x → setTreeIndex  (setTreeHeight x (k+1)) ((getTreeIndex (setTreeHeight x (k+ 1))) + (addOne k) `div` 2)) adrs⁶⁷
-
+-- -- Algorithm 11
+-- xmss_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+--     ⇒ Channel dom (SIGˣᵐˢˢType alg, NBlockType alg, PKSeedType alg, ADRSType alg) 
+--      → IdxType alg -- idx
+--      → Channel dom (NodeType alg)
+-- xmss_pkFromSig input idx
+--     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--     = node¹
+--     where
+--         adrs ∷ Channel dom (ADRSType alg)
+--         adrs = frtOf4C input
+--         sigˣᵐˢˢ ∷  Channel dom (SIGˣᵐˢˢType alg)
+--         sigˣᵐˢˢ = fstOf4C input
+--         m = sndOf4C input
+--         pkSeed = thdOf4C input
+--         -- line 1-2
+--         adrs¹² ∷ Channel dom (ADRSType alg)
+--         adrs¹² = fmap (`setKeyPairAddress` idx) (setTypeAndClearC adrs WOTS_HASH)
+--         -- line 3
+--         sig ∷ SIGˣᵐˢˢType alg → SIGʷᵒᵗˢPlusType alg
+--         sig (XMSSType {sig_ots = x}) = x
+--         -- line 4
+--         auth ∷ SIGˣᵐˢˢType alg → AUTHType alg
+--         auth (XMSSType {auth = y}) = y
+--         -- line 5
+--         node⁰ = wots_pkFromSig (zip4C (fmap sig sigˣᵐˢˢ) m pkSeed adrs¹²)
+--         -- line 6 - 7
+--         adrs⁶⁷ ∷ Channel dom (ADRSType alg)
+--         adrs⁶⁷ = fmap (`setTreeIndex` idx) (setTypeAndClearC adrs¹² TREE)
+--         node¹ ∷ Channel dom (NodeType alg)
+--         node¹ 
+--          | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--          = foldl function node⁰ (iterateI @(H' alg) (+1) (natToNum @0)) 
+--             where
+--                 function ∷ Channel dom (NBlockType alg) → IdxType alg → Channel dom (NBlockType alg)
+--                 function node k 
+--                      | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+--                      = _HStream alg (zip3C pkSeed (adrs¹⁰ k) (swap node k))
+--                      where 
+--                         addOne ∷ IdxType alg  → IdxType alg
+--                         addOne k 
+--                             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+--                             = if testBit idx (bitCoerce (resize k)) then 0x1 else 0x0
+--                         swap ∷ Channel dom (NodeType alg) → IdxType alg → Channel dom (M²Type alg)
+--                         swap node k 
+--                             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+--                             = if testBit idx (bitCoerce (resize k)) then liftA2 (‖) node (fmap (!! k) (fmap auth sigˣᵐˢˢ)) else liftA2 (‖) (fmap (!! k) (fmap auth sigˣᵐˢˢ)) node
+--                         adrs¹⁰ k = fmap (\x → setTreeIndex  (setTreeHeight x (k+1)) ((getTreeIndex (setTreeHeight x (k+ 1))) + (addOne k) `div` 2)) adrs⁶⁷
+-- Algorithm 12
+-- ht_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+--     ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, PKRootType alg) 
+--      → IdxType alg -- idx_leaf
+--      → IdxType alg -- idx_tree
+--      → Channel dom (Bit)
+-- ht_sign input idxˡᵉᵃᶠ idxᵗʳᵉᵉ 
+--         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--         = 
+--         adrs ∷ ADRSType alg
+--         adrs = setTreeAddress
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
 concatMapC Nil = errorX "Invalid vector"
 concatMapC ( x `Cons` Nil) = fmap singleton  x 

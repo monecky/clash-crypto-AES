@@ -71,6 +71,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , LayerAddressType
   , TreeAddressType
   , TypeType
+  , IdxType
   -- Hash
   , SLH_DSA_hash(..)
 )where

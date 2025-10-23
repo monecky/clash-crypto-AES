@@ -139,3 +139,10 @@ data ADRSTypeType =
     , Bounded
     , Typeable
     )
+
+    
+-------------------------
+-- idx type to simplify
+--
+-------------------------
+type IdxType (alg ∷ SLH_DSA) = BitVector (HashAddressTreeIndexSize alg * ByteSize)
