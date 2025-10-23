@@ -250,7 +250,7 @@ xmss_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEna
      → Channel dom (IdxType alg) -- i 
      → Channel dom (IdxType alg) -- z
      → Channel dom (NodeType alg)
-xmss_node input i z = apWhen (fmap (\x → (x == 0x00)) z) (\x → ifthen) ifelse
+xmss_node input i z =  mux  (fmap (\x → (x == 0x00)) z)  ifthen ifelse
                                                         -- $ apWhen input.hasUpdates (const (FLTSquare, maxBound))
     where
         ifthen ∷ Channel dom (NodeType alg)
