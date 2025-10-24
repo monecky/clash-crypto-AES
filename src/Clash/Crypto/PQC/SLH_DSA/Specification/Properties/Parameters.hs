@@ -50,6 +50,8 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , (Len¹ alg + Div (N alg * ByteSize) (Lgʷ alg) - Len¹ alg) * Lgʷ alg ~ N alg * ByteSize
                 , Len¹ alg ≤ Div (N alg * ByteSize) (Lgʷ alg) 
         , (Len¹ alg + Div (N alg * ByteSize) (Lgʷ alg) - Len¹ alg) * Lgʷ alg ~ N alg * ByteSize
+        -- Algorithm 12
+        , 1 ≤ D alg
         -- Properties according p.17, TODO it can be delete since it holds for many more cases.
         -- This works as verification methode that the calculation is done right on Type level.
         -- , Lgʷ alg ~ 4

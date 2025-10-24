@@ -44,6 +44,7 @@ data SLH_DSAFacts (alg ∷ SLH_DSA) where
         ,  N alg <= 64
         -- Properties according p.17, TODO it can be delete since it holds for many more cases.
         -- This works as verification methode that the calculation is done right on Type level.
+
         , Lgʷ alg ~ 4
         , W alg ~ 16
         , Len¹ alg ~ 2 * N alg

@@ -28,10 +28,10 @@ import Clash.Signal.Channel
 ------------------------------
 -- Setters
 ------------------------------
-setLayerAddressC ∷  ∀ (alg ∷ SLH_DSA) dom . KnownSLH_DSAParameters alg ⇒ Channel dom (ADRSType alg) → LayerAddressType alg → Channel dom (ADRSType alg)
+setLayerAddressC ∷  ∀ (alg ∷ SLH_DSA) dom . KnownSLH_DSAParameters alg ⇒ Channel dom (ADRSType alg) → Channel dom (LayerAddressType alg) → Channel dom (ADRSType alg)
 setLayerAddressC adrs l 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
-      = fmap (`setLayerAddress` l) adrs
+      = liftA2 setLayerAddress adrs l
 setTreeAddressC ∷ ∀ (alg ∷ SLH_DSA) ℓ dom . (KnownSLH_DSAParameters alg, KnownNat ℓ)⇒ Channel dom (ADRSType alg) → Channel dom (BitVector ℓ) →  Channel dom (ADRSType alg)
 setTreeAddressC adrs t 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg     
