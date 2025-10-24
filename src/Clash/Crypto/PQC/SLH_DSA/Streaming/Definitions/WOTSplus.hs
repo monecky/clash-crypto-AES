@@ -370,12 +370,12 @@ xmss_pkFromSig input idx
 -- Algorithm 12
 ht_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
     ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, PKRootType alg) 
-     → Channel dom (IdxType alg) -- idx_leaf
      → Channel dom (IdxType alg) -- idx_tree
+     → Channel dom (IdxType alg) -- idx_leaf
      → Channel dom (SIGᴴᵀType alg)
-ht_sign input idxˡᵉᵃᶠ idxᵗʳᵉᵉ 
+ht_sign input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-        = concatMapC (map (fmap record2bv . thdOf3C) (scanl function (zip3C root idxᵗʳᵉᵉ sigʰᵗ) (iterateI @(D alg - 1) (fmap (+1)) (fmap (const 0x001) idxᵗʳᵉᵉ))))
+        = concatMapC (map thdOf3C forloop)
         where 
             adrs ∷ Channel dom (ADRSType alg)
             adrs = fmap (setTreeAddress getInitADRS) idxᵗʳᵉᵉ
@@ -386,6 +386,11 @@ ht_sign input idxˡᵉᵃᶠ idxᵗʳᵉᵉ
             sigᵗᵐᵖ = xmss_sign (liftA2 (\(m,s,p,_) a → (m,s,p,a)) input adrs) idxˡᵉᵃᶠ
             sigʰᵗ = sigᵗᵐᵖ
             root = xmss_pkFromSig (liftA3 (\sig (m,s,p,_) a → (sig,m,p,a)) sigʰᵗ input adrs) idxˡᵉᵃᶠ
+            -- line 6 - 16
+            forloop ∷ Vec (D alg) (Channel dom (NodeType alg, IdxType alg, SIGˣᵐˢˢType alg) )
+            forloop 
+                | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                = scanl function (zip3C root idxᵗʳᵉᵉ sigʰᵗ) (iterateI @(D alg - 1) (fmap (+1)) (fmap (const 0x001) idxᵗʳᵉᵉ))
             function ∷ Channel dom (NodeType alg, IdxType alg, SIGˣᵐˢˢType alg) 
                     → Channel dom (IdxType alg) 
                     → Channel dom (NodeType alg, IdxType alg, SIGˣᵐˢˢType alg)
@@ -427,6 +432,31 @@ ht_sign input idxˡᵉᵃᶠ idxᵗʳᵉᵉ
                             ifelse 
                                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                 = root⁰
+
+-- Algorithm 13
+-- ht_verify ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+--     ⇒ Channel dom (NBlockType alg, SIGᴴᵀType alg, PKSeedType alg, PKRootType alg) 
+--      → Channel dom (IdxType alg) -- idx_tree
+--      → Channel dom (IdxType alg) -- idx_leaf 
+--      → Channel dom (Bool)
+-- ht_verify input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
+--         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--         = (==) <$> node <*> pkRoot -- line 13-17
+--         where
+--             adrs ∷ Channel dom (ADRSType alg)
+--             adrs = fmap (setTreeAddress getInitADRS) idxᵗʳᵉᵉ -- line 1-2
+--             pkSeed ∷ Channel dom (PKSeedType alg)
+--             pkSeed = thdOf4C input
+--             pkRoot ∷ Channel dom (PKRootType alg)
+--             pkRoot = frtOf4C input
+--             sig ∷ Channel dom (SIGᴴᵀType alg)
+--             sig = sndOf4C input
+--             sig⁰ ∷ Channel dom (SIGˣᵐˢˢType alg)
+--             sig⁰ = fmap head sig
+--             m ∷ Channel dom (NBlockType alg)
+--             m = fstOf4C input
+--             node⁰ ∷ Channel dom (NBlockType alg)
+--             node⁰ = xmss_pkFromSig (zip4C sig⁰ m pkSeed adrs) idxˡᵉᵃᶠ
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
 concatMapC Nil = errorX "Invalid vector"
 concatMapC ( x `Cons` Nil) = fmap singleton  x 

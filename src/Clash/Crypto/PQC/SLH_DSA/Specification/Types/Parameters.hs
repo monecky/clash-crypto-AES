@@ -367,7 +367,7 @@ deriving newtype instance (KnownNat (N alg)) ⇒ Ord     (PublicKey alg)
 ---------------------------------------------------------------------------
 type RType (alg ∷ SLH_DSA) = NBlockType alg
 type SIGᶠᵒʳˢType (alg ∷ SLH_DSA) = Vec ((N alg) * (K alg) * (1 + A alg)) ByteType
-type SIGᴴᵀType (alg ∷ SLH_DSA) = Vec (D alg) (Vec ((H' alg + Len alg)* N alg) ByteType)
+type SIGᴴᵀType (alg ∷ SLH_DSA) = Vec (D alg) (SIGˣᵐˢˢType alg)
 
 
 ---------------------------------------------------------------------------
