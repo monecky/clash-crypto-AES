@@ -46,3 +46,34 @@ fors_skGen input idx
                     skADRS  = setTypeAndClear a FORS_PRF
                     skADRS¹ = setKeyPairAddress skADRS (getKeyPairAddress a)
                     skADRS² = setTreeIndex skADRS¹ i
+-- Algorithm 15
+fors_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) 
+     → Channel dom (IdxType alg) -- i 
+     → Channel dom (IdxType alg) -- z
+     → Channel dom (NodeType alg)
+fors_node input i z =  mux  (fmap (== 0x00) z) ifthen ifelse
+    where
+        ifthen ∷ Channel dom (NodeType alg)
+        ifthen 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = _FStream alg (liftA2 (\(s,t,v) w → (t, setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w, s)) input i)
+        ifelse ∷ Channel dom (NodeType alg)
+        ifelse
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = node
+                where
+                    -- line 7
+                    lnode ∷ Channel dom (NodeType alg)
+                    lnode =  fors_node input ((2*) <$> i) (fmap (\x → x - 1) z)
+                    -- line 8
+                    rnode ∷ Channel dom (NodeType alg)
+                    rnode = fors_node input (fmap (\x → 2 * x + 1) i) (fmap (\x → x - 1) z)
+                    adrs¹ ∷ Channel dom (ADRSType alg)
+                    adrs¹ 
+                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                        = liftA2 (\(s,t,v) w → setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w) input i
+                    node ∷ Channel dom (NodeType alg)
+                    node 
+                        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                        = _HStream alg ((\(_,p,_) a l r →  (p,a, l ‖ r)) <$> input <*> adrs¹ <*> lnode <*> rnode)
