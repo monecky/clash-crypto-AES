@@ -403,11 +403,11 @@ ht_sign input idxˡᵉᵃᶠ idxᵗʳᵉᵉ
                     idxTree ∷ Channel dom (BitVector 32)
                     idxTree 
                         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                        = (fmap (\x → shiftL x (natToNum @(H' alg))) idxᵗʳᵉᵉ⁰)
+                        = fmap (\x → shiftL x (natToNum @(H' alg))) idxᵗʳᵉᵉ⁰
                     idxLeaf ∷ Channel dom (BitVector 32)
                     idxLeaf 
                         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                        = (fmap (\x → shiftL (shiftR x (natToNum @(H' alg))) (natToNum @(H' alg))) idxᵗʳᵉᵉ⁰)
+                        = fmap (\x → shiftL (shiftR x (natToNum @(H' alg))) (natToNum @(H' alg))) idxᵗʳᵉᵉ⁰
                     sigᵗᵐᵖ⁰ = xmss_sign (zip4C root⁰ skSeed pkSeed adrs) idxLeaf
                     -- sigʰᵗ¹ = (‖) <$> sigʰᵗ⁰ <*> sigᵗᵐᵖ⁰
                     root¹ ∷ Channel dom (NBlockType alg)
@@ -415,7 +415,7 @@ ht_sign input idxˡᵉᵃᶠ idxᵗʳᵉᵉ
                         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                         = mux cond ifthen ifelse
                         where
-                            cond ∷ Channel dom (Bool)
+                            cond ∷ Channel dom Bool
                             cond 
                                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                 = fmap (\ x → x < (natToNum @(D alg) - 1)) j
@@ -439,8 +439,8 @@ transferAddressC adrs t
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
     = liftA2 (\ad ad¹  → setKeyPairAddress ad¹ (getKeyPairAddress ad)) (setTypeAndClearC adrs t) adrs
 
-record2bv ∷ SIGˣᵐˢˢType alg → Vec ((H' alg + Len alg)* N alg) (ByteType)
+record2bv ∷ SIGˣᵐˢˢType alg → Vec ((H' alg + Len alg)* N alg) ByteType
 record2bv XMSSType {
   sig_ots,
   auth
-  } = (concat (sig_ots ‖ auth))
+  } = concat (sig_ots ‖ auth)
