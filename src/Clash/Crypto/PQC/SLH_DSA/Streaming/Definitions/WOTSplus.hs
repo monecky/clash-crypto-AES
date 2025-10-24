@@ -434,29 +434,64 @@ ht_sign input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
                                 = root⁰
 
 -- Algorithm 13
--- ht_verify ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
---     ⇒ Channel dom (NBlockType alg, SIGᴴᵀType alg, PKSeedType alg, PKRootType alg) 
---      → Channel dom (IdxType alg) -- idx_tree
---      → Channel dom (IdxType alg) -- idx_leaf 
---      → Channel dom (Bool)
--- ht_verify input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
---         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
---         = (==) <$> node <*> pkRoot -- line 13-17
---         where
---             adrs ∷ Channel dom (ADRSType alg)
---             adrs = fmap (setTreeAddress getInitADRS) idxᵗʳᵉᵉ -- line 1-2
---             pkSeed ∷ Channel dom (PKSeedType alg)
---             pkSeed = thdOf4C input
---             pkRoot ∷ Channel dom (PKRootType alg)
---             pkRoot = frtOf4C input
---             sig ∷ Channel dom (SIGᴴᵀType alg)
---             sig = sndOf4C input
---             sig⁰ ∷ Channel dom (SIGˣᵐˢˢType alg)
---             sig⁰ = fmap head sig
---             m ∷ Channel dom (NBlockType alg)
---             m = fstOf4C input
---             node⁰ ∷ Channel dom (NBlockType alg)
---             node⁰ = xmss_pkFromSig (zip4C sig⁰ m pkSeed adrs) idxˡᵉᵃᶠ
+ht_verify ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+    ⇒ Channel dom (NBlockType alg, SIGᴴᵀType alg, PKSeedType alg, PKRootType alg) 
+     → Channel dom (IdxType alg) -- idx_tree
+     → Channel dom (IdxType alg) -- idx_leaf 
+     → Channel dom (Bool)
+ht_verify input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
+        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+        = (==) <$> fstC forloop <*> pkRoot -- line 13-17
+        where
+            adrs ∷ Channel dom (ADRSType alg)
+            adrs = fmap (setTreeAddress getInitADRS) idxᵗʳᵉᵉ -- line 1-2
+            pkSeed ∷ Channel dom (PKSeedType alg)
+            pkSeed = thdOf4C input
+            pkRoot ∷ Channel dom (PKRootType alg)
+            pkRoot = frtOf4C input
+            sig ∷ Channel dom (SIGᴴᵀType alg)
+            sig = sndOf4C input
+            sig⁰ ∷ Channel dom (SIGˣᵐˢˢType alg)
+            sig⁰ 
+                | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                = fmap head sig
+            m ∷ Channel dom (NBlockType alg)
+            m = fstOf4C input
+            node⁰ ∷ Channel dom (NBlockType alg)
+            node⁰ 
+                | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                = xmss_pkFromSig (zip4C sig⁰ m pkSeed adrs) idxˡᵉᵃᶠ
+            forloop ∷ Channel dom (NodeType alg, IdxType alg)
+            forloop 
+                | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                = foldl function (zipC node⁰ idxᵗʳᵉᵉ) (iterateI @(D alg - 1) (fmap (+1)) (fmap (const 0x001) idxᵗʳᵉᵉ))
+            function ∷ Channel dom (NodeType alg, IdxType alg) 
+                    → Channel dom (IdxType alg) 
+                    → Channel dom (NodeType alg, IdxType alg)
+            function input⁰ j 
+                | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                = zipC node² idxTree
+                where
+                    adrs⁰ ∷ (KnownSLH_DSAParameters alg) ⇒ Channel dom (ADRSType alg)
+                    adrs⁰ 
+                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                        = setLayerAddressC (setLayerAddressC adrs (fmap (unconcatBitVector# . resize) j)) (fmap (unconcatBitVector# . resize) idxTree)
+                    idxᵗʳᵉᵉ⁰ = sndC input⁰
+                    node¹ = fstC input⁰
+                    idxTree ∷ Channel dom (BitVector 32)
+                    idxTree 
+                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                        = fmap (\x → shiftL x (natToNum @(H' alg))) idxᵗʳᵉᵉ⁰
+                    idxLeaf ∷ Channel dom (BitVector 32)
+                    idxLeaf 
+                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                        = fmap (\x → shiftL (shiftR x (natToNum @(H' alg))) (natToNum @(H' alg))) idxᵗʳᵉᵉ⁰
+                    node² ∷ Channel dom (NBlockType alg)
+                    node² 
+                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                        = xmss_pkFromSig (zip4C ( (!!) <$> sig <*> j) node¹ pkSeed adrs) idxLeaf
+                    
+
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
 concatMapC Nil = errorX "Invalid vector"
 concatMapC ( x `Cons` Nil) = fmap singleton  x 

@@ -44,7 +44,7 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- , SK alg
         -- , PK alg
         , N alg ≤ 64 -- This constain is needed for Tˡ, PRF, F and H, for SLH_DSA based on SHA
-        , KnownNat(m), N alg + m ~ 32-- This constain is at least needed for Tˡ, PRF, F and H, for SLH_DSA based on SHA
+        , KnownNat(m1), N alg + m1 ~ 32 -- This constain is at least needed for Tˡ, PRF, F and H, for SLH_DSA based on SHA
         -- Constrain for algorithm 7
         , Len¹ alg ≤ Div (N alg * ByteSize) (Lgʷ alg) 
         , (Len¹ alg + Div (N alg * ByteSize) (Lgʷ alg) - Len¹ alg) * Lgʷ alg ~ N alg * ByteSize
@@ -52,6 +52,8 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , (Len¹ alg + Div (N alg * ByteSize) (Lgʷ alg) - Len¹ alg) * Lgʷ alg ~ N alg * ByteSize
         -- Algorithm 12
         , 1 ≤ D alg
+        , KnownNat(m2), m2 + 1 ~ D alg 
+        , D alg - 1 ~ m2
         -- Properties according p.17, TODO it can be delete since it holds for many more cases.
         -- This works as verification methode that the calculation is done right on Type level.
         -- , Lgʷ alg ~ 4

@@ -11,7 +11,9 @@ Tuple functions of the channel class
 -}
 
 module Clash.Signal.Channel.Extra
-  ( fstOf3C
+  ( fstC
+  , sndC
+  , fstOf3C
   , sndOf3C
   , thdOf3C
   , zip3C
@@ -29,6 +31,12 @@ module Clash.Signal.Channel.Extra
   ) where
 import Clash.Signal.Channel
 import Clash.Prelude
+fstC ∷ Channel dom (a,b) → Channel dom a
+fstC = fmap fst
+sndC ∷ Channel dom (a,b) → Channel dom b
+sndC = fmap snd
+ 
+
 fstOf3C ∷ Channel dom (a,b,c) → Channel dom a
 fstOf3C = fmap (\ (a, _, _) -> a)
 sndOf3C ∷ Channel dom (a,b,c) → Channel dom b
