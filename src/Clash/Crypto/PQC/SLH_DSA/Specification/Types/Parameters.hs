@@ -68,22 +68,6 @@ data SLH_DSA =
     , Typeable
     )
 
-type SLH_DSA_SHA ∷ SLH_DSA → SHA.SHA
-type family SLH_DSA_SHA (alg ∷ SLH_DSA) where
-  {-TODO:When the right implementation exist of SHA other algorithms can be added-}
-  SLH_DSA_SHA SLH_DSA_SHA2_128s  = SHA.SHA256
-  -- SLH_DSA_SHA SLH_DSA_SHAKE_128s = SHA.SHA256
-  SLH_DSA_SHA SLH_DSA_SHA2_128f  = SHA.SHA256
-  -- SLH_DSA_SHA SLH_DSA_SHAKE_128f = SHA.SHA256
-  SLH_DSA_SHA SLH_DSA_SHA2_192s  = SHA.SHA512
-  -- SLH_DSA_SHA SLH_DSA_SHAKE_192s = SHA.SHA512
-  SLH_DSA_SHA SLH_DSA_SHA2_192f  = SHA.SHA512
-  -- SLH_DSA_SHA SLH_DSA_SHAKE_192f = SHA.SHA512
-  SLH_DSA_SHA SLH_DSA_SHA2_256s  = SHA.SHA512
-  -- SLH_DSA_SHA SLH_DSA_SHAKE_256s = SHA.SHA512
-  SLH_DSA_SHA SLH_DSA_SHA2_256f  = SHA.SHA512
-  -- SLH_DSA_SHA SLH_DSA_SHAKE_256f = SHA.SHA512
-  SLH_DSA_SHA _                  = SHA.SHA512
 -- According to Table 2 of FIPS 205
 type N ∷ SLH_DSA → Nat
 type family N (alg ∷ SLH_DSA) where
@@ -423,3 +407,72 @@ deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ Eq      (Ele
 deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ Ord     (ElemForsType alg)
 
 type FORSType (alg ∷ SLH_DSA) = Vec (K alg) (ElemForsType alg)-- 0 .. k- 1
+
+--------------------------------------------------------
+-- Security levels for different implementation of the
+-- functions described in chapter 11 and section 4.1
+--
+--------------------------------------------------------
+type SecurityLevel ∷ Type
+data SecurityLevel =
+    SecurityOne
+    | SecurityThree
+    | SecurityFive
+  deriving
+    ( Generic
+    , NFDataX
+    , BitPack
+    , Eq
+    , Ord
+    , Show
+    , Enum
+    , Bounded
+    , Typeable
+    )
+type SHAVersion ∷ Type
+data SHAVersion =
+    SHATwo
+    | SHAThree
+  deriving
+    ( Generic
+    , NFDataX
+    , BitPack
+    , Eq
+    , Ord
+    , Show
+    , Enum
+    , Bounded
+    , Typeable
+    )
+type SecurityLevelSLH_DSA ∷ SLH_DSA → SecurityLevel
+type family SecurityLevelSLH_DSA (alg ∷ SLH_DSA) where
+    SecurityLevelSLH_DSA  SLH_DSA_SHA2_128s  = SecurityOne   
+    SecurityLevelSLH_DSA  SLH_DSA_SHAKE_128s = SecurityOne    
+    SecurityLevelSLH_DSA  SLH_DSA_SHA2_128f  = SecurityOne   
+    SecurityLevelSLH_DSA  SLH_DSA_SHAKE_128f = SecurityOne    
+    SecurityLevelSLH_DSA  SLH_DSA_SHA2_192s  = SecurityThree   
+    SecurityLevelSLH_DSA  SLH_DSA_SHAKE_192s = SecurityThree    
+    SecurityLevelSLH_DSA  SLH_DSA_SHA2_192f  = SecurityThree   
+    SecurityLevelSLH_DSA  SLH_DSA_SHAKE_192f = SecurityThree    
+    SecurityLevelSLH_DSA  SLH_DSA_SHA2_256s  = SecurityFive   
+    SecurityLevelSLH_DSA  SLH_DSA_SHAKE_256s = SecurityFive    
+    SecurityLevelSLH_DSA  SLH_DSA_SHA2_256f  = SecurityFive   
+    SecurityLevelSLH_DSA  SLH_DSA_SHAKE_256f = SecurityFive 
+    SecurityLevelSLH_DSA  _                  = SecurityOne    
+
+type SHAVersionSLH_DSA ∷ SLH_DSA → SHAVersion
+type family SHAVersionSLH_DSA (alg ∷ SLH_DSA) where
+    SHAVersionSLH_DSA  SLH_DSA_SHA2_128s  = SHATwo   
+    SHAVersionSLH_DSA  SLH_DSA_SHAKE_128s = SHAThree    
+    SHAVersionSLH_DSA  SLH_DSA_SHA2_128f  = SHATwo   
+    SHAVersionSLH_DSA  SLH_DSA_SHAKE_128f = SHAThree    
+    SHAVersionSLH_DSA  SLH_DSA_SHA2_192s  = SHATwo   
+    SHAVersionSLH_DSA  SLH_DSA_SHAKE_192s = SHAThree    
+    SHAVersionSLH_DSA  SLH_DSA_SHA2_192f  = SHATwo   
+    SHAVersionSLH_DSA  SLH_DSA_SHAKE_192f = SHAThree    
+    SHAVersionSLH_DSA  SLH_DSA_SHA2_256s  = SHATwo   
+    SHAVersionSLH_DSA  SLH_DSA_SHAKE_256s = SHAThree    
+    SHAVersionSLH_DSA  SLH_DSA_SHA2_256f  = SHATwo   
+    SHAVersionSLH_DSA  SLH_DSA_SHAKE_256f = SHAThree 
+    SHAVersionSLH_DSA  _                  = SHATwo    
+
