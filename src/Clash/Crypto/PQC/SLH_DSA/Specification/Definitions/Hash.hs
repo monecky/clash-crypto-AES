@@ -41,13 +41,13 @@ import Data.Constraint.Nat.Extra
 -- This is only the interface.
 --
 ---------------------------------------------------------------------------
-class SLH_DSA_hash (sha ∷ SHAVersion) (security ∷ SecurityLevel) where
-  _PRFᵐˢᵍ ∷ ∀ alg ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
-  _Hᵐˢᵍ   ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
-  _PRF    ∷ ∀ (alg ∷ SLH_DSA)   . (KnownSLH_DSAParameters alg)             ⇒ PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
-  _Tˡ     ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
-  _H      ∷ ∀ (alg ∷ SLH_DSA)   . (KnownSLH_DSAParameters alg)             ⇒ PKSeedType alg → ADRSType alg → M²Type alg → HOutType alg
-  _F      ∷ ∀ (alg ∷ SLH_DSA)   . (KnownSLH_DSAParameters alg)             ⇒ PKSeedType alg → ADRSType alg → M¹Type alg → FOutType alg
+class (KnownSLH_DSAParameters alg, KnownNat ℓ)  ⇒ SLH_DSA_hash  (sha ∷ SHAVersion) (security ∷ SecurityLevel) (alg ∷ SLH_DSA) (ℓ ∷ Nat) where
+  _PRFᵐˢᵍ ∷  SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
+  _Hᵐˢᵍ   ∷  RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
+  _PRF    ∷  PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
+  _Tˡ     ∷  PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
+  _H      ∷  PKSeedType alg → ADRSType alg → M²Type alg → HOutType alg
+  _F      ∷  PKSeedType alg → ADRSType alg → M¹Type alg → FOutType alg
 
 -- import Clash.Crypto.Hash.SHA as SHA
 -- import Clash.Crypto.MAC.HMAC as HMAC
@@ -58,13 +58,13 @@ class SLH_DSA_hash (sha ∷ SHAVersion) (security ∷ SecurityLevel) where
 --   , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
 --   )
 -- import Language.Haskell.Unicode (type (≤))
-instance SLH_DSA_hash SHATwo SecurityOne where 
+instance (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ SLH_DSA_hash SHATwo SecurityOne (alg ∷ SLH_DSA) (ℓ ∷ Nat) where 
     -- No functional function of HMAC sha exists.
-    _PRFᵐˢᵍ ∷ ∀ alg ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
-    _PRFᵐˢᵍ alg skPrfType opt_rand m  
+    _PRFᵐˢᵍ ∷ SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
+    _PRFᵐˢᵍ skPrfType opt_rand m  
         = errorX "Not implemented HMAC doesn't exist as functional"
-    _Hᵐˢᵍ   ∷ ∀ alg ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
-    _Hᵐˢᵍ alg r pkSeed pkRoot m   
+    _Hᵐˢᵍ   ∷ RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
+    _Hᵐˢᵍ r pkSeed pkRoot m   
         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
         -- , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
         = -- truncˡ
@@ -86,7 +86,7 @@ instance SLH_DSA_hash SHATwo SecurityOne where
                         (concatBitVector# 
                         (r ‖ pkSeed ‖ pkRoot ‖ m1)))
 
-    _PRF    ∷ ∀ (alg :: SLH_DSA).  (KnownSLH_DSAParameters alg) ⇒ PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
+    _PRF    ∷ PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
     _PRF   pkSeed skSeed adrs 
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         = truncˡ (unconcatBitVector# (Spec.hash 
@@ -95,7 +95,7 @@ instance SLH_DSA_hash SHATwo SecurityOne where
                     (toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (SKSeedType alg)) 8) @ByteSize @0 
                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed))))
   
-    _Tˡ     ∷ ∀ (alg :: SLH_DSA) ℓ.  ( KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
+    _Tˡ     ∷ PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
     _Tˡ   pkSeed adrs ml
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         , Rewrite ← using @(DivTimes (((N alg + (64 - N alg))
@@ -110,7 +110,7 @@ instance SLH_DSA_hash SHATwo SecurityOne where
                     (toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (MˡType ℓ alg)) 8) @ByteSize @0 
                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ ml))))
 
-    _H      ∷ ∀ (alg :: SLH_DSA).  (KnownSLH_DSAParameters alg) ⇒ PKSeedType alg → ADRSType alg → M²Type alg → HOutType alg
+    _H      ∷ PKSeedType alg → ADRSType alg → M²Type alg → HOutType alg
     _H pkSeed adrs m2
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         , Rewrite ← using @(DivTimes (((N alg + (64 - N alg))
@@ -125,7 +125,7 @@ instance SLH_DSA_hash SHATwo SecurityOne where
                     (toInt @(Div (BitSize (PKSeedType alg)  + 64 * ByteSize - BitSize (NBlockType alg) + BitSize (ADRSType alg) + BitSize (M²Type alg)) 8) @ByteSize @0 
                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ m2))))
 
-    _F      ∷ ∀ (alg :: SLH_DSA).  (KnownSLH_DSAParameters alg) ⇒ PKSeedType alg → ADRSType alg → M¹Type alg → FOutType alg
+    _F      ∷ PKSeedType alg → ADRSType alg → M¹Type alg → FOutType alg
     _F pkSeed adrs m1 
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         = truncˡ (unconcatBitVector# (Spec.hash 
