@@ -5,7 +5,7 @@ Maintainer  : QBayLogic B.V.
 Stability   : experimental
 Portability : POSIX
 
-Basic types covering the fundamentals of FIPS 205.
+Hash types covering chapter 11 of FIPS 205.
 All subscript are superscripts, since not all subscripts are 
 defined in unicode. But for superscript there are.
 -}
