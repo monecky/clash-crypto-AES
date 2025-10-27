@@ -44,11 +44,11 @@ import Data.Constraint.Nat.Extra
   )
 import Language.Haskell.Unicode (type (≤))
 
-instance (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ SLH_DSA_hashStream SHATwo SecurityOne (alg ∷ SLH_DSA) (ℓ ∷ Nat) where 
+instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne (alg ∷ SLH_DSA) where 
   -- TODO make a DataStream as input because algorithm 19
-    _PRFᵐˢᵍStreaming ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, KnownNat ℓ) 
-            ⇒  Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
-    _PRFᵐˢᵍStreaming input  
+    _PRFᵐˢᵍStreaming ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, KnownSLH_DSAParameters alg) 
+                  ⇒ Proxy alg → Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
+    _PRFᵐˢᵍStreaming alg input  
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         , Rewrite ← using @(ModTimes (BlockSize SHA256 + N alg + ℓ) ByteSize) 
         , Rewrite ← using @(DivTimes (BlockSize SHA256 + N alg + ℓ) ByteSize) 
@@ -105,19 +105,19 @@ instance (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ SLH_DSA_hashStream SHATw
                     = toInt @(64 + ADRSTypeVectorSize alg + N alg) @ByteSize @0 
                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed)
     -- TODO make a Datastream as input, since the variable ℓ
-    _TˡStreaming     ∷ ∀  (alg :: SLH_DSA) dom  (ℓ ∷ Nat).  (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg, KnownNat ℓ) 
-                  ⇒ Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
-    _TˡStreaming    input
-        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-        , Rewrite ← using @(ModTimes (64 + ADRSTypeVectorSize alg + ℓ * N alg) ByteSize) 
-        = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
-            where
-            transfer = fmap go input
-            makeOutput output = truncˡ (unconcatBitVector# output)
-            go ∷ (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒ (PKSeedType alg, ADRSType alg, MˡType ℓ alg)  → BitVector ((64 + ADRSTypeVectorSize alg + ℓ * N alg) * ByteSize)
-            go (pkSeed, adrs, ml) 
-                | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                = concatBitVector# (pkSeed ‖ unconcatBitVector# @(64 - N alg) @ByteSize 0x0 ‖ getADRSVector adrs ‖ ml)
+    -- _TˡStreaming     ∷ ∀ sha security alg1 ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) 
+    --               ⇒ Channel dom (PKSeedType alg1, ADRSType alg1, MˡType ℓ alg1) → Channel dom (TˡOutType alg1)
+    -- _TˡStreaming    input
+    --     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    --     , Rewrite ← using @(ModTimes (64 + ADRSTypeVectorSize alg + ℓ * N alg) ByteSize) 
+    --     = fmap makeOutput (SHA.sha @SHA256 (serializeHash @ByteSize transfer))
+    --         where
+    --         transfer = fmap go input
+    --         makeOutput output = truncˡ (unconcatBitVector# output)
+    --         go ∷ (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒ (PKSeedType alg, ADRSType alg, MˡType ℓ alg)  → BitVector ((64 + ADRSTypeVectorSize alg + ℓ * N alg) * ByteSize)
+    --         go (pkSeed, adrs, ml) 
+    --             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+    --             = concatBitVector# (pkSeed ‖ unconcatBitVector# @(64 - N alg) @ByteSize 0x0 ‖ getADRSVector adrs ‖ ml)
 
     _HStreaming      ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
                   ⇒  Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
