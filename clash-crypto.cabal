@@ -83,7 +83,6 @@ library
     Clash.Crypto.PQC.SLH_DSA.General.General
     Clash.Crypto.PQC.SLH_DSA.Specification.Types
     Clash.Crypto.PQC.SLH_DSA.Specification.Types.Address 
-    Clash.Crypto.PQC.SLH_DSA.Specification.Types.Hash
     Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters
     Clash.Crypto.PQC.SLH_DSA.Specification.Algorithm
     Clash.Crypto.PQC.SLH_DSA.Specification.Constants

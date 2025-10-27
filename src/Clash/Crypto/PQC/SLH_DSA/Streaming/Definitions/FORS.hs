@@ -77,3 +77,30 @@ fors_node input i z =  mux  (fmap (== 0x00) z) ifthen ifelse
                     node 
                         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                         = _HStream alg ((\(_,p,_) a l r →  (p,a, l ‖ r)) <$> input <*> adrs¹ <*> lnode <*> rnode)
+
+-- Algorithm 16
+-- fors_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg) 
+--     ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
+--      → Channel dom (IdxType alg) -- idx
+--      → Channel dom (SIGˣᵐˢˢType alg)
+-- fors_sign input idx 
+--     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--     = liftA2 object sig_ots auth
+--     where 
+--         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStream alg)
+--                 ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → SIGˣᵐˢˢType alg
+--         object x y 
+--             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--             = XMSSType {sig_ots = x, auth = y}
+--         k ∷ Channel dom (IdxType alg) → Channel dom (IdxType alg) -- k
+--         k x = fmap (\y → xor# (0 +>>. y)  1) x -- k ← ⌊idx/2j⌋ ⊕ 1
+--         auth ∷ Channel dom (AUTHType alg)
+--         auth
+--             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--             = concatMapC (map (uncurry (xmss_node input⁰)) (iterateI @(H' alg) (\(x, y) → (k x, fmap (1+) y)) (idx, fmap (\x → 0x0 ∷ IdxType alg) idx)))
+--             where
+--                 input⁰ = fmap (\(_,s,p,a) → (s,p,a)) input
+--         sig_ots ∷ Channel dom (SIGʷᵒᵗˢPlusType alg)
+--         sig_ots = wots_sign input⁰
+--             where
+--                 input⁰ = liftA2 (\(m,s,p,a) x → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) x)) input idx

@@ -74,7 +74,10 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , TypeType
   , IdxType
   -- Hash
-  , SLH_DSA_hash(..)
+  , SecurityLevelSLH_DSA
+  , SHAVersionSLH_DSA
+  , SHAVersion (..)
+  , SecurityLevel (..)
 )where
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)
@@ -94,4 +97,3 @@ import Data.Type.Bool (If)
 import Clash.Crypto.Hash.SHA as SHA
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Address
-import Clash.Crypto.PQC.SLH_DSA.Specification.Types.Hash

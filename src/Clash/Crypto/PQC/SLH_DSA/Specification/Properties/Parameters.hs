@@ -61,6 +61,22 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- , Len¹ alg ~ 2 * N alg
         -- , Len² alg ~ 3
         -- , Len alg ~ 2 * N alg + 3
+        -- Specification functional implementation constraints
+        , Div
+                          ((((N alg + (64 - N alg))
+                             + (((((LayerAddressSize alg + TreeAddressSize alg) + TypeSize alg)
+                                  + 4)
+                                 + 4)
+                                + 4))
+                            + N alg)
+                           * 8)
+                          8
+                        ~ (((N alg + (64 - N alg))
+                            + (((((LayerAddressSize alg + TreeAddressSize alg) + TypeSize alg)
+                                 + 4)
+                                + 4)
+                               + 4))
+                           + N alg)
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg
