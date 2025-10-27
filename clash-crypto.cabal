@@ -73,6 +73,7 @@ library
     Clash.Crypto.PQC.SLH_DSA
     Clash.Crypto.PQC.SLH_DSA.Specification
     Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters
+    Clash.Crypto.PQC.SLH_DSA.Streaming.Properties.Hash
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Address
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash

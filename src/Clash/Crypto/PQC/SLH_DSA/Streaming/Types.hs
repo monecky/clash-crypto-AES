@@ -17,6 +17,12 @@ defined in unicode. But for superscript there are.
 {-# HLINT ignore "Use camelCase" #-}
 
 module Clash.Crypto.PQC.SLH_DSA.Streaming.Types (
-    SLH_DSA_hashStream(..)
+    SLH_DSA_hashStreamFact
+    , _FStream
+    , _HStream
+    , _TˡStream
+    , _PRFStream
+    , _HᵐˢᵍStream
+    , _PRFᵐˢᵍStream
 ) where
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Types.Hash

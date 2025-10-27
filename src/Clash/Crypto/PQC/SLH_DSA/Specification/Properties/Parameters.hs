@@ -43,6 +43,7 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- , PublicKey alg
         -- , SK alg
         -- , PK alg
+        -- , 1 ≤ BitSize 
         , N alg ≤ 64 -- This constain is needed for Tˡ, PRF, F and H, for SLH_DSA based on SHA
         , KnownNat(m1), N alg + m1 ~ 32 -- This constain is at least needed for Tˡ, PRF, F and H, for SLH_DSA based on SHA
         -- Constrain for algorithm 7
@@ -77,6 +78,7 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
                                 + 4)
                                + 4))
                            + N alg)
+     
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg
