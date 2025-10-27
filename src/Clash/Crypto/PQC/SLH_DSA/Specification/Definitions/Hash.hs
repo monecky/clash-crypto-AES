@@ -11,6 +11,7 @@ in section 4 and 11 regards Hash functions of FIPS 205.
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
@@ -41,8 +42,8 @@ import Data.Constraint.Nat.Extra
 --
 ---------------------------------------------------------------------------
 class SLH_DSA_hash (sha ∷ SHAVersion) (security ∷ SecurityLevel) where
-  _PRFᵐˢᵍ ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
-  _Hᵐˢᵍ   ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
+  _PRFᵐˢᵍ ∷ ∀ alg ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
+  _Hᵐˢᵍ   ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
   _PRF    ∷ ∀ (alg ∷ SLH_DSA)   . (KnownSLH_DSAParameters alg)             ⇒ PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
   _Tˡ     ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ PKSeedType alg → ADRSType alg → MˡType ℓ alg → TˡOutType alg
   _H      ∷ ∀ (alg ∷ SLH_DSA)   . (KnownSLH_DSAParameters alg)             ⇒ PKSeedType alg → ADRSType alg → M²Type alg → HOutType alg
@@ -59,12 +60,13 @@ class SLH_DSA_hash (sha ∷ SHAVersion) (security ∷ SecurityLevel) where
 -- import Language.Haskell.Unicode (type (≤))
 instance SLH_DSA_hash SHATwo SecurityOne where 
     -- No functional function of HMAC sha exists.
-    _PRFᵐˢᵍ ∷ ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
-    _PRFᵐˢᵍ skPrfType opt_rand m  = errorX "Not implemented"
-    _Hᵐˢᵍ   ∷  ∀ (alg ∷ SLH_DSA) ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
-    _Hᵐˢᵍ r pkSeed pkRoot m   
+    _PRFᵐˢᵍ ∷ ∀ alg ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
+    _PRFᵐˢᵍ alg skPrfType opt_rand m  
+        = errorX "Not implemented HMAC doesn't exist as functional"
+    _Hᵐˢᵍ   ∷ ∀ alg ℓ . (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ Proxy alg → RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
+    _Hᵐˢᵍ alg r pkSeed pkRoot m   
         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-        , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
+        -- , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
         = -- truncˡ
             (unconcatBitVector#  (MGF1Spec.mgf1 
                 @SHA256 
@@ -72,17 +74,17 @@ instance SLH_DSA_hash SHATwo SecurityOne where
                 @((N alg + N alg + Div (MessageDigestSize SHA256) ByteSize) * ByteSize) -- ℓ 
                 @(MessageDigestSize SHA256) -- hLen
                     (concatBitVector#
-                    (r ‖ pkSeed ‖ (hashed @alg @ℓ r pkSeed pkRoot m)))))
+                    (r ‖ pkSeed ‖ (hashed r pkSeed pkRoot m)))))
             where
-                hashed ∷ ∀ alg ℓ . (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒ RType alg → PKSeedType alg → PKRootType alg → MType ℓ → Vec (Div (MessageDigestSize SHA256) ByteSize) ByteType
-                hashed r pkSeed pkRoot m
+                hashed ∷ RType alg → PKSeedType alg → PKRootType alg → MType ℓ → Vec (Div (MessageDigestSize SHA256) ByteSize) ByteType
+                hashed r pkSeed pkRoot m1
                         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                         --  , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
                     = unconcatBitVector# (Spec.hash 
                     @SHA256 
                     -- @((N alg + N alg + N alg + ℓ) * ByteSize) 
                         (concatBitVector# 
-                        (r ‖ pkSeed ‖ pkRoot ‖ m)))
+                        (r ‖ pkSeed ‖ pkRoot ‖ m1)))
 
     _PRF    ∷ ∀ (alg :: SLH_DSA).  (KnownSLH_DSAParameters alg) ⇒ PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
     _PRF   pkSeed skSeed adrs 
