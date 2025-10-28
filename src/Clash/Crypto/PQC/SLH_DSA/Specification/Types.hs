@@ -78,6 +78,10 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , SHAVersionSLH_DSA
   , SHAVersion (..)
   , SecurityLevel (..)
+  -- FORS
+  , MD
+  , MDType
+  , SIGᶠᵒʳˢType
 )where
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)

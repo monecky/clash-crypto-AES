@@ -350,7 +350,6 @@ deriving newtype instance (KnownNat (N alg)) ⇒ Ord     (PublicKey alg)
 --
 ---------------------------------------------------------------------------
 type RType (alg ∷ SLH_DSA) = NBlockType alg
-type SIGᶠᵒʳˢType (alg ∷ SLH_DSA) = Vec ((N alg) * (K alg) * (1 + A alg)) ByteType
 type SIGᴴᵀType (alg ∷ SLH_DSA) = Vec (D alg) (SIGˣᵐˢˢType alg)
 
 
@@ -405,9 +404,11 @@ deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ BitPack (Ele
 deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ NFDataX (ElemForsType alg)
 deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ Eq      (ElemForsType alg)
 deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ Ord     (ElemForsType alg)
+-- type SIGᶠᵒʳˢType (alg ∷ SLH_DSA) = Vec ((N alg) * (K alg) * (1 + A alg)) ByteType
 
-type FORSType (alg ∷ SLH_DSA) = Vec (K alg) (ElemForsType alg)-- 0 .. k- 1
-
+type SIGᶠᵒʳˢType (alg ∷ SLH_DSA) = Vec (K alg) (ElemForsType alg)-- 0 .. k- 1
+type MD (alg ∷ SLH_DSA) = (K alg * A alg)
+type MDType (alg ∷ SLH_DSA) = (BitVector (MD alg))
 --------------------------------------------------------
 -- Security levels for different implementation of the
 -- functions described in chapter 11 and section 4.1
