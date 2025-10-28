@@ -78,7 +78,10 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
                                 + 4)
                                + 4))
                            + N alg)
-     
+        -- H stream
+        , Mod ((((N alg + N alg) * 8) + 256) + 32) 8  ~ 0
+        , 1 ≤ N alg, 1 ≤ ((N alg + N alg) + N alg)
+        , 1 ≤ ByteSize
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg

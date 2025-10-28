@@ -61,33 +61,37 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                     = concatBitVector# (skPrf ‖ unconcatBitVector# @(BlockSize SHA256 - N alg) @ByteSize 0x0 ‖ opt_rand ‖ m)
   -- TODO make a DataStream as input because algorithm 19, 20
-    -- _HᵐˢᵍStream   ∷  ∀ (alg :: SLH_DSA) dom (ℓ ∷ Nat) . (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg,  KnownNat ℓ) 
-    --             ⇒ Proxy alg → Channel dom (RType alg, PKSeedType alg, PKRootType alg , MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
-    -- _HᵐˢᵍStream _ input
-    --     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    --     , Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
-    --     = fmap makeOutput (MGF1.mgf1Stream @SHA256 @(M alg) transfer)
-    --         where 
-    --             shaResult ∷ Channel dom (Digest SHA256)
-    --             shaResult 
-    --                   | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    --                   , Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
-    --                   = SHA.sha @SHA256 (serializeHash @ByteSize transfer⁰)
-    --                 where
-    --                     transfer⁰ ∷ (KnownNat ℓ) ⇒ Channel dom (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize))
-    --                     transfer⁰ 
-    --                             | Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
-    --                             = fmap go⁰ input
-    --                     go⁰ ∷  (RType alg, PKSeedType alg, PKRootType alg, MType ℓ)  → BitVector ((N alg + N alg + N alg + ℓ) * ByteSize)
-    --                     go⁰ (r⁰, pkSeed⁰, pkRoot⁰, m⁰) 
-    --                       | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    --                       = concatBitVector# (r⁰ ‖ pkSeed⁰ ‖ pkRoot⁰ ‖ m⁰)
-    --             transfer = liftA2 (++#) (fmap go input) (shaResult)
-    --             makeOutput output = truncˡ (unconcatBitVector# output)
-    --             go ∷ (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒ (RType alg, PKSeedType alg, PKRootType alg , MType ℓ)  → BitVector ((N alg + N alg) * ByteSize)
-    --             go (r, pkSeed, pkRoot, m) 
-    --               | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    --               = concatBitVector# (r ‖ pkSeed)
+    _HᵐˢᵍStreaming   ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ,KnownSLH_DSAParameters alg
+                        , 1 ≤ BitSize (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize))) 
+                  ⇒ Proxy alg → Channel dom (RType alg, PKSeedType alg, PKRootType alg, MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
+    _HᵐˢᵍStreaming _ input
+        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+        , Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
+        = fmap makeOutput (MGF1.mgf1Stream @SHA256 @(M alg) transfer)
+            where 
+                shaResult ∷ Channel dom (Digest SHA256)
+                shaResult 
+                      | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                      , Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
+                      = SHA.sha @SHA256 (serializeHash @ByteSize (transfer⁰))
+                    where
+                        transfer⁰ ∷ (KnownNat ℓ, 1 ≤ BitSize (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize))) ⇒ Channel dom (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize))
+                        transfer⁰ 
+                                | Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
+                                = fmap go⁰ input
+                        go⁰ ∷  (RType alg, PKSeedType alg, PKRootType alg, MType ℓ)  → BitVector ((N alg + N alg + N alg + ℓ) * ByteSize)
+                        go⁰ (r⁰, pkSeed⁰, pkRoot⁰, m⁰) 
+                          | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                          = concatBitVector# (r⁰ ‖ pkSeed⁰ ‖ pkRoot⁰ ‖ m⁰)
+                transfer = liftA2 (++#) (fmap go input) (shaResult)
+                makeOutput ∷ BitVector (M alg * ByteSize) → HᵐˢᵍOutType alg
+                makeOutput output 
+                   | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                   = unconcatBitVector# output
+                go ∷ (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒ (RType alg, PKSeedType alg, PKRootType alg , MType ℓ)  → BitVector ((N alg + N alg) * ByteSize)
+                go (r, pkSeed, pkRoot, m) 
+                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                  = concatBitVector# (r ‖ pkSeed)
 
 
     _PRFStreaming    ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
@@ -153,7 +157,7 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
 
 -- TODO a function that convert a Channel (BitVector ℓ) to DataStream  dom (Index n) (BitVector n)
 -- Inspiration can be taken of a mealy machine and hmac serialisation is taken.
-serializeHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+serializeHash ∷ ∀ (n ∷ Nat)  a (dom ∷ Domain) . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
     Channel  dom a → 
