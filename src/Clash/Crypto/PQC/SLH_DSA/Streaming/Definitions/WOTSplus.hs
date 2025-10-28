@@ -493,6 +493,10 @@ ht_verify input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
                         = xmss_pkFromSig (zip4C ( (!!) <$> sig <*> j) node¹ pkSeed adrs) idxLeaf
                     
 
+----------------------------------------
+-- The following might be too specific.
+-- Maybe moved to somewhere else
+----------------------------------------
 concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
 concatMapC Nil = errorX "Invalid vector"
 concatMapC ( x `Cons` Nil) = fmap singleton  x 

@@ -81,28 +81,90 @@ fors_node input i z =  mux  (fmap (== 0x00) z) ifthen ifelse
 -- Algorithm 16
 fors_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (MDType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
-     → Channel dom (IdxType alg) -- idx
      → Channel dom (SIGᶠᵒʳˢType alg)
-fors_sign input idx 
+fors_sign input
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    = liftA2 object sig_fors auth
+    = sigᶠᵒʳˢ
     where 
         indices ∷ Channel dom (Vec (K alg) (BitVector (A alg)))
-        indices = base_2ᵇ (fstOf4C input)
+        indices 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = fmap unconcatBitVector# (fstOf4C input)
+        indicesi ∷ Vec (K alg) (Channel dom (IdxType alg), Channel dom (IdxType alg))
+        indicesi 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = map (\(x,y,z) → (x,z)) sub
+            where
+                sub ∷ Vec (K alg) (Channel dom (IdxType alg), Int, Channel dom (IdxType alg))
+                sub 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = (generateI @(K alg) (\(x, y, z) → (fmap (\x → resize (x !! (y + 1))) indices, y + 1 , fmap (+1) z)) (fmap (\x → 0x0 ∷ IdxType alg) input, -1 , fmap (\x → 0x0 ∷ IdxType alg) input))
+        sigᶠᵒʳˢ ∷ Channel dom (SIGᶠᵒʳˢType alg)
+        sigᶠᵒʳˢ 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = concatMapC (map function indicesi)
+        function ∷ (Channel dom (IdxType alg), Channel dom (IdxType alg)) → Channel dom (ElemForsType alg)
+        function idxi 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = liftA2 object (sig idxi) (auth idxi)
+        sig ∷ (Channel dom (IdxType alg), Channel dom (IdxType alg)) → Channel dom (PrivateKeyValueTreeType alg)
+        sig (idx, i) 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = fors_skGen (fmap (\(_,s,t,v) → (s,t,v)) input) (liftA2 (\x y→ shiftL y (natToNum @(A alg)) + x) idx i)
+        auth ∷ (Channel dom (IdxType alg), Channel dom (IdxType alg)) → Channel dom (AUTHTreeType alg)
+        auth (idx, i) 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = concatMapC (zipWith function⁰  (i2ᵃʲs (idx, i))  j)
+            where 
+                s ∷ Channel dom (IdxType alg) → Vec (A alg) (Channel dom (IdxType alg))
+                s idx 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = iterateI @(A alg) (fmap ( \i → xor# ((0 +>>.) i) 1)) (idx)
+                i2ᵃʲ ∷ Channel dom (IdxType alg) → Vec (A alg) (Channel dom (IdxType alg))
+                i2ᵃʲ i 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = iterateI @(A alg) (\i →  (fmap (.<<+ 0) i)) i 
+                i2ᵃʲs   ∷ (Channel dom (IdxType alg), Channel dom (IdxType alg)) →  Vec (A alg) (Channel dom (IdxType alg))
+                i2ᵃʲs (idx, i) 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = zipWith (zipWithC (+)) (s idx) (i2ᵃʲ i)
+                j ∷ Vec (A alg) (Channel dom (IdxType alg))
+                j 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = iterateI @(A alg) (fmap (+1)) (fmap (\x → 0x0∷ IdxType alg) input)
+                function⁰ ∷ Channel dom (IdxType alg) → Channel dom (IdxType alg) → Channel dom (NBlockType alg)
+                function⁰ i⁰ j⁰ 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = fors_node  (fmap (\(_,s,t,v) → (s,t,v)) input)  i⁰ j⁰
+
+
+
         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg)
                 ⇒ PrivateKeyValueTreeType alg → AUTHTreeType alg → ElemForsType alg
         object x y 
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
             = ElemForsType {privateKeyValueElem = x, authElem = y}
-        k ∷ Channel dom (IdxType alg) → Channel dom (IdxType alg) -- k
-        k x = fmap (\y → xor# (0 +>>. y)  1) x -- k ← ⌊idx/2j⌋ ⊕ 1
-        auth ∷ Channel dom (AUTHType alg)
-        auth
-            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = concatMapC (map (uncurry (xmss_node input⁰)) (iterateI @(H' alg) (\(x, y) → (k x, fmap (1+) y)) (idx, fmap (\x → 0x0 ∷ IdxType alg) idx)))
-            where
-                input⁰ = fmap (\(_,s,p,a) → (s,p,a)) input
-        sig_fors ∷ Channel dom (SIGʷᵒᵗˢPlusType alg)
-        sig_fors = fors_sign input⁰
-            where
-                input⁰ = liftA2 (\(m,s,p,a) x → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) x)) input idx
+
+
+
+----------------------------------------
+-- The following might be too specific.
+-- Maybe moved to somewhere else
+----------------------------------------
+concatMapC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
+concatMapC Nil = errorX "Invalid vector"
+concatMapC ( x `Cons` Nil) = fmap singleton  x 
+concatMapC (x `Cons` xs) = liftA2 (++) (fmap singleton x) (concatMapC xs)
+
+
+
+transferAddressC ∷ ∀ alg dom . (KnownSLH_DSAParameters alg) ⇒ Channel dom (ADRSType alg) → ADRSTypeType → Channel dom (ADRSType alg) 
+transferAddressC adrs t 
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    = liftA2 (\ad ad¹  → setKeyPairAddress ad¹ (getKeyPairAddress ad)) (setTypeAndClearC adrs t) adrs
+
+record2bv ∷ SIGˣᵐˢˢType alg → Vec ((H' alg + Len alg)* N alg) ByteType
+record2bv XMSSType {
+  sig_ots,
+  auth
+  } = concat (sig_ots ‖ auth)

@@ -71,3 +71,5 @@ fthOf5C ∷ Channel dom (a,b,c,d,e) → Channel dom e
 fthOf5C = fmap (\ (_, _, _, _, e) -> e)
 zip5C   ∷ Channel dom a → Channel dom b → Channel dom c → Channel dom d → Channel dom e → Channel dom (a,b,c,d,e)
 zip5C   a b c d e = (,,,,) <$> a <*> b <*> c <*> d <*> e
+
+

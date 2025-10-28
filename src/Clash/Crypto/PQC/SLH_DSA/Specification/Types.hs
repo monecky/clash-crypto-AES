@@ -82,6 +82,9 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , MD
   , MDType
   , SIGᶠᵒʳˢType
+  , PrivateKeyValueTreeType
+  , AUTHTreeType
+  , ElemForsType (..)
 )where
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)
