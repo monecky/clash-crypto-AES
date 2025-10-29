@@ -136,15 +136,103 @@ fors_sign input
                 function⁰ i⁰ j⁰ 
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = fors_node  (fmap (\(_,s,t,v) → (s,t,v)) input)  i⁰ j⁰
-
-
-
         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg)
                 ⇒ PrivateKeyValueTreeType alg → AUTHTreeType alg → ElemForsType alg
         object x y 
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
             = ElemForsType {privateKeyValueElem = x, authElem = y}
 
+-- Algorithm 17
+fors_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+    ⇒ Channel dom (SIGᶠᵒʳˢType alg, MDType alg, PKSeedType alg, ADRSType alg) 
+     → Channel dom (NBlockType alg)
+fors_pkFromSig input
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    = thdOf4C input 
+    where
+        sigᶠᵒʳˢ ∷ Channel dom (SIGᶠᵒʳˢType alg)
+        sigᶠᵒʳˢ = fstOf4C input
+        adrs ∷ Channel dom (ADRSType alg)
+        adrs = frtOf4C input
+        pkSeed ∷ Channel dom (PKSeedType alg)
+        pkSeed = thdOf4C input
+        -- Line 1
+        indices ∷ Channel dom (Vec (K alg) (BitVector (A alg)))
+        indices 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = fmap unconcatBitVector# (sndOf4C input)
+        -- Line 21- 23
+        forspkADRS ∷ Channel dom (ADRSType alg)
+        forspkADRS = setKeyPairAddressC forspkADRS⁰ (getKeyPairAddressC adrs)
+            where
+                forspkADRS⁰ ∷ Channel dom (ADRSType alg)
+                forspkADRS⁰ = setTypeAndClearC adrs FORS_ROOTS
+        root ∷ Channel dom (MˡType (K alg) alg)
+        root = fmap concat (concatMapC (map function iterationi))
+            where
+                -- code line 2                    i               ,  i
+                iterationi ∷ Vec (K alg) (Channel dom (IdxType alg), Int )
+                iterationi = iterateI @(K alg) function⁰ (fmap (\x → 0x0∷ IdxType alg) input, 0)
+                    where
+                        function⁰ (x, y) = (fmap (+1) x, y+1) 
+                function ∷ (Channel dom (IdxType alg), Int ) → Channel dom (NBlockType alg)
+                function (iBV,iInt) = node¹
+                    where
+                        -- Line 3
+                        sk ∷ Channel dom (PrivateKeyValueTreeType alg)
+                        sk = fmap go sigᶠᵒʳˢ
+                            where 
+                                go x = f (x !! iInt)
+                                f (ElemForsType { privateKeyValueElem = i }) = i 
+                        -- Line 3
+                        auth ∷ Channel dom (AUTHTreeType alg)
+                        auth = fmap go sigᶠᵒʳˢ
+                            where 
+                                go x = f (x !! iInt)
+                                f (ElemForsType { authElem = i }) = i 
+                        indicesi ∷ Channel dom (IdxType alg)
+                        indicesi = fmap (\ x → resize (x !! iInt)) indices
+                        -- Line 5
+                        adrs⁵ ∷ Channel dom (ADRSType alg)
+                        adrs⁵ = setTreeIndexC adrs⁴ i2ᵃindicesi
+                            where 
+                                -- Line 4
+                                adrs⁴ ∷ Channel dom (ADRSType alg)
+                                adrs⁴ = setTreeHeightC adrs (fmap (\x → 0x0∷ IdxType alg) input)
+                                i2ᵃ ∷ Channel dom (IdxType alg)
+                                i2ᵃ = fmap (\x → shiftL x (natToNum @(A alg))) iBV
+
+                                i2ᵃindicesi ∷ Channel dom (IdxType alg)
+                                i2ᵃindicesi = (+) <$> i2ᵃ <*> indicesi
+                        -- Line 6
+                        node⁰ ∷ Channel dom (NBlockType alg)
+                        node⁰ = _FStream @alg (zip3C pkSeed  adrs⁵ sk) 
+                        -- Line 8 - 18
+                        node¹ ∷ Channel dom (NBlockType alg)
+                        node¹ = foldl function¹ node⁰ iterationj 
+                            where
+                                iterationj ∷ Vec (A alg) (Channel dom (IdxType alg), Int )
+                                iterationj = iterateI @(A alg) function⁰ (fmap (\x → 0x0∷ IdxType alg) input, 0)
+                                    where
+                                        function⁰ (x, y) = (fmap (+1) x, y+1) 
+                                function¹ ∷ Channel dom (NBlockType alg) 
+                                            → (Channel dom (IdxType alg), Int ) 
+                                            → Channel dom (NBlockType alg)
+                                function¹ node (jBV, jInt) = _HStream @alg (zip3C pkSeed adrsʰ m²)
+                                    where
+                                        -- Line 9
+                                        adrs⁹ ∷ Channel dom (ADRSType alg)
+                                        adrs⁹ = setTreeHeightC adrs⁵ (fmap (+1) jBV)
+                                        -- Line 10
+                                        cond ∷ Channel dom (Bool)
+                                        cond = fmap (\x →  testBit (complement x) jInt) indicesi  
+                                        authj ∷ Channel dom (NBlockType alg)
+                                        authj = fmap (!! jInt) auth
+                                        adrs¹⁰_¹⁴ ∷ Channel dom (BitVector (HashAddressTreeIndexSize alg * ByteSize))
+                                        adrs¹⁰_¹⁴ = mux cond (fmap (\x → 0x0∷ IdxType alg) input) (fmap (\x → 0x1∷ IdxType alg) input)
+                                        m² ∷ Channel dom (M²Type alg)
+                                        m² = mux cond ((‖) <$> node <*> authj) ((‖) <$> authj <*> node)
+                                        adrsʰ = setTreeIndexC adrs⁹ (fmap ((+>>.) 0) (liftA2 (-) (getTreeIndexC adrs⁹) adrs¹⁰_¹⁴))
 
 
 ----------------------------------------
