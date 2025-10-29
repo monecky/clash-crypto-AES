@@ -36,9 +36,23 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
 import Clash.Signal.Extra(apWhen)
 
 -- Algorithm 18
--- slh_keygen_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
---     ⇒ Channel dom (SKSeedType alg, SKPrfType alg, PKSeedType alg)  
---      → Channel dom ((, ,), (, ))
+slh_keygen_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
+    ⇒ Channel dom (SKSeedType alg, SKPrfType alg, PKSeedType alg)  
+     → Channel dom ((SKSeedType alg, SKPrfType alg, PKSeedType alg, PKRootType alg), (PKSeedType alg, PKRootType alg))
+slh_keygen_internal input
+     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+     = (\(sks,skp,pks) pkr → ((sks, skp, pks, pkr),(pks,pkr))) <$> input <*> pkRoot
+      where
+        -- Code line 1-2
+        adrs ∷ ADRSType alg
+        adrs 
+          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+          = setLayerAddress getInitADRS (unconcatBitVector# (natToNum @(D alg) - 1))
+        -- Code line 3
+        pkRoot ∷ Channel dom (PKRootType alg)
+        pkRoot 
+          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+          = xmss_node (fmap (\(sks,skp,pks) → (sks,pks, adrs)) input) (fmap (\x → 0x0 ∷ IdxType alg) input) (fmap (\x → (natToNum @(H' alg)) ∷ IdxType alg) input)
 
 
 
