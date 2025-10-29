@@ -148,7 +148,7 @@ fors_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockRes
      → Channel dom (NBlockType alg)
 fors_pkFromSig input
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    = thdOf4C input 
+    = _TˡStream @alg @(K alg) @dom (zip3C pkSeed forspkADRS root)
     where
         sigᶠᵒʳˢ ∷ Channel dom (SIGᶠᵒʳˢType alg)
         sigᶠᵒʳˢ = fstOf4C input
@@ -168,30 +168,52 @@ fors_pkFromSig input
                 forspkADRS⁰ ∷ Channel dom (ADRSType alg)
                 forspkADRS⁰ = setTypeAndClearC adrs FORS_ROOTS
         root ∷ Channel dom (MˡType (K alg) alg)
-        root = fmap concat (concatMapC (map function iterationi))
+        root 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = fmap concat (concatMapC (map function iterationi))
             where
                 -- code line 2                    i               ,  i
                 iterationi ∷ Vec (K alg) (Channel dom (IdxType alg), Int )
-                iterationi = iterateI @(K alg) function⁰ (fmap (\x → 0x0∷ IdxType alg) input, 0)
+                iterationi 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = iterateI @(K alg) function⁰ (fmap (\x → 0x0∷ IdxType alg) input, 0)
                     where
                         function⁰ (x, y) = (fmap (+1) x, y+1) 
                 function ∷ (Channel dom (IdxType alg), Int ) → Channel dom (NBlockType alg)
-                function (iBV,iInt) = node¹
+                function (iBV,iInt) 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = node¹
                     where
                         -- Line 3
                         sk ∷ Channel dom (PrivateKeyValueTreeType alg)
-                        sk = fmap go sigᶠᵒʳˢ
+                        sk 
+                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                            = fmap go sigᶠᵒʳˢ
                             where 
-                                go x = f (x !! iInt)
-                                f (ElemForsType { privateKeyValueElem = i }) = i 
+                                go ∷ SIGᶠᵒʳˢType alg → PrivateKeyValueTreeType alg
+                                go x 
+                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                    = f (x !! iInt)
+                                f ∷ ElemForsType alg → PrivateKeyValueTreeType alg
+                                f (ElemForsType { privateKeyValueElem = i }) 
+                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                    = i 
                         -- Line 3
                         auth ∷ Channel dom (AUTHTreeType alg)
                         auth = fmap go sigᶠᵒʳˢ
                             where 
-                                go x = f (x !! iInt)
-                                f (ElemForsType { authElem = i }) = i 
+                                go ∷ SIGᶠᵒʳˢType alg → AUTHTreeType alg
+                                go x 
+                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                    = f (x !! iInt)
+                                f ∷ ElemForsType alg → AUTHTreeType alg
+                                f (ElemForsType { authElem = i }) 
+                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                    = i 
                         indicesi ∷ Channel dom (IdxType alg)
-                        indicesi = fmap (\ x → resize (x !! iInt)) indices
+                        indicesi 
+                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                            = fmap (\ x → resize (x !! iInt)) indices
                         -- Line 5
                         adrs⁵ ∷ Channel dom (ADRSType alg)
                         adrs⁵ = setTreeIndexC adrs⁴ i2ᵃindicesi
@@ -200,7 +222,9 @@ fors_pkFromSig input
                                 adrs⁴ ∷ Channel dom (ADRSType alg)
                                 adrs⁴ = setTreeHeightC adrs (fmap (\x → 0x0∷ IdxType alg) input)
                                 i2ᵃ ∷ Channel dom (IdxType alg)
-                                i2ᵃ = fmap (\x → shiftL x (natToNum @(A alg))) iBV
+                                i2ᵃ 
+                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                    = fmap (\x → shiftL x (natToNum @(A alg))) iBV
 
                                 i2ᵃindicesi ∷ Channel dom (IdxType alg)
                                 i2ᵃindicesi = (+) <$> i2ᵃ <*> indicesi
@@ -212,7 +236,9 @@ fors_pkFromSig input
                         node¹ = foldl function¹ node⁰ iterationj 
                             where
                                 iterationj ∷ Vec (A alg) (Channel dom (IdxType alg), Int )
-                                iterationj = iterateI @(A alg) function⁰ (fmap (\x → 0x0∷ IdxType alg) input, 0)
+                                iterationj 
+                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                    = iterateI @(A alg) function⁰ (fmap (\x → 0x0∷ IdxType alg) input, 0)
                                     where
                                         function⁰ (x, y) = (fmap (+1) x, y+1) 
                                 function¹ ∷ Channel dom (NBlockType alg) 
@@ -227,7 +253,9 @@ fors_pkFromSig input
                                         cond ∷ Channel dom (Bool)
                                         cond = fmap (\x →  testBit (complement x) jInt) indicesi  
                                         authj ∷ Channel dom (NBlockType alg)
-                                        authj = fmap (!! jInt) auth
+                                        authj 
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                            = fmap (!! jInt) auth
                                         adrs¹⁰_¹⁴ ∷ Channel dom (BitVector (HashAddressTreeIndexSize alg * ByteSize))
                                         adrs¹⁰_¹⁴ = mux cond (fmap (\x → 0x0∷ IdxType alg) input) (fmap (\x → 0x1∷ IdxType alg) input)
                                         m² ∷ Channel dom (M²Type alg)
