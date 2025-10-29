@@ -6,6 +6,7 @@ Stability   : experimental
 Portability : POSIX
 
 Basic WOTS definitions covering the fundamentals of FIPS 205.
+Algorithm 5- 13 are implemented and exposed for testing purposes.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -14,7 +15,27 @@ Basic WOTS definitions covering the fundamentals of FIPS 205.
 {-# OPTIONS_GHC -fno-max-relevant-binds #-}
 {-# HLINT ignore "[]" #-}
 {-# HLINT ignore "Use camelCase" #-}
-module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus where
+module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus 
+    (
+        -- ALgorithm 5
+        chain²
+        -- Algorithm 6
+        , wots_pkGen
+        -- Algorithm 7
+        , wots_sign
+        -- Algorithm 8
+        , wots_pkFromSig
+        -- Algorithm 9
+        , xmss_node
+        -- Algorithm 10
+        , xmss_sign
+        -- Algorithm 11
+        , xmss_pkFromSig
+        -- Algorithm 12
+        , ht_sign
+        -- Algorithm 13
+        , ht_verify
+    )where
 import Clash.Prelude
 import Clash.Sized.Internal.BitVector
 import Language.Haskell.Unicode (type (≤))

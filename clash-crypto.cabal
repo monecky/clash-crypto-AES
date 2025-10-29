@@ -78,6 +78,7 @@ library
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS
+    Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH
     Clash.Crypto.PQC.SLH_DSA.Streaming.Types
     Clash.Crypto.PQC.SLH_DSA.Streaming.Types.Hash
     Clash.Crypto.PQC.SLH_DSA.General.General

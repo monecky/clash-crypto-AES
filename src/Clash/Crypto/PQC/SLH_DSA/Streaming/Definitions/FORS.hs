@@ -6,6 +6,7 @@ Stability   : experimental
 Portability : POSIX
 
 Basic FORS definitions covering the fundamentals of FIPS 205.
+Thus algorithm 14-17 are implemented.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -14,7 +15,17 @@ Basic FORS definitions covering the fundamentals of FIPS 205.
 {-# OPTIONS_GHC -fno-max-relevant-binds #-}
 {-# HLINT ignore "[]" #-}
 {-# HLINT ignore "Use camelCase" #-}
-module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS where
+module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS (
+     -- Algorithm 14
+    fors_skGen 
+    -- Algorithm 15
+    , fors_node
+    -- Algorithm 16
+    , fors_sign
+    -- Algorithm 17
+    , fors_pkFromSig
+
+) where
 
 import Clash.Prelude
 import Clash.Sized.Internal.BitVector
