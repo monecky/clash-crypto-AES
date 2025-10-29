@@ -53,11 +53,15 @@ slh_keygen_internal input
         pkRoot 
           | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
           = xmss_node (fmap (\(sks,skp,pks) → (sks,pks, adrs)) input) (fmap (\x → 0x0 ∷ IdxType alg) input) (fmap (\x → (natToNum @(H' alg)) ∷ IdxType alg) input)
+-- Algorithm 19
+-- slh_sign_internal ∷ 
+-- Algorithm 20
+-- slh_verify_internal
+-- Algorithm 21
+slh_keygen ∷  Channel dom ((SKSeedType alg, SKPrfType alg, PKSeedType alg, PKRootType alg), (PKSeedType alg, PKRootType alg))
+slh_keygen = errorX "This function should generate SK.seed, SK.prf, PK.seed and if succesful then call slh_keygen_internal."
 
-
-
-
-     ----------------------------------------
+----------------------------------------
 -- The following might be too specific.
 -- Maybe moved to somewhere else
 ----------------------------------------
