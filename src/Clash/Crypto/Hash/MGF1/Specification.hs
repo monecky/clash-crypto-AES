@@ -30,7 +30,7 @@ mgf1 mgfSeed
         ifthen = errorX "mask too long"
         ifelse ∷  (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, 1≤ hLen) 
             ⇒ BitVector (maskLen * ByteSize)
-        ifelse = resize (concatBitVector# (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ BitVector (ByteSize * 4)))))
+        ifelse = resize  (concatBitVector# (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ BitVector (ByteSize * 4)))))
             where 
                 go ∷ BitVector (ByteSize * 4) → Digest alg
                 go x = hash @alg (mgfSeed ++# x)
