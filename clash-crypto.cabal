@@ -165,6 +165,9 @@ test-suite simulation
     --SHA
     , cryptohash
     --
+    -- MGF1
+    , memory >= 0.18.0 
+    --
     --AES
     , crypton >= 1.0.4
     ---

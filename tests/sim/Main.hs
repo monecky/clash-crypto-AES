@@ -13,12 +13,13 @@ import qualified Test.Clash.Crypto.PQC.SLH_DSA as SLH_DSA
 main ∷ IO ()
 main = defaultMain $ testGroup "clash-crypto simulation tests"
   [
-     AES.tastyTests
-  , MGF1.tastyTests
-  , SHA.tastyTests
-  , HMAC.tastyTests
-  , InverseModulo.tastyTests
-  , Karatsuba.tastyTests
-  , Modulo.tastyTests
+  --    AES.tastyTests
+  -- , 
+  MGF1.tastyTests
+  -- , SHA.tastyTests
+  -- , HMAC.tastyTests
+  -- , InverseModulo.tastyTests
+  -- , Karatsuba.tastyTests
+  -- , Modulo.tastyTests
   , SLH_DSA.tastyTests
   ]

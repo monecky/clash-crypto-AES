@@ -6,7 +6,14 @@ Stability   : experimental
 Portability : POSIX
 
 Test suite for 'Clash.Crypto.Hash.MGF1'.
+MGF1 is implemenent to work for security level 1 and 3 of the SLH-DSA algorithm.
+Therefore only the combination of SHA256 and SHA512 is properly tested.
 -}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module Test.Clash.Crypto.Hash.MGF1 (
     tastyTests
 ) where
@@ -22,14 +29,142 @@ import Test.Tasty.Hedgehog
 -- Generate BitVecor and Vector
 import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import Clash.Hedgehog.Sized.Vector
-import qualified Crypto.PubKey.MaskGenFunction as RefMGF1
+import Data.ByteString (ByteString)
+
+import Clash.Prelude
+import Clash.Signal.Channel
+import Clash.Signal.DataStream
+import Clash.Sized.Vector (unsafeFromList)
+
+import Data.ByteString (ByteString)
+import Data.Constraint.Nat.Extra
+import Data.Maybe
+import Data.Proxy
+import GHC.TypeNats.Proof (Rewrite(..), using)
+import Hedgehog
+import Language.Haskell.Unicode (type (≤))
+import Test.Tasty
+import Test.Tasty.Hedgehog
+
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
+
+import qualified Data.ByteString as BS
+import qualified Data.List as List
+
+
+import qualified Clash.Crypto.Hash.SHA.Specification as Spec
+import Crypto.PubKey.MaskGenFunction as Ref
+import Crypto.Hash.Algorithms as RefAlg
+import Data.ByteArray (ByteArrayAccess, ByteArray)
+import Crypto.Hash.IO
+import Clash.Crypto.Hash.SHA as DUT
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
   [localOption (HedgehogTestLimit (Just 10)) $ -- Purpose is mainly to get familiar with testing.
       testProperty "Functional equality of XOR" $ property $ do
         a ← forAll $ genDefinedBitVector
         b ← forAll $ genDefinedBitVector
-        testOplus a b] 
+        testOplus a b
+        , localOption (HedgehogTestLimit $ Just 4)
+      $ testGroup "Specification Sanity Checks (unit tests)"
+          [ testProperty ("SHA-" <> algName)
+              $ property
+              $ forAll (Gen.element inputs)
+                  >>= hashPure
+          | let inputs = [input1, input2, input3, input4] ∷ [ByteString]
+          , (hashPure, algName) ←
+              [ (testMGF1Pure @DUT.SHA1,      "1")
+              , (testMGF1Pure @DUT.SHA224,    "224")
+              , (testMGF1Pure @DUT.SHA256,    "256")
+              , (testMGF1Pure @DUT.SHA512,    "512")
+            --   , (testMGF1Pure @SHA512224, "512/224")
+            --   , (testMGF1Pure @SHA512256, "512/246")
+              ]
+          ]
+        ] 
 type TestLen = 8
 testOplus ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
 testOplus a b = xor b a === xor a b
+type TestMaskLen = 64
+type TestMessageLen = 128
+
+
+testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha) ⇒ ByteString → PropertyT m ()
+testMGF1Pure bs
+  | SHAFacts sha ← knownSHA @sha
+  , Rewrite ← using @(CancelMultiple (MessageDigestSize sha) 8)
+  = do
+
+  Just (SomeNat (_ ∷ Proxy n)) ←
+    return $ someNatVal $ toInteger $ BS.length bs
+
+  let
+    inputAsBv8 ∷ [BitVector 8]
+    inputAsBv8 = pack <$> BS.unpack bs
+
+    inputAsVBv8 ∷ Vec n (BitVector 8)
+    inputAsVBv8 = unsafeFromList @n inputAsBv8
+
+    inputAsBv ∷ Message (n * 8)
+    inputAsBv = concatBitVector# inputAsVBv8
+
+    resultDigestAsBv ∷ BitVector (MessageDigestSize sha)
+    resultDigestAsBv = Spec.hash @sha @(n * 8) inputAsBv
+
+    resultDigestAsVBv8 ∷ Vec (MessageDigestSize sha `Div` 8) (BitVector 8)
+    resultDigestAsVBv8 = unconcatBitVector# resultDigestAsBv
+
+    dut = toList $ unpack <$> resultDigestAsVBv8
+    ref = BS.unpack $ cryptoMGF1 sha bs (natToNum @(TestMessageLen))
+
+  ref === dut
+
+
+class CryptoMGF1 (alg ∷ DUT.SHA) where
+  cryptoMGF1 ∷ Proxy alg → ByteString → Int → ByteString
+
+instance CryptoMGF1 DUT.SHA1      where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA1
+instance CryptoMGF1 DUT.SHA224    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA224
+instance CryptoMGF1 DUT.SHA256    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA256
+instance CryptoMGF1 DUT.SHA384    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA384
+instance CryptoMGF1 DUT.SHA512    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA512
+
+
+-- | Some example input for unit testing.
+input1 ∷ ByteString
+input1 =
+  [ 255, 23, 42, 38, 29, 48, 244, 65, 2, 99 ]
+
+-- | Some example input for unit testing.
+input2 ∷ ByteString
+input2 =
+  [ 255, 23, 42, 38, 29, 48, 244, 65, 2, 99, 41, 31, 231, 199, 25, 32
+  , 65, 2, 99, 41, 31, 231, 199, 25, 32, 255, 23, 42, 38, 29, 48, 244
+  , 255, 23, 42, 38, 199, 25, 32, 29, 48, 244, 65, 2, 99, 41, 31, 231
+  ]
+
+-- | Some example input for unit testing.
+input3 ∷ ByteString
+input3 =
+  [ 255, 23, 42, 38, 29, 48, 244, 65, 2, 99, 41, 31, 231, 199, 25, 32
+  , 65, 2, 99, 41, 31, 231, 199, 25, 32, 255, 23, 42, 38, 29, 48, 244
+  , 255, 23, 42, 38, 199, 25, 32, 29, 48, 244, 65, 2, 99, 41, 31, 231
+  , 42, 38, 199, 25, 32, 29, 48, 244, 65, 2, 99, 41, 31, 255, 23, 231
+  , 65, 2, 99, 41, 31, 231, 199, 25, 32, 255, 23, 42, 38, 29, 48, 244
+  ]
+
+-- | Some example input for unit testing.
+input4 ∷ ByteString
+input4 =
+  [ 255, 23, 42, 38, 29, 48, 244, 65, 2, 99, 41, 31, 231, 199, 25, 32
+  , 65, 2, 99, 41, 31, 231, 199, 25, 32, 255, 23, 42, 38, 29, 48, 244
+  , 255, 23, 42, 38, 199, 25, 32, 29, 48, 244, 65, 2, 99, 41, 31, 231
+  , 42, 38, 199, 25, 32, 29, 48, 244, 65, 2, 99, 41, 31, 255, 23, 231
+  , 65, 2, 99, 41, 31, 231, 199, 25, 32, 255, 23, 42, 38, 29, 48, 244
+  , 255, 23, 42, 38, 29, 48, 244, 65, 2, 99, 41, 31, 231, 199, 25, 32
+  , 65, 2, 99, 41, 31, 231, 199, 25, 32, 255, 23, 42, 38, 29, 48, 244
+  , 255, 23, 42, 38, 199, 25, 32, 29, 48, 244, 65, 2, 99, 41, 31, 231
+  , 42, 38, 199, 25, 32, 29, 48, 244, 65, 2, 99, 41, 31, 255, 23, 231
+  , 65, 2, 99, 41, 31, 231, 199, 25, 32, 255, 23, 42, 38, 29, 48, 244
+  ]
