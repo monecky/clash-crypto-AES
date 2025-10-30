@@ -15,7 +15,7 @@ module Clash.Crypto.Hash.MGF1.Specification (
     mgf1
 ) where
 import Clash.Prelude
-
+import Language.Haskell.Unicode (type (≤))
 import Clash.Crypto.Hash.SHA.Specification
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types (ByteSize, ByteType)
 import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
@@ -25,9 +25,14 @@ mgf1 ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)  (hLen ∷ Nat).
  ⇒ BitVector ℓ → BitVector (maskLen * ByteSize)
 mgf1 mgfSeed
     | SHAFacts {} ← knownSHA @alg 
-    = resize (concatBitVector# (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ ByteType))))
-    where 
-        go ∷ ByteType → Digest alg
-        go x = hash @alg (mgfSeed ++# c @4 x)
-        c ∷ ∀ xLen . KnownNat xLen ⇒ ByteType → BitVector (ByteSize * xLen)
-        c x = resize x ∷  BitVector (ByteSize * xLen)
+    = if ((natToNum @maskLen) > 0x100000000 * (natToNum @hLen)) then ifthen else ifelse
+    where
+        ifthen = errorX "mask too long"
+        ifelse ∷  (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, 1≤ hLen) 
+            ⇒ BitVector (maskLen * ByteSize)
+        ifelse = resize (concatBitVector# (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ ByteType))))
+            where 
+                go ∷ ByteType → Digest alg
+                go x = hash @alg (mgfSeed ++# c @4 x)
+                c ∷ ∀ xLen . KnownNat xLen ⇒ ByteType → BitVector (ByteSize * xLen)
+                c x = resize x ∷  BitVector (ByteSize * xLen)

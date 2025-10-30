@@ -58,7 +58,9 @@ import Crypto.PubKey.MaskGenFunction as Ref
 import Crypto.Hash.Algorithms as RefAlg
 import Data.ByteArray (ByteArrayAccess, ByteArray)
 import Crypto.Hash.IO
-import Clash.Crypto.Hash.SHA as DUT
+import Clash.Crypto.Hash.SHA as CryptoSHA
+import Clash.Crypto.Hash.MGF1.Specification as DUT
+import Clash.Crypto.PQC.SLH_DSA.Specification.Types 
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
   [localOption (HedgehogTestLimit (Just 10)) $ -- Purpose is mainly to get familiar with testing.
@@ -74,10 +76,10 @@ tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
                   >>= hashPure
           | let inputs = [input1, input2, input3, input4] ∷ [ByteString]
           , (hashPure, algName) ←
-              [ (testMGF1Pure @DUT.SHA1,      "1")
-              , (testMGF1Pure @DUT.SHA224,    "224")
-              , (testMGF1Pure @DUT.SHA256,    "256")
-              , (testMGF1Pure @DUT.SHA512,    "512")
+              [ (testMGF1Pure @CryptoSHA.SHA1,      "1")
+              , (testMGF1Pure @CryptoSHA.SHA224,    "224")
+              , (testMGF1Pure @CryptoSHA.SHA256,    "256")
+              , (testMGF1Pure @CryptoSHA.SHA512,    "512")
             --   , (testMGF1Pure @SHA512224, "512/224")
             --   , (testMGF1Pure @SHA512256, "512/246")
               ]
@@ -86,8 +88,8 @@ tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
 type TestLen = 8
 testOplus ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
 testOplus a b = xor b a === xor a b
-type TestMaskLen = 64
-type TestMessageLen = 128
+type TestMaskLen = 3
+type TestMessageLen = 1
 
 
 testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha) ⇒ ByteString → PropertyT m ()
@@ -109,26 +111,26 @@ testMGF1Pure bs
     inputAsBv ∷ Message (n * 8)
     inputAsBv = concatBitVector# inputAsVBv8
 
-    resultDigestAsBv ∷ BitVector (MessageDigestSize sha)
-    resultDigestAsBv = Spec.hash @sha @(n * 8) inputAsBv
+    resultDigestAsBv ∷ BitVector (TestMaskLen * ByteSize)
+    resultDigestAsBv = DUT.mgf1 @sha @(TestMaskLen)  inputAsBv
 
-    resultDigestAsVBv8 ∷ Vec (MessageDigestSize sha `Div` 8) (BitVector 8)
+    resultDigestAsVBv8 ∷ Vec (TestMaskLen) (ByteType)
     resultDigestAsVBv8 = unconcatBitVector# resultDigestAsBv
 
     dut = toList $ unpack <$> resultDigestAsVBv8
-    ref = BS.unpack $ cryptoMGF1 sha bs (natToNum @(TestMessageLen))
+    ref = BS.unpack $ cryptoMGF1 sha bs (natToNum @(TestMaskLen))
 
   ref === dut
 
 
-class CryptoMGF1 (alg ∷ DUT.SHA) where
+class CryptoMGF1 (alg ∷ CryptoSHA.SHA) where
   cryptoMGF1 ∷ Proxy alg → ByteString → Int → ByteString
 
-instance CryptoMGF1 DUT.SHA1      where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA1
-instance CryptoMGF1 DUT.SHA224    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA224
-instance CryptoMGF1 DUT.SHA256    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA256
-instance CryptoMGF1 DUT.SHA384    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA384
-instance CryptoMGF1 DUT.SHA512    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA512
+instance CryptoMGF1 CryptoSHA.SHA1      where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA1
+instance CryptoMGF1 CryptoSHA.SHA224    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA224
+instance CryptoMGF1 CryptoSHA.SHA256    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA256
+instance CryptoMGF1 CryptoSHA.SHA384    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA384
+instance CryptoMGF1 CryptoSHA.SHA512    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA512
 
 
 -- | Some example input for unit testing.
