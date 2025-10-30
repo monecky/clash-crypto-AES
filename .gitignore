@@ -37,3 +37,4 @@ Trial.hs
 _build/
 .gitignore
 errot.txt
+tests/sim/Main.hs
