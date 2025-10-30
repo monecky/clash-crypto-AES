@@ -152,6 +152,7 @@ test-suite simulation
     Test.Clash.Crypto.Cipher.AES.Streaming
     Test.Clash.Crypto.Cipher.AES.Streaming.Algorithm
     Test.Clash.Crypto.Cipher.AES
+    Test.Clash.Crypto.Hash.MGF1
     Test.Clash.Crypto.Hash.SHA
     Test.Clash.Crypto.MAC.HMAC
     Test.Clash.Crypto.ECDSA.InverseModulo
