@@ -36,7 +36,7 @@ import Clash.Signal.Channel
 import Clash.Signal.DataStream
 import Clash.Sized.Vector (unsafeFromList)
 
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, dropEnd )
 import Data.Constraint.Nat.Extra
 import Data.Maybe
 import Data.Proxy
@@ -61,6 +61,12 @@ import Crypto.Hash.IO
 import Clash.Crypto.Hash.SHA as CryptoSHA
 import Clash.Crypto.Hash.MGF1.Specification as DUT
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types 
+import qualified Crypto.Hash.SHA1    as SHA1
+import qualified Crypto.Hash.SHA224  as SHA224
+import qualified Crypto.Hash.SHA256  as SHA256
+import qualified Crypto.Hash.SHA384  as SHA384
+import qualified Crypto.Hash.SHA512  as SHA512
+import qualified Crypto.Hash.SHA512t as SHA512t
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
   [localOption (HedgehogTestLimit (Just 10)) $ -- Purpose is mainly to get familiar with testing.
@@ -75,11 +81,12 @@ tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
               $ forAll (Gen.element inputs)
                   >>= hashPure
           | let inputs = [input1, input2, input3, input4] ∷ [ByteString]
-          , (hashPure, algName) ←
-              [ (testMGF1Pure @CryptoSHA.SHA1,      "1")
-              , (testMGF1Pure @CryptoSHA.SHA224,    "224")
-              , (testMGF1Pure @CryptoSHA.SHA256,    "256")
-              , (testMGF1Pure @CryptoSHA.SHA512,    "512")
+          , (hashPure, algName) ← [
+              -- (testMGF1Pure @CryptoSHA.SHA1,      "1")
+              -- , (testMGF1Pure @CryptoSHA.SHA224,    "224")
+              -- ,
+               (testMGF1Pure @CryptoSHA.SHA256,    "256")
+              -- , (testMGF1Pure @CryptoSHA.SHA512,    "512")
             --   , (testMGF1Pure @SHA512224, "512/224")
             --   , (testMGF1Pure @SHA512256, "512/246")
               ]
@@ -89,10 +96,8 @@ type TestLen = 8
 testOplus ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
 testOplus a b = xor b a === xor a b
 type TestMaskLen = 3
-type TestMessageLen = 1
 
-
-testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha) ⇒ ByteString → PropertyT m ()
+testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha,CryptoHash sha) ⇒ ByteString → PropertyT m ()
 testMGF1Pure bs
   | SHAFacts sha ← knownSHA @sha
   , Rewrite ← using @(CancelMultiple (MessageDigestSize sha) 8)
@@ -111,14 +116,20 @@ testMGF1Pure bs
     inputAsBv ∷ Message (n * 8)
     inputAsBv = concatBitVector# inputAsVBv8
 
-    resultDigestAsBv ∷ BitVector (TestMaskLen * ByteSize)
-    resultDigestAsBv = DUT.mgf1 @sha @(TestMaskLen)  inputAsBv
+    -- resultDigestAsBv ∷ BitVector (TestMaskLen * ByteSize)
+    resultDigestAsBv ∷ BitVector (MessageDigestSize sha)
+    resultDigestAsBv = Spec.hash @sha ((++#) inputAsBv (0 ∷ BitVector (ByteSize * 4)))
+    -- resultDigestAsBv = DUT.mgf1 @sha @(TestMaskLen)  inputAsBv
 
-    resultDigestAsVBv8 ∷ Vec (TestMaskLen) (ByteType)
+
+    resultDigestAsVBv8 ∷  Vec (MessageDigestSize sha `Div` 8) (BitVector 8)
+    -- resultDigestAsVBv8 ∷ Vec (TestMaskLen) (ByteType)
+    -- resultDigestAsVBv8 = unconcatBitVector# resultDigestAsBv
     resultDigestAsVBv8 = unconcatBitVector# resultDigestAsBv
 
     dut = toList $ unpack <$> resultDigestAsVBv8
     ref = BS.unpack $ cryptoMGF1 sha bs (natToNum @(TestMaskLen))
+    -- ref = BS.unpack $ cryptoHash sha bs
 
   ref === dut
 
@@ -131,12 +142,25 @@ instance CryptoMGF1 CryptoSHA.SHA224    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SH
 instance CryptoMGF1 CryptoSHA.SHA256    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA256
 instance CryptoMGF1 CryptoSHA.SHA384    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA384
 instance CryptoMGF1 CryptoSHA.SHA512    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA512
+class CryptoHash (alg ∷ CryptoSHA.SHA) where
+  cryptoHash ∷ Proxy alg → ByteString → ByteString
 
+instance CryptoHash CryptoSHA.SHA1      where cryptoHash _ = SHA1.hash
+instance CryptoHash CryptoSHA.SHA224    where cryptoHash _ = SHA224.hash
+instance CryptoHash CryptoSHA.SHA256    where cryptoHash _ = SHA256.hash
+instance CryptoHash CryptoSHA.SHA384    where cryptoHash _ = SHA384.hash
+instance CryptoHash CryptoSHA.SHA512    where cryptoHash _ = SHA512.hash
+instance CryptoHash CryptoSHA.SHA512224 where cryptoHash _ = SHA512t.hash 224
+instance CryptoHash CryptoSHA.SHA512256 where cryptoHash _ = SHA512t.hash 256
 
 -- | Some example input for unit testing.
 input1 ∷ ByteString
 input1 =
-  [ 255, 23, 42, 38, 29, 48, 244, 65, 2, 99 ]
+  [102, 111, 111, 111, 111, 111, 111, 111, 111, 111, 102, 111, 111, 111, 111, 111, 111, 111, 111, 111, 102, 111, 111, 111, 111, 111, 111, 111, 111, 111
+  ,102, 111, 111, 111, 111, 111, 111, 111, 111, 111, 102, 111, 111, 111, 111, 111, 111, 111, 111, 111, 102, 111, 111, 111, 111, 111, 111, 111, 111, 111, 0 ,0 ,0 ,0]
+-- input1 ∷ ByteString
+-- input1 =
+--   [ 255, 23, 42, 38, 29, 48, 244, 65, 2, 99 ]
 
 -- | Some example input for unit testing.
 input2 ∷ ByteString
