@@ -63,28 +63,28 @@ instance (KnownSLH_DSAParameters alg, KnownNat ℓ) ⇒ SLH_DSA_hash SHATwo Secu
     _PRFᵐˢᵍ ∷ SKPrfType alg → Opt_randType alg → MType ℓ → PRFᵐˢᵍOutType alg
     _PRFᵐˢᵍ skPrfType opt_rand m  
         = errorX "Not implemented HMAC doesn't exist as functional"
-    _Hᵐˢᵍ   ∷ RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
-    _Hᵐˢᵍ r pkSeed pkRoot m   
-        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-        -- , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
-        = -- truncˡ
-            (unconcatBitVector#  (MGF1Spec.mgf1 
-                @SHA256 
-                @(M alg) -- maskLen
-                @((N alg + N alg + Div (MessageDigestSize SHA256) ByteSize) * ByteSize) -- ℓ 
-                @(MessageDigestSize SHA256) -- hLen
-                    (concatBitVector#
-                    (r ‖ pkSeed ‖ (hashed r pkSeed pkRoot m)))))
-            where
-                hashed ∷ RType alg → PKSeedType alg → PKRootType alg → MType ℓ → Vec (Div (MessageDigestSize SHA256) ByteSize) ByteType
-                hashed r pkSeed pkRoot m1
-                        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                        --  , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
-                    = unconcatBitVector# (Spec.hash 
-                    @SHA256 
-                    -- @((N alg + N alg + N alg + ℓ) * ByteSize) 
-                        (concatBitVector# 
-                        (r ‖ pkSeed ‖ pkRoot ‖ m1)))
+    -- _Hᵐˢᵍ   ∷ RType alg → PKSeedType alg → PKRootType alg → MType ℓ →  HᵐˢᵍOutType alg
+    -- _Hᵐˢᵍ r pkSeed pkRoot m   
+    --     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+    --     -- , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
+    --     = -- truncˡ
+    --         (unconcatBitVector#  (MGF1Spec.mgf1 
+    --             @SHA256 
+    --             @(M alg) -- maskLen
+    --             @((N alg + N alg + Div (MessageDigestSize SHA256) ByteSize) * ByteSize) -- ℓ 
+    --             @(MessageDigestSize SHA256) -- hLen
+    --                 (concatBitVector#
+    --                 (r ‖ pkSeed ‖ (hashed r pkSeed pkRoot m)))))
+    --         where
+    --             hashed ∷ RType alg → PKSeedType alg → PKRootType alg → MType ℓ → Vec (Div (MessageDigestSize SHA256) ByteSize) ByteType
+    --             hashed r pkSeed pkRoot m1
+    --                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+    --                     --  , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) + ℓ) ByteSize) 
+    --                 = unconcatBitVector# (Spec.hash 
+    --                 @SHA256 
+    --                 -- @((N alg + N alg + N alg + ℓ) * ByteSize) 
+    --                     (concatBitVector# 
+    --                     (r ‖ pkSeed ‖ pkRoot ‖ m1)))
 
     _PRF    ∷ PKSeedType alg → SKSeedType alg → ADRSType alg → PRFOutType alg
     _PRF   pkSeed skSeed adrs 
