@@ -100,7 +100,7 @@ testOplus ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m
 testOplus a b = xor b a === xor a b
 type TestMaskLen = 3
 
-testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha,CryptoHash sha, TestMaskLen * ByteSize ≤ (CeilXDivY TestMaskLen (MessageDigestSize sha)) * (MessageDigestSize sha) ) ⇒ ByteString → PropertyT m ()
+testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha,CryptoHash sha, TestMaskLen * ByteSize ≤ (CeilXDivY (TestMaskLen * ByteSize) (MessageDigestSize sha)) * (MessageDigestSize sha) ) ⇒ ByteString → PropertyT m ()
 testMGF1Pure bs
   | SHAFacts sha ← knownSHA @sha
   , Rewrite ← using @(CancelMultiple (MessageDigestSize sha) 8)

@@ -18,6 +18,8 @@ import Data.Proxy (Proxy(..))
 import Clash.Prelude
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
 import Language.Haskell.Unicode (type (≤))
+import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
+import Clash.Crypto.Hash.SHA.Specification
 data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
     SLH_DSAParametersFacts ∷
         ( KnownNat (N alg)
@@ -83,6 +85,11 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , 1 ≤ N alg, 1 ≤ ((N alg + N alg) + N alg)
         -- FORS
         , KnownNat (MD alg)
+        -- H msg constain
+            -- security level 1
+        , (M alg) * ByteSize ≤ (CeilXDivY ((M alg) * ByteSize) (MessageDigestSize SHA256) ) * MessageDigestSize SHA256
+            -- security level 2
+        , (M alg) * ByteSize ≤ (CeilXDivY ((M alg) * ByteSize) (MessageDigestSize SHA512) ) * MessageDigestSize SHA512
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg
