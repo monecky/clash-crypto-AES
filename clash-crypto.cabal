@@ -61,6 +61,9 @@ common common-options
     , ghc-typelits-extra >= 0.4.4
     , ghc-typelits-knownnat >= 0.7.7
     , ghc-typelits-natnormalise >= 0.7.7
+        -- MGF1
+    , constraints >= 0.14.2
+    --
 
 library
   import: common-options
@@ -192,6 +195,7 @@ library hitlt-shared
     , pretty-show
     , string-interpolate
     , text
+
   exposed-modules:
     Clash.Cores.LatticeSemi.ECP5.Domain
     Clash.Cores.LatticeSemi.ECP5.Pll
@@ -234,6 +238,7 @@ test-suite hitlt
     --AES
     , crypton >= 1.0.4
     ---
+
     , hedgehog >= 1.0
     , modular-arithmetic
     , serialport >= 0.5.6
