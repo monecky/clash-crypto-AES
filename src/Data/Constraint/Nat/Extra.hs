@@ -43,7 +43,7 @@ module Data.Constraint.Nat.Extra
 
 import Clash.Prelude
 import GHC.TypeNats.Proof
-
+import Data.Proxy
 -- | Divisible division operation, which ensures that the dividend is
 -- always a multiple of the divisor. Type family resolution will error
 -- if the dividend is not a multiple of the divisor.
@@ -586,3 +586,13 @@ class
   apply Div0.mod_mul.
 /-}
 instance ModTimes a b ⇒ QED (ModTimes a b)
+
+
+-- Mod ( a*b + c*b) b
+
+-- (a * b + c * b) => ((a + c) * b)
+-- (a * 8 + 32) => ((a + 4) * 8)
+
+
+f :: Proxy (a * 8 + 32) -> Proxy ((a + 4) * 8)
+f = id

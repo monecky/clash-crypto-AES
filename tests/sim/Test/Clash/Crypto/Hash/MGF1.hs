@@ -59,7 +59,8 @@ import Crypto.Hash.Algorithms as RefAlg
 import Data.ByteArray (ByteArrayAccess, ByteArray)
 import Crypto.Hash.IO
 import Clash.Crypto.Hash.SHA as CryptoSHA
-import Clash.Crypto.Hash.MGF1.Specification as DUT
+import Clash.Crypto.Hash.MGF1 as DUT
+import Clash.Crypto.Hash.MGF1.Specification as DUTSpec
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types 
 import qualified Crypto.Hash.SHA1    as SHA1
 import qualified Crypto.Hash.SHA224  as SHA224
@@ -69,6 +70,16 @@ import qualified Crypto.Hash.SHA512  as SHA512
 import qualified Crypto.Hash.SHA512t as SHA512t
 import Data.Word (Word8)
 import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
+import qualified Data.List as List
+import Clash.Signal.Channel
+import Data.Maybe (fromMaybe)
+import Data.Monoid (First(..))
+import GHC.TypeLits
+import GHC.TypeLits.Extra
+import Data.Proxy
+import Data.Constraint
+import Unsafe.Coerce
+
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
   [localOption (HedgehogTestLimit $ Just 4)
@@ -87,10 +98,27 @@ tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
             --   , (testMGF1Pure @CryptoSHA.SHA512256, "512/246")
               ]
           ]
-        ] 
+          , testGroup "Property Based Tests"
+          [  testProperty ("SHA-" <> algName)
+              $ property
+              $ forAll (Gen.element inputs)
+                  >>= hashStream
+          | let inputs = [input1, input2, input3, input4] ∷ [ByteString]
+          , (hashStream, algName) ←
+              [ (testMGF1StreamPure @CryptoSHA.SHA1,      "1")
+              , (testMGF1StreamPure @CryptoSHA.SHA224,    "224")
+              , (testMGF1StreamPure @CryptoSHA.SHA256,    "256")
+              , (testMGF1StreamPure @CryptoSHA.SHA512,    "512")
+              -- , (testMGF1StreamPure @CryptoSHA.SHA512224, "512/224")
+              -- , (testMGF1StreamPure @CryptoSHA.SHA512256, "512/246")
+              ]
+          ]
+      ] 
 type TestMaskLen = 3
 
-testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha,CryptoHash sha, TestMaskLen * ByteSize ≤ (CeilXDivY (TestMaskLen * ByteSize) (MessageDigestSize sha)) * (MessageDigestSize sha) ) ⇒ ByteString → PropertyT m ()
+testMGF1Pure ∷ ∀ (sha ∷ SHA) m . 
+  (KnownSHA sha, Monad m, CryptoMGF1 sha,CryptoHash sha,
+   TestMaskLen * ByteSize ≤ (CeilXDivY (TestMaskLen * ByteSize) (MessageDigestSize sha)) * (MessageDigestSize sha)) ⇒ ByteString → PropertyT m ()
 testMGF1Pure bs
   | SHAFacts sha ← knownSHA @sha
   , Rewrite ← using @(CancelMultiple (MessageDigestSize sha) 8)
@@ -110,7 +138,7 @@ testMGF1Pure bs
     inputAsBv = concatBitVector# inputAsVBv8
 
     resultDigestAsBv ∷ BitVector (TestMaskLen * ByteSize)
-    resultDigestAsBv = DUT.mgf1 @sha @(TestMaskLen)  inputAsBv
+    resultDigestAsBv = DUTSpec.mgf1 @sha @(TestMaskLen)  inputAsBv
 
 
     resultDigestAsVBv8 ∷ Vec (TestMaskLen) (BitVector 8)
@@ -121,7 +149,58 @@ testMGF1Pure bs
     ref = BS.unpack $ cryptoMGF1 sha bs (natToNum @(TestMaskLen))
  
   ref === dut
+-- | Tests on a non-contiguous data input stream.
+testMGF1StreamPure ∷ ∀ (sha ∷ SHA) m .
+  (KnownSHA sha, Monad m, CryptoMGF1 sha,CryptoHash sha
+  , TestMaskLen * ByteSize ≤ (CeilXDivY (TestMaskLen * ByteSize) (MessageDigestSize sha)) * (MessageDigestSize sha)
+  , TestMaskLen * ByteSize <= (4294967296 * MessageDigestSize sha) - 1, ByteSize ≤ BlockSize sha, (Mod (BlockSize sha) 8 ~ 0)) ⇒
+  ByteString →
+  -- ^ input data
+  PropertyT m ()
+testMGF1StreamPure bs
+  | SHAFacts sha ← knownSHA @sha
+    = do
 
+  Just (SomeNat (_ ∷ Proxy n)) ←
+    return $ someNatVal $ toInteger $ BS.length bs
+
+  let
+    inputAsBv8 ∷ [BitVector 8]
+    inputAsBv8 = pack <$> BS.unpack bs
+
+    inputAsVBv8 ∷ Vec n (BitVector 8)
+    inputAsVBv8 = unsafeFromList @n inputAsBv8
+
+    inputAsBv ∷ Message (n * 8)
+    inputAsBv = concatBitVector# inputAsVBv8
+
+    resultDigestAsBv ∷ (Mod (BlockSize sha) 8 ~ 0) ⇒  BitVector (TestMaskLen * ByteSize)
+    resultDigestAsBv 
+              | SHAFacts sha ← knownSHA @sha
+              , Dict <- ax
+              =  fromMaybe (error "The returned list was empty")
+                                  $ getFirst
+                                  $ foldMap First
+                                  $ sampleN @System 10000
+                                  $ withClockResetEnable @System clockGen resetGen enableGen
+                                  $ newsfeed
+                                  $ DUT.mgf1Stream @sha @TestMaskLen @(n * 8)
+                                  $ channel
+                                  $ fmap (inputAsBv, )
+                                  $ fromList
+                                  $ Keep : Keep : Release : List.repeat Keep
+                     where
+                        ax :: Dict (Mod ((n * 8) + 32) 8 ~ 0)
+                        ax = unsafeCoerce (Dict @(() ~ ()))
+    resultDigestAsVBv8 ∷ (Mod (BlockSize sha) 8 ~ 0) ⇒ Vec (TestMaskLen) (BitVector 8)
+    resultDigestAsVBv8 = unconcatBitVector# resultDigestAsBv
+
+    dut ∷ (Mod (BlockSize sha) 8 ~ 0) ⇒ [Word8] 
+    dut = toList $ unpack <$> resultDigestAsVBv8
+    ref = BS.unpack $ cryptoMGF1 sha bs (natToNum @(TestMaskLen))
+  ref === dut
+
+          
 
 class CryptoMGF1 (alg ∷ CryptoSHA.SHA) where
   cryptoMGF1 ∷ Proxy alg → ByteString → Int → ByteString

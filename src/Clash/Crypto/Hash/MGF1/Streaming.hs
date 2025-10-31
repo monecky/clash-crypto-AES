@@ -24,15 +24,15 @@ import Clash.Signal.Channel
 import GHC.TypeNats.Proof (Rewrite(..), using)
 import Data.Constraint.Nat.Extra
   ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
-  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
+  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple, ModTimes, DivTimes
   )
 import Language.Haskell.Unicode (type (≤))
 mgf1Stream ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat) (hLen ∷ Nat) dom .
   (KnownSHA alg, KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ -- General constrains
- (KnownNat ByteSize, 1 ≤ ByteSize, ByteSize ≤ BlockSize alg, Mod (BlockSize alg) ByteSize ~ 0, Mod (ℓ + 32) 8 ~ 0) ⇒ -- constrains of use of sha
+ (KnownNat ByteSize, 1 ≤ ByteSize, ByteSize ≤ BlockSize alg, Mod (BlockSize alg) ByteSize ~ 0, Mod (ℓ + (4 * 8)) 8 ~ 0) ⇒ -- constrains of use of sha
  (KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, maskLen * ByteSize ≤ (CeilXDivY (maskLen * ByteSize) hLen) * hLen,
  -- Constain due definition of algorithm
-   maskLen * ByteSize ≤ (0x100000000 * hLen) - 1
+   maskLen * ByteSize ≤ (0x100000000 * hLen) -1
   )   -- Constrains of mgf1
  ⇒ Channel dom (BitVector ℓ) → Channel dom (BitVector (maskLen * ByteSize))
 mgf1Stream mgfSeed

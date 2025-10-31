@@ -167,6 +167,7 @@ test-suite simulation
     --
     -- MGF1
     , memory >= 0.18.0 
+    , constraints >= 0.14.2
     --
     --AES
     , crypton >= 1.0.4
