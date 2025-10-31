@@ -23,7 +23,7 @@ import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
 mgf1 ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)  (hLen ∷ Nat).
  (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, maskLen * ByteSize ≤ (CeilXDivY (maskLen * ByteSize) hLen) * hLen,
  -- Constain due definition of algorithm
-   maskLen * ByteSize ≤ 0x100000000 * hLen
+   maskLen * ByteSize ≤ (0x100000000 * hLen) -1
   ) 
  ⇒ BitVector ℓ → BitVector (maskLen * ByteSize)
 mgf1 mgfSeed
