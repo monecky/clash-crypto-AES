@@ -83,6 +83,7 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                         go⁰ (r⁰, pkSeed⁰, pkRoot⁰, m⁰) 
                           | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                           = concatBitVector# (r⁰ ‖ pkSeed⁰ ‖ pkRoot⁰ ‖ m⁰)
+                -- transfer ∷ Channel dom (BitVector ((MessageDigestSize SHA256) + (N alg + N alg) * ByteSize))
                 transfer = liftA2 (++#) (fmap go input) (shaResult)
                 makeOutput ∷ BitVector (M alg * ByteSize) → HᵐˢᵍOutType alg
                 makeOutput output 
