@@ -27,18 +27,35 @@ import Data.Constraint.Nat.Extra
   , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple 
   )
 import Language.Haskell.Unicode (type (≤))
-mgf1Stream ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)
-  (hLen ∷ Nat) dom.
- (ByteSize <= BlockSize alg, Mod (BlockSize alg) 8 ~ 0, Mod (ℓ + 32) 8 ~ 0, KnownDomain dom, HiddenClockResetEnable dom, KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg) 
+mgf1Stream ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat) (hLen ∷ Nat) dom .
+  (KnownSHA alg, KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ -- General constrains
+ (KnownNat ByteSize, 1 ≤ ByteSize, ByteSize ≤ BlockSize alg, Mod (BlockSize alg) ByteSize ~ 0, Mod (ℓ + 32) 8 ~ 0) ⇒ -- constrains of use of sha
+ (KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, maskLen * ByteSize ≤ (CeilXDivY (maskLen * ByteSize) hLen) * hLen,
+ -- Constain due definition of algorithm
+   maskLen * ByteSize ≤ (0x100000000 * hLen) - 1
+  )   -- Constrains of mgf1
  ⇒ Channel dom (BitVector ℓ) → Channel dom (BitVector (maskLen * ByteSize))
 mgf1Stream mgfSeed
     | SHAFacts {} ← knownSHA @alg 
-    = fmap (\x → resize x) (concatMapC (map  go (iterateI @(CeilXDivY maskLen hLen) (+1) (0 ∷ ByteType))))
+    = fmap v2bv takeMaskLenBit
     where 
-        go ∷ ByteType → Channel dom (Digest alg)
-        go x = sha @alg (serializeHash @ByteSize (fmap  (\y → (y ++# c @4 x)) mgfSeed))
-        c ∷ ∀ xLen . KnownNat xLen ⇒ ByteType → BitVector (ByteSize * xLen)
-        c x = resize x ∷  BitVector (ByteSize * xLen)
+        tv ∷ Channel dom ( Vec (CeilXDivY (maskLen * ByteSize) hLen) (BitVector (MessageDigestSize alg)))
+        tv 
+          | SHAFacts {} ← knownSHA @alg 
+          =  concatMapVC (map go indices⁰)
+          where 
+              go ∷ BitVector (ByteSize * 4) → Channel dom (Digest alg)
+              go x = sha @alg (serializeHash @ByteSize (fmap  (++# x) mgfSeed))
+              indices⁰ ∷ (1 ≤ hLen) ⇒ Vec (CeilXDivY (maskLen * ByteSize) hLen) (BitVector (ByteSize * 4))
+              indices⁰ = iterateI @(CeilXDivY (maskLen * ByteSize) hLen) (+1) (0 ∷ BitVector (ByteSize * 4)) 
+        tbv ∷ Channel dom (Vec ((CeilXDivY (maskLen * ByteSize) hLen) * (MessageDigestSize alg)) Bit)
+        tbv 
+            | SHAFacts {} ← knownSHA @alg 
+            =  fmap (bv2v . concatBitVector#) tv  
+        takeMaskLenBit ∷ Channel dom (Vec (maskLen * ByteSize) Bit)
+        takeMaskLenBit 
+            | SHAFacts {} ← knownSHA @alg 
+            = fmap  (takeI @(maskLen * ByteSize) @((CeilXDivY (maskLen * ByteSize) hLen) * (MessageDigestSize alg) - (maskLen * ByteSize))) tbv
 
 serializeHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
@@ -71,7 +88,12 @@ serializeHash input
   -- a value that should never be evaluated
   neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
 
-concatMapC ∷ ∀ ℓ n dom . (KnownNat ℓ, KnownNat n) ⇒  Vec n (Channel dom (BitVector ℓ)) -> Channel dom (BitVector (ℓ * n))
-concatMapC Nil = errorX "Invalid vector"
-concatMapC ( x `Cons` Nil) = x 
-concatMapC (x `Cons` xs) = liftA2 (++#) x (concatMapC xs)
+concatMapBvC ∷ ∀ ℓ n dom . (KnownNat ℓ, KnownNat n) ⇒  Vec n (Channel dom (BitVector ℓ)) -> Channel dom (BitVector (ℓ * n))
+concatMapBvC Nil = errorX "Invalid vector"
+concatMapBvC ( x `Cons` Nil) = x 
+concatMapBvC (x `Cons` xs) = liftA2 (++#) x (concatMapBvC xs)
+
+concatMapVC ∷ ∀ ℓ a dom . (KnownNat ℓ) ⇒  Vec ℓ (Channel dom a) -> Channel dom (Vec ℓ a)
+concatMapVC Nil = errorX "Invalid vector"
+concatMapVC ( x `Cons` Nil) = fmap singleton  x 
+concatMapVC (x `Cons` xs) = liftA2 (++) (fmap singleton x) (concatMapVC xs)
