@@ -71,12 +71,7 @@ import Data.Word (Word8)
 import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
-  [localOption (HedgehogTestLimit (Just 10)) $ -- Purpose is mainly to get familiar with testing.
-      testProperty "Functional equality of XOR" $ property $ do
-        a ← forAll $ genDefinedBitVector
-        b ← forAll $ genDefinedBitVector
-        testOplus a b
-        , localOption (HedgehogTestLimit $ Just 4)
+  [localOption (HedgehogTestLimit $ Just 4)
       $ testGroup "Specification Sanity Checks (unit tests)"
           [ testProperty ("SHA-" <> algName)
               $ property
@@ -89,13 +84,10 @@ tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
               , (testMGF1Pure @CryptoSHA.SHA256 ,    "256")
               , (testMGF1Pure @CryptoSHA.SHA512,    "512")
               -- , (testMGF1Pure @CryptoSHA.SHA512224, "512/224")
-            --   , (testMGF1Pure @SHA512256, "512/246")
+            --   , (testMGF1Pure @CryptoSHA.SHA512256, "512/246")
               ]
           ]
         ] 
-type TestLen = 8
-testOplus ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
-testOplus a b = xor b a === xor a b
 type TestMaskLen = 3
 
 testMGF1Pure ∷ ∀ (sha ∷ SHA) m . (KnownSHA sha, Monad m, CryptoMGF1 sha,CryptoHash sha, TestMaskLen * ByteSize ≤ (CeilXDivY (TestMaskLen * ByteSize) (MessageDigestSize sha)) * (MessageDigestSize sha) ) ⇒ ByteString → PropertyT m ()
@@ -118,20 +110,16 @@ testMGF1Pure bs
     inputAsBv = concatBitVector# inputAsVBv8
 
     resultDigestAsBv ∷ BitVector (TestMaskLen * ByteSize)
-    -- resultDigestAsBv ∷ ∀ n1 n0 . (KnownNat n1, KnownNat n0, (MessageDigestSize sha * n1) ~ (TestMaskLen * 8 + n0)) ⇒  BitVector ((MessageDigestSize sha) * n1)
-    -- resultDigestAsBv =concatBitVector# (map (\x → Spec.hash @sha ((++#) inputAsBv x)) (iterateI (+1) (0 ∷ BitVector (ByteSize * 4))))
     resultDigestAsBv = DUT.mgf1 @sha @(TestMaskLen)  inputAsBv
 
 
     resultDigestAsVBv8 ∷ Vec (TestMaskLen) (BitVector 8)
-    -- resultDigestAsVBv8 ∷ Vec (TestMaskLen) (ByteType)
     resultDigestAsVBv8 = unconcatBitVector# resultDigestAsBv
-    -- resultDigestAsVBv8 = unconcatBitVector# (v2bv ( takeI @(TestMaskLen * 8) (bv2v (resultDigestAsBv))))
+
     dut ∷ [Word8] 
     dut = toList $ unpack <$> resultDigestAsVBv8
     ref = BS.unpack $ cryptoMGF1 sha bs (natToNum @(TestMaskLen))
-    -- ref = BS.unpack $ cryptoHash sha bs
-
+ 
   ref === dut
 
 
