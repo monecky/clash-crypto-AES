@@ -84,13 +84,11 @@ tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
                   >>= hashPure
           | let inputs = [input1, input2, input3, input4] ∷ [ByteString]
           , (hashPure, algName) ← [
-              -- (testMGF1Pure @CryptoSHA.SHA1,      "1")
-              -- , (testMGF1Pure @CryptoSHA.SHA224,    "224")
-              -- ,
-
-               (testMGF1Pure @CryptoSHA.SHA256 ,    "256")
+              (testMGF1Pure @CryptoSHA.SHA1,      "1")
+              , (testMGF1Pure @CryptoSHA.SHA224,    "224")
+              , (testMGF1Pure @CryptoSHA.SHA256 ,    "256")
               , (testMGF1Pure @CryptoSHA.SHA512,    "512")
-            --   , (testMGF1Pure @SHA512224, "512/224")
+              -- , (testMGF1Pure @CryptoSHA.SHA512224, "512/224")
             --   , (testMGF1Pure @SHA512256, "512/246")
               ]
           ]
@@ -145,6 +143,7 @@ instance CryptoMGF1 CryptoSHA.SHA224    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SH
 instance CryptoMGF1 CryptoSHA.SHA256    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA256
 instance CryptoMGF1 CryptoSHA.SHA384    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA384
 instance CryptoMGF1 CryptoSHA.SHA512    where cryptoMGF1 _ = Ref.mgf1  RefAlg.SHA512
+
 class CryptoHash (alg ∷ CryptoSHA.SHA) where
   cryptoHash ∷ Proxy alg → ByteString → ByteString
 
