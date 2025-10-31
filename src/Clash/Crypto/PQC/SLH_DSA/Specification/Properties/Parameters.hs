@@ -88,8 +88,10 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- H msg constain
             -- security level 1
         , (M alg) * ByteSize ≤ (CeilXDivY ((M alg) * ByteSize) (MessageDigestSize SHA256) ) * MessageDigestSize SHA256
+        , (M alg) * ByteSize ≤ 0x100000000 * MessageDigestSize SHA256
             -- security level 2
         , (M alg) * ByteSize ≤ (CeilXDivY ((M alg) * ByteSize) (MessageDigestSize SHA512) ) * MessageDigestSize SHA512
+        , (M alg) * ByteSize ≤ 0x100000000 * MessageDigestSize SHA512
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg

@@ -21,33 +21,28 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Types (ByteSize, ByteType)
 import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
 
 mgf1 ∷ ∀ (alg ∷ SHA) (maskLen ∷ Nat) (ℓ ∷ Nat)  (hLen ∷ Nat).
- (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, maskLen * ByteSize ≤ (CeilXDivY (maskLen * ByteSize) hLen) * hLen ) 
+ (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, maskLen * ByteSize ≤ (CeilXDivY (maskLen * ByteSize) hLen) * hLen,
+ -- Constain due definition of algorithm
+   maskLen * ByteSize ≤ 0x100000000 * hLen
+  ) 
  ⇒ BitVector ℓ → BitVector (maskLen * ByteSize)
 mgf1 mgfSeed
     | SHAFacts {} ← knownSHA @alg 
-    = if ((natToNum @maskLen) > 0x100000000 * (natToNum @hLen)) then ifthen else ifelse
-    where
-        ifthen = errorX "mask too long"
-        ifelse ∷  (KnownSHA alg, KnownNat ℓ, KnownNat maskLen, KnownNat hLen, hLen ~ MessageDigestSize alg, 1≤ hLen) 
-            ⇒ BitVector (maskLen * ByteSize)
-        ifelse = v2bv takeMaskLenBit
+    = v2bv takeMaskLenBit
             where 
                 tv ∷ Vec (CeilXDivY (maskLen * ByteSize) hLen) (BitVector (MessageDigestSize alg))
                 tv 
                     | SHAFacts {} ← knownSHA @alg 
-                    = map  go indices
+                    = map go indices⁰
                     where 
                         go ∷ BitVector (ByteSize * 4) → Digest alg
                         go x = hash @alg (mgfSeed ++# x)
-                        indices ∷ Vec (CeilXDivY (maskLen * ByteSize) hLen) (BitVector (ByteSize * 4))
-                        indices = iterateI @(CeilXDivY (maskLen * ByteSize) hLen) (+1) (0 ∷ BitVector (ByteSize * 4)) 
+                        indices⁰ ∷ (1≤ hLen) ⇒ Vec (CeilXDivY (maskLen * ByteSize) hLen) (BitVector (ByteSize * 4))
+                        indices⁰ = iterateI @(CeilXDivY (maskLen * ByteSize) hLen) (+1) (0 ∷ BitVector (ByteSize * 4)) 
                 tbv ∷ Vec ((CeilXDivY (maskLen * ByteSize) hLen) * (MessageDigestSize alg)) Bit
                 tbv 
                     | SHAFacts {} ← knownSHA @alg 
                     =  bv2v (concatBitVector# tv)  
-                -- c ∷ ∀ xLen . KnownNat xLen ⇒ ByteType → BitVector (ByteSize * xLen)
-                -- c x = resize   x ∷  BitVector (ByteSize * xLen)
-
                 takeMaskLenBit ∷ Vec (maskLen * ByteSize) Bit
                 takeMaskLenBit 
                     | SHAFacts {} ← knownSHA @alg 

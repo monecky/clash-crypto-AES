@@ -89,7 +89,7 @@ tastyTests = testGroup "Clash.Crypto.Hash.MGF1"
               -- ,
 
                (testMGF1Pure @CryptoSHA.SHA256 ,    "256")
-              -- , (testMGF1Pure @CryptoSHA.SHA512,    "512")
+              , (testMGF1Pure @CryptoSHA.SHA512,    "512")
             --   , (testMGF1Pure @SHA512224, "512/224")
             --   , (testMGF1Pure @SHA512256, "512/246")
               ]
