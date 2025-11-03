@@ -203,7 +203,9 @@ serializeHash input
   -- a value that should never be evaluated
   neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.serializeEn: Mealy"
 
-
+-- This methode combines a channel with a dataStream by prepending
+-- Since we don't know when the user start sending data and we don't want to miss any. 
+-- We store it in a buffer.
 serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0,  (BitSize a * n) `Div` n ~ 0) ⇒ 
@@ -218,27 +220,54 @@ serializePrependHash inputC inputD
     = leToPlusKN @1 @(BitSize a `Div` n)
   $ mealy (~~>)
       ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
-      , 0 ∷ Index ((BitSize a `Div` n) + 1), NoData ∷ Frame () (Index n) (BitVector n)
+      , 0 ∷ Index ((BitSize a `Div` n) + 1)
+      , repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
+      , 0 ∷ Index ((BitSize a `Div` n) + 1)
+      -- , NoData ∷ Frame () (Index n) (BitVector n)
       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
  where
-  (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) ⇒  (Vec (BitSize a1 `Div` n1) (BitVector n1), Index ((BitSize a1 `Div` n1) + 1), Frame () (Index n1) (BitVector n1)) 
+  (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+    ⇒  (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
+        , Vec (BitSize a1 `Div` n1) (BitVector n1) -- data stream buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
+        -- , Frame () (Index n1) (BitVector n1)
+        ) 
     → (Maybe a1, Bool, Frame () (Index n1) (BitVector n1)) 
-    → ((Vec (BitSize a1 `Div` n1) (BitVector n1),Index ((BitSize a1`Div` n1) + 1), Frame () (Index n1) (BitVector n1)),
-        Frame () (Index n1) (BitVector n1))
-  -- Sending received data from channel without endframe.
-  (~~>) state@(toSend, currentIndex, currentFrame) input@(Just x, False, pretendFrame) 
-      |Rewrite ← using @(DivTimes (BitSize a1) n1)
-      , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
-      , currentIndex > 0
-      = ((toSend <<+ neval, satPred SatBound n), frame $ head buf)
+    → (
+        (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
+        , Vec (BitSize a1 `Div` n1) (BitVector n1) -- data stream buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
+        -- , Frame () (Index n1) (BitVector n1)
+        )
+      , Frame () (Index n1) (BitVector n1))
+  -- -- Sending received data from channel without endframe.
+  -- (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
+  --     |Rewrite ← using @(DivTimes (BitSize a1) n1)
+  --     , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
+  --     , idxC > 0
+  --     = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame $ head buffC)
+  --        where
+  --           frame | idxC == maxBound = Start ()
+  --                 | idxC > 1         = Middle
+  --                 | otherwise     = End (0 ∷ Index ((BitSize a1 `Div` n1) + 1))
   -- New data is into the channel ready to send.
-  (~~>) state@(toSend, currentIndex, currentFrame) input@(Just x, True, pretendFrame) 
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, True, pretendFrame) 
       |Rewrite ← using @(DivTimes (BitSize a1) n1)
       , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
-      = ((bitCoerce x, maxBound, Idle), Idle)
+      = ((bitCoerce x, maxBound, goBuff pretendFrame, goIdx pretendFrame), Idle)
+      where 
+        goBuff ∷ Frame () (Index n1) (BitVector n1)
+              → Vec (BitSize a1 `Div` n1) (BitVector n1)
+        goBuff (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` n1) (BitVector n1))
+        -- Middle and end frames are ignored.
+        goBuff _ = repeat neval ∷ Vec (BitSize a1 `Div` n1) (BitVector n1)
+        goIdx Start{} = 1
+        goIdx _ = 0
   -- Defining the idle state 
-  (~~>) state@(toSend, currentIndex, currentFrame) input@(maybeC, updataC, pretendFrame)
-    | currentIndex > 0 = (state, Idle)
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, pretendFrame)
+    | idxC > 0 = (state, Idle)
     | otherwise = (state, Idle)
   -- (buf, n, data1) ~~> (Just _, False,  data2) | n > 0 = -- 
   --   ((buf <<+ neval, satPred SatBound n, data1), frame $ head buf)
