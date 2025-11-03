@@ -16,8 +16,9 @@ import Test.Tasty
 
 import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm as Alg
 
-
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions as Def
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.PQC.SLH_DSA.Streaming"
-  [Alg.tastyTests] 
+  [Alg.tastyTests,
+   Def.tastyTests] 
 

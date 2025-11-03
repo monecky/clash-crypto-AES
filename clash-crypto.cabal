@@ -65,6 +65,7 @@ common common-options
     , constraints >= 0.14.2
     --
 
+
 library
   import: common-options
   hs-source-dirs: src
@@ -146,6 +147,8 @@ test-suite simulation
     Test.Clash.Crypto.PQC.SLH_DSA.Specification.Algorithm
     Test.Clash.Crypto.PQC.SLH_DSA.Specification
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm
     Test.Clash.Crypto.PQC.SLH_DSA
     Test.Clash.Crypto.Cipher.AES.GoldenReference

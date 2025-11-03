@@ -201,10 +201,49 @@ serializeHash input
     ((buf, n), if n > 0 then NoData else Idle)
 
   -- a value that should never be evaluated
+  neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.serializeEn: Mealy"
+
+
+serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+    ( BitPack a, KnownNat (BitSize a), KnownNat n
+  , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
+    Channel  dom a
+    -- -- ^ streamed input that needs to be split up and preprend
+    → DataStream dom () (Index n) (BitVector n)
+    → DataStream dom () (Index n) (BitVector n)
+serializePrependHash inputC inputD
+  | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
+  , Rewrite ← using @(CancelMultiple (BitSize a) n)
+    = leToPlusKN @1 @(BitSize a `Div` n)
+  $ mealy (~~>)
+      ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
+      , 0 ∷ Index ((BitSize a `Div` n) + 1), NoData ∷ Frame () (Index n) (BitVector n)
+      ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
+ where
+  (~~>) ∷ (Vec (BitSize a `Div` n) (BitVector n), Index ((BitSize a `Div` n) + 1), Frame () (Index n) (BitVector n)) 
+    → (Maybe a,Bool, Frame () (Index n) (BitVector n)) 
+    → ((Vec (BitSize a `Div` n) (BitVector n),Index ((BitSize a `Div` n) + 1), Frame () (Index n) (BitVector n)),
+       Frame () (Index n) (BitVector n))
+  (~~>) = errorX "TODO: Not implemented yet"
+  -- (buf, n, data1) ~~> (Just _, False,  _) | n > 0 = -- 
+  --   ((buf <<+ neval, satPred SatBound n, data1), frame $ head buf)
+  --  where
+  --   frame | n == maxBound = Start ()
+  --         | n > 1         = Middle
+  --         | otherwise     = End 0
+
+  -- _ ~~> (Just x, True, _)  = -- (Just x, True) equivalent to 
+  --   ((bitCoerce x, maxBound, data1), Idle, data1)
+
+  -- (buf, n, data1)~~> _ =
+  --   ((buf, n, data1), if n > 0 then NoData else Idle)
+
+  -- -- a value that should never be evaluated
   neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
+
+
+
 type ChunksPerInput a n = Div (BitSize a) n
-
-
 serializeHMAC
   ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a
    . ( KnownDomain dom
