@@ -227,17 +227,11 @@ serializeHash input
       Frame () (Index n1) (BitVector n1))
 (~~>) state@(toSend, currentIndex, currentFrame) input@(Just x, True, pretendData) 
     |Rewrite ← using @(DivTimes (BitSize a1) n1)
-    -- , Dict ← ax
-    -- , Dict ← ax¹ 
     , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
-    = ((bitCoerce x, maxBound, Idle), Idle)
-    where 
-      ax :: Dict ((BitSize a1) ~ (Div (BitSize a1) n1) * n1)
-      ax = unsafeCoerce (Dict @(() ~ ()))
-      ax¹ :: Dict ( (Div ((BitSize a1) * n1) n1) ~ (BitSize a1))
-      ax¹ = unsafeCoerce (Dict @(() ~ ()))
+    = ((bitCoerce x, maxBound, Idle), Idle) -- New data is into the channel ready to send.
 (~~>) state@(toSend, currentIndex, currentFrame) input@(maybeC, updataC, pretendData)
-  | otherwise = errorX "TODO: Not implemented yet"
+  | currentIndex > 0 = (state, Idle)
+  | otherwise = (state, Idle)
   -- (buf, n, data1) ~~> (Just _, False,  data2) | n > 0 = -- 
   --   ((buf <<+ neval, satPred SatBound n, data1), frame $ head buf)
   --  where
