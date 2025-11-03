@@ -66,41 +66,39 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                     = concatBitVector# (skPrf ‖ unconcatBitVector# @(BlockSize SHA256 - N alg) @ByteSize 0x0 ‖ opt_rand ‖ m)
   -- TODO make a DataStream as input because algorithm 19, 20
-    _HᵐˢᵍStreaming   ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ,KnownSLH_DSAParameters alg) 
-                  ⇒ Proxy alg → Channel dom (RType alg, PKSeedType alg, PKRootType alg, MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
-    _HᵐˢᵍStreaming _ input
+    _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
+                  ⇒ Proxy alg 
+                  → Channel dom (RType alg, PKSeedType alg, PKRootType alg) → DataStream dom () (Index (ByteSize)) (ByteType) 
+                  →  Channel dom (HᵐˢᵍOutType alg)
+    _HᵐˢᵍStreaming _ inputC inputD
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-        , Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
         = fmap makeOutput (MGF1.mgf1Stream @SHA256 @(M alg) transfer)
             where 
                 shaResult ∷ Channel dom (Digest SHA256)
                 shaResult 
                       | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                      , Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
-                      , Dict <- ax
-                      = SHA.sha @SHA256 (serializeHash @ByteSize (transfer⁰))
+                      , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) * ByteSize)  ByteSize)
+                      , Rewrite ← using @(ModTimes ((N alg + N alg) + N alg)  ByteSize)
+                      = SHA.sha @SHA256 (serializePrependHash @ByteSize (transfer⁰) inputD)
                     where
-                        transfer⁰ ∷ (KnownNat ℓ, 1 ≤ BitSize (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize))) ⇒ Channel dom (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize))
+                        transfer⁰ ∷ Channel dom (BitVector ((N alg + N alg + N alg) * ByteSize))
                         transfer⁰ 
-                                | Rewrite ← using @(ModTimes (N alg + N alg + N alg + ℓ) ByteSize) 
-                                = fmap go⁰ input
-                        go⁰ ∷  (RType alg, PKSeedType alg, PKRootType alg, MType ℓ)  → BitVector ((N alg + N alg + N alg + ℓ) * ByteSize)
-                        go⁰ (r⁰, pkSeed⁰, pkRoot⁰, m⁰) 
+                                = fmap go⁰ inputC
+                        go⁰ ∷  (RType alg, PKSeedType alg, PKRootType alg)  → BitVector ((N alg + N alg + N alg) * ByteSize)
+                        go⁰ (r⁰, pkSeed⁰, pkRoot⁰) 
                           | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                          = concatBitVector# (r⁰ ‖ pkSeed⁰ ‖ pkRoot⁰ ‖ m⁰)
+                          = concatBitVector# (r⁰ ‖ pkSeed⁰ ‖ pkRoot⁰)
                 -- transfer ∷ Channel dom (BitVector ((MessageDigestSize SHA256) + (N alg + N alg) * ByteSize))
-                transfer = liftA2 (++#) (fmap go input) (shaResult)
+                transfer = liftA2 (++#) (fmap go inputC) (shaResult)
                 makeOutput ∷ BitVector (M alg * ByteSize) → HᵐˢᵍOutType alg
                 makeOutput output 
                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                    = unconcatBitVector# output
-                go ∷ (KnownNat ℓ, KnownSLH_DSAParameters alg) ⇒ (RType alg, PKSeedType alg, PKRootType alg , MType ℓ)  → BitVector ((N alg + N alg) * ByteSize)
-                go (r, pkSeed, pkRoot, m) 
+                go ∷ (KnownSLH_DSAParameters alg) ⇒ (RType alg, PKSeedType alg, PKRootType alg)  → BitVector ((N alg + N alg) * ByteSize)
+                go (r, pkSeed, pkRoot) 
                   | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                   = concatBitVector# (r ‖ pkSeed)
 
-                ax :: Dict (1 ≤ BitSize (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize)))
-                ax = unsafeCoerce (Dict @(() ~ ()))
                  
 
     _PRFStreaming    ∷ ∀ (alg :: SLH_DSA) dom .  (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
@@ -209,7 +207,7 @@ serializeHash input
 -- Assumption the datastream doesn't start before the channel has send the fresh label.s
 serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
-  , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0,  (BitSize a * n) `Div` n ~ 0) ⇒ 
+  , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
     Channel  dom a
     -- -- ^ streamed input that needs to be split up and preprend
     → DataStream dom () (Index n) (BitVector n)
