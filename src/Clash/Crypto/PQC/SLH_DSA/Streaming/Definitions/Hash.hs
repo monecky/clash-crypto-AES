@@ -204,29 +204,40 @@ serializeHash input
   neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.serializeEn: Mealy"
 
 
-serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
-    ( BitPack a, KnownNat (BitSize a), KnownNat n
-  , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
-    Channel  dom a
-    -- -- ^ streamed input that needs to be split up and preprend
-    → DataStream dom () (Index n) (BitVector n)
-    → DataStream dom () (Index n) (BitVector n)
-serializePrependHash inputC inputD
-  | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
-  , Rewrite ← using @(CancelMultiple (BitSize a) n)
-  , Rewrite ← using @(DivTimes (BitSize a) n)
-    = leToPlusKN @1 @(BitSize a `Div` n)
-  $ mealy (~~>)
-      ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
-      , 0 ∷ Index ((BitSize a `Div` n) + 1), NoData ∷ Frame () (Index n) (BitVector n)
-      ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
- where
-  (~~>) ∷ (Vec (BitSize a `Div` n) (BitVector n), Index ((BitSize a `Div` n) + 1), Frame () (Index n) (BitVector n)) 
-    → (Maybe a, Bool, Frame () (Index n) (BitVector n)) 
-    → ((Vec (BitSize a `Div` n) (BitVector n),Index ((BitSize a `Div` n) + 1), Frame () (Index n) (BitVector n)),
-       Frame () (Index n) (BitVector n))
-  (~~>) state@(toSend, currentIndex, currentFrame) input@(maybeC, updataC, pretendData) 
-    | otherwise = errorX "TODO: Not implemented yet"
+-- serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+--     ( BitPack a, KnownNat (BitSize a), KnownNat n
+--   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0,  (BitSize a * n) `Div` n ~ 0) ⇒ 
+--     Channel  dom a
+--     -- -- ^ streamed input that needs to be split up and preprend
+--     → DataStream dom () (Index n) (BitVector n)
+--     → DataStream dom () (Index n) (BitVector n)
+-- serializePrependHash inputC inputD
+--   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
+--   , Rewrite ← using @(CancelMultiple (BitSize a) n)
+--   , Rewrite ← using @(DivTimes (BitSize a) n)
+--     = leToPlusKN @1 @(BitSize a `Div` n)
+--   $ mealy (~~>)
+--       ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
+--       , 0 ∷ Index ((BitSize a `Div` n) + 1), NoData ∷ Frame () (Index n) (BitVector n)
+--       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
+--  where
+(~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) ⇒  (Vec (BitSize a1 `Div` n1) (BitVector n1), Index ((BitSize a1 `Div` n1) + 1), Frame () (Index n1) (BitVector n1)) 
+  → (Maybe a1, Bool, Frame () (Index n1) (BitVector n1)) 
+  → ((Vec (BitSize a1 `Div` n1) (BitVector n1),Index ((BitSize a1`Div` n1) + 1), Frame () (Index n1) (BitVector n1)),
+      Frame () (Index n1) (BitVector n1))
+(~~>) state@(toSend, currentIndex, currentFrame) input@(Just x, True, pretendData) 
+    |Rewrite ← using @(DivTimes (BitSize a1) n1)
+    -- , Dict ← ax
+    -- , Dict ← ax¹ 
+    , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
+    = ((bitCoerce x, maxBound, Idle), Idle)
+    where 
+      ax :: Dict ((BitSize a1) ~ (Div (BitSize a1) n1) * n1)
+      ax = unsafeCoerce (Dict @(() ~ ()))
+      ax¹ :: Dict ( (Div ((BitSize a1) * n1) n1) ~ (BitSize a1))
+      ax¹ = unsafeCoerce (Dict @(() ~ ()))
+(~~>) state@(toSend, currentIndex, currentFrame) input@(maybeC, updataC, pretendData)
+  | otherwise = errorX "TODO: Not implemented yet"
   -- (buf, n, data1) ~~> (Just _, False,  data2) | n > 0 = -- 
   --   ((buf <<+ neval, satPred SatBound n, data1), frame $ head buf)
   --  where
@@ -246,12 +257,11 @@ serializePrependHash inputC inputD
 
   -- (buf, n, data1)~~> _ =
   --   ((buf, n, data1), if n > 0 then NoData else Idle)
-  -- ax :: Dict ((n0 + 1) ~ Div (BitSize a) n)
-  -- ax = unsafeCoerce (Dict @(() ~ ()))
+
   -- ax¹ :: Dict ((Div (BitSize a) n * n) ~ BitSize a)
   -- ax¹ = unsafeCoerce (Dict @(() ~ ()))
   -- -- a value that should never be evaluated
-  neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
+  -- neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
 
 
 
