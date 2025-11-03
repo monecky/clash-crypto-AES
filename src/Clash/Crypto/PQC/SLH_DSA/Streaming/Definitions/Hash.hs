@@ -206,6 +206,7 @@ serializeHash input
 -- This methode combines a channel with a dataStream by prepending
 -- Since we don't know when the user start sending data and we don't want to miss any. 
 -- We store it in a buffer.
+-- Assumption the datastream doesn't start before the channel has send the fresh label.s
 serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0,  (BitSize a * n) `Div` n ~ 0) ⇒ 
@@ -243,15 +244,16 @@ serializePrependHash inputC inputD
         )
       , Frame () (Index n1) (BitVector n1))
   -- -- Sending received data from channel without endframe.
-  -- (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
-  --     |Rewrite ← using @(DivTimes (BitSize a1) n1)
-  --     , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
-  --     , idxC > 0
-  --     = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame $ head buffC)
-  --        where
-  --           frame | idxC == maxBound = Start ()
-  --                 | idxC > 1         = Middle
-  --                 | otherwise     = End (0 ∷ Index ((BitSize a1 `Div` n1) + 1))
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
+      |Rewrite ← using @(DivTimes (BitSize a1) n1)
+      , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
+      , idxC > 0
+      = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame $ (buffC !! 0))
+         where
+            frame ∷ (BitVector n1) → Frame () (Index n1) (BitVector n1)
+            frame | idxC == maxBound = Start ()
+                  | idxC > 1         = Middle
+                  | otherwise         = End 0
   -- New data is into the channel ready to send.
   (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, True, pretendFrame) 
       |Rewrite ← using @(DivTimes (BitSize a1) n1)
