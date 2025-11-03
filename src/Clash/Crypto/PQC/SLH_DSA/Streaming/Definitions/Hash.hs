@@ -225,7 +225,8 @@ serializePrependHash inputC inputD
     → (Maybe a, Bool, Frame () (Index n) (BitVector n)) 
     → ((Vec (BitSize a `Div` n) (BitVector n),Index ((BitSize a `Div` n) + 1), Frame () (Index n) (BitVector n)),
        Frame () (Index n) (BitVector n))
-  (~~>) state@(toSend, currentIndex, currentFrame) input@(maybeC, updataC, pretendData) = errorX "TODO: Not implemented yet"
+  (~~>) state@(toSend, currentIndex, currentFrame) input@(maybeC, updataC, pretendData) 
+    | otherwise = errorX "TODO: Not implemented yet"
   -- (buf, n, data1) ~~> (Just _, False,  data2) | n > 0 = -- 
   --   ((buf <<+ neval, satPred SatBound n, data1), frame $ head buf)
   --  where
