@@ -214,6 +214,7 @@ serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, 
 serializePrependHash inputC inputD
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
   , Rewrite ← using @(CancelMultiple (BitSize a) n)
+  , Rewrite ← using @(DivTimes (BitSize a) n)
     = leToPlusKN @1 @(BitSize a `Div` n)
   $ mealy (~~>)
       ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
@@ -221,23 +222,33 @@ serializePrependHash inputC inputD
       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
  where
   (~~>) ∷ (Vec (BitSize a `Div` n) (BitVector n), Index ((BitSize a `Div` n) + 1), Frame () (Index n) (BitVector n)) 
-    → (Maybe a,Bool, Frame () (Index n) (BitVector n)) 
+    → (Maybe a, Bool, Frame () (Index n) (BitVector n)) 
     → ((Vec (BitSize a `Div` n) (BitVector n),Index ((BitSize a `Div` n) + 1), Frame () (Index n) (BitVector n)),
        Frame () (Index n) (BitVector n))
-  (~~>) = errorX "TODO: Not implemented yet"
-  -- (buf, n, data1) ~~> (Just _, False,  _) | n > 0 = -- 
+  (~~>) state@(toSend, currentIndex, currentFrame) input@(maybeC, updataC, pretendData) = errorX "TODO: Not implemented yet"
+  -- (buf, n, data1) ~~> (Just _, False,  data2) | n > 0 = -- 
   --   ((buf <<+ neval, satPred SatBound n, data1), frame $ head buf)
   --  where
   --   frame | n == maxBound = Start ()
   --         | n > 1         = Middle
   --         | otherwise     = End 0
 
-  -- _ ~~> (Just x, True, _)  = -- (Just x, True) equivalent to 
-  --   ((bitCoerce x, maxBound, data1), Idle, data1)
+  -- _ ~~> (Just x, True, y)  
+  --      | Rewrite ← using @(DivTimes (BitSize a) n)
+  --      = -- (Just x, True) equivalent to 
+  --   ((go x, maxBound, y), Idle)
+  --   where 
+  --     go ∷ a → Vec (BitSize a `Div` n) (BitVector n)
+  --     go x 
+  --       | Rewrite ← using @(DivTimes (BitSize a) n)
+  --       = bitCoerce x
 
   -- (buf, n, data1)~~> _ =
   --   ((buf, n, data1), if n > 0 then NoData else Idle)
-
+  -- ax :: Dict ((n0 + 1) ~ Div (BitSize a) n)
+  -- ax = unsafeCoerce (Dict @(() ~ ()))
+  -- ax¹ :: Dict ((Div (BitSize a) n * n) ~ BitSize a)
+  -- ax¹ = unsafeCoerce (Dict @(() ~ ()))
   -- -- a value that should never be evaluated
   neval = error "Clash.Crypto.MAC.HMAC.serializeEn: Mealy"
 
