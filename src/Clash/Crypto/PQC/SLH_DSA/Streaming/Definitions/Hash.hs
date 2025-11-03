@@ -243,17 +243,49 @@ serializePrependHash inputC inputD
         -- , Frame () (Index n1) (BitVector n1)
         )
       , Frame () (Index n1) (BitVector n1))
-  -- -- Sending received data from channel without endframe.
+  -- Sending received data from datastream without endframe.
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
+      |Rewrite ← using @(DivTimes (BitSize a1) n1)
+      , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
+      , idxC == 0
+          = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame $ (buffC !! idxD))
+         where
+            frame ∷ BitVector n1 → Frame () (Index n1) (BitVector n1)
+            frame | idxD > 1         = Middle 
+                  | otherwise        = End 0               
+              
+            goBuff ∷ Frame () (Index n1) (BitVector n1)
+                  → Vec (BitSize a1 `Div` n1) (BitVector n1)
+            goBuff (Start _ y) = y +>> buffD
+            goBuff (Middle  y) = y +>> buffD
+            goBuff _ = buffD
+
+            goIdx Start{} = 0 -- just in edge case
+            goIdx Middle{} = idxD
+            goIdx End{} = idxD
+            goIdx _ = satPred SatBound idxD
+  -- Sending received data from channel without endframe.
   (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
       |Rewrite ← using @(DivTimes (BitSize a1) n1)
       , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
       , idxC > 0
-      = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame $ (buffC !! 0))
+      = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame)
          where
-            frame ∷ (BitVector n1) → Frame () (Index n1) (BitVector n1)
-            frame | idxC == maxBound = Start ()
-                  | idxC > 1         = Middle
-                  | otherwise         = End 0
+            frame ∷ Frame () (Index n1) (BitVector n1)
+            frame | idxC == maxBound = Start () (buffC !! 0)
+                  | idxC > 1         = Middle (buffC !! 0)
+                  | idxC == 0        = Middle (buffC !! 0)
+                  | otherwise        = NoData
+              
+            goBuff ∷ Frame () (Index n1) (BitVector n1)
+                  → Vec (BitSize a1 `Div` n1) (BitVector n1)
+            goBuff (Start _ y) = y +>> buffD
+            goBuff (Middle  y) = y +>> buffD
+            goBuff _ = buffD
+            goIdx Start{} = 1
+            goIdx Middle{} = satSucc SatBound idxD
+            goIdx End{} = satSucc SatBound idxD
+            goIdx _ = idxD
   -- New data is into the channel ready to send.
   (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, True, pretendFrame) 
       |Rewrite ← using @(DivTimes (BitSize a1) n1)
@@ -269,7 +301,7 @@ serializePrependHash inputC inputD
         goIdx _ = 0
   -- Defining the idle state 
   (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, pretendFrame)
-    | idxC > 0 = (state, Idle)
+    | idxC > 0 = (state, NoData)
     | otherwise = (state, Idle)
   -- (buf, n, data1) ~~> (Just _, False,  data2) | n > 0 = -- 
   --   ((buf <<+ neval, satPred SatBound n, data1), frame $ head buf)
