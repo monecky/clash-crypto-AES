@@ -53,38 +53,37 @@ import Clash.Signal.DataStream
 import Clash.Signal.Delayed.Extra
 import Clash.Signal.Extra (apWhen)
 import Language.Haskell.Unicode (type (≤))
+import Clash.Crypto.Hash.SHA as SHA
 class (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream  (sha ∷ SHAVersion) (security ∷ SecurityLevel) (alg ∷ SLH_DSA)where
   -- Since a DataStream is used for flexible size messages and that is neded for algorithm 19, 20, PRFᵐˢᵍ and Hᵐˢᵍ, need to take a stream as input.
-  _PRFᵐˢᵍStreamingC ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, KnownSLH_DSAParameters alg) 
-                  ⇒ Proxy alg → Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
-  _PRFᵐˢᵍStreaming ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, KnownSLH_DSAParameters alg) 
-                  ⇒ Proxy alg → Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
-  -- _HᵐˢᵍStreamingC   ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, KnownSLH_DSAParameters alg
-  --                       , 1 <= (((N alg + N alg) + N alg) + ℓ) * ByteSize) 
-  --                 ⇒ Proxy alg → Channel dom (RType alg, PKSeedType alg, PKRootType alg, MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
+  _PRFᵐˢᵍStreaming ∷ ∀ sha security alg dom e . (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
+                  ⇒ Proxy alg 
+                  → Channel dom (SKPrfType alg, Opt_randType alg) 
+                  → DataStream dom (Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` 8) + 1)) e (ByteType)
+                  → Channel dom (PRFᵐˢᵍOutType alg)
   _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s . (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
                   ⇒ Proxy alg 
-                  → Channel dom (RType alg, PKSeedType alg, PKRootType alg) → DataStream dom s (Index (ByteSize)) (ByteType) 
+                  → Channel dom (RType alg, PKSeedType alg, PKRootType alg) 
+                  → DataStream dom s (Index (ByteSize)) (ByteType) 
                   →  Channel dom (HᵐˢᵍOutType alg)
   _PRFStreaming    ∷ (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) ⇒ Channel dom (PKSeedType alg,  SKSeedType alg, ADRSType alg) → Channel dom (PRFOutType alg)
   _TˡStreaming     ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, KnownSLH_DSAParameters alg) 
                   ⇒ Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
   _HStreaming      ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Channel dom (PKSeedType alg, ADRSType alg, M²Type alg) → Channel dom (HOutType alg)
   _FStreaming      ∷ (KnownDomain dom, HiddenClockResetEnable dom) ⇒ Channel dom (PKSeedType alg, ADRSType alg, M¹Type alg) → Channel dom (FOutType alg)
-  -- type CeilXDivY ∷ Nat → Nat → Nat
+
 type family  SLH_DSA_hashStreamFact (alg ∷ SLH_DSA) where
     SLH_DSA_hashStreamFact alg = SLH_DSA_hashStream (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg) alg
-_PRFᵐˢᵍStream ∷ ∀ alg ℓ dom . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ) ⇒ Channel dom (SKPrfType alg, Opt_randType alg, MType ℓ) → Channel dom (PRFᵐˢᵍOutType alg)
+_PRFᵐˢᵍStream ∷ ∀ alg dom e . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom) 
+                  ⇒ Channel dom (SKPrfType alg, Opt_randType alg) 
+                  → DataStream dom (Index (( BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` 8) + 1)) e (ByteType)
+                  →  Channel dom (PRFᵐˢᵍOutType alg)
 _PRFᵐˢᵍStream 
   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-  = _PRFᵐˢᵍStreaming  @(SHAVersionSLH_DSA alg) @(SecurityLevelSLH_DSA alg) @alg @ℓ alg
--- _HᵐˢᵍStream ∷ ∀ alg ℓ dom . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, 1 ≤ BitSize (BitVector ((N alg + N alg + N alg + ℓ) * ByteSize))) 
---     ⇒ Channel dom (RType alg, PKSeedType alg, PKRootType alg, MType ℓ) →  Channel dom (HᵐˢᵍOutType alg)
--- _HᵐˢᵍStream 
---   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
---   = _HᵐˢᵍStreaming  @(SHAVersionSLH_DSA alg) @(SecurityLevelSLH_DSA alg) @alg @ℓ alg
-_HᵐˢᵍStream ∷ ∀ alg dom s . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom) 
-                  ⇒ Channel dom (RType alg, PKSeedType alg, PKRootType alg) → DataStream dom s (Index (ByteSize)) (ByteType) 
+  = _PRFᵐˢᵍStreaming  @(SHAVersionSLH_DSA alg) @(SecurityLevelSLH_DSA alg) @alg  alg
+_HᵐˢᵍStream ∷ ∀ alg dom s e. (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom) 
+                  ⇒ Channel dom (RType alg, PKSeedType alg, PKRootType alg) 
+                  → DataStream dom s (Index (ByteSize)) (ByteType)
                   →  Channel dom (HᵐˢᵍOutType alg)
 _HᵐˢᵍStream 
   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg

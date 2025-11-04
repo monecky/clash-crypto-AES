@@ -10,6 +10,7 @@ specification.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+-- {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# HLINT ignore "[]" #-}
 {-# HLINT ignore "Use camelCase" #-}
 module Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters where
@@ -20,6 +21,7 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Types
 import Language.Haskell.Unicode (type (≤))
 import Clash.Crypto.PQC.SLH_DSA.General.General (CeilXDivY)
 import Clash.Crypto.Hash.SHA.Specification
+import Clash.Crypto.Hash.SHA as SHA
 data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
     SLH_DSAParametersFacts ∷
         ( KnownNat (N alg)
@@ -92,6 +94,13 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
             -- security level 2
         , (M alg) * ByteSize ≤ (CeilXDivY ((M alg) * ByteSize) (MessageDigestSize SHA512) ) * MessageDigestSize SHA512
         , (M alg) * ByteSize ≤ 0x100000000 * MessageDigestSize SHA512 - 1
+        -- PRFᵐˢᵍ constrains
+        , KnownSHA (SHAVersionPRFᵐˢᵍSLH_DSA alg)
+        ,  ByteSize <= BlockSize (SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg))
+        , N alg ≤ BlockSize (SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg))
+        , 1 ≤  ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) + N alg) * ByteSize
+        , Mod (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize ~ 0
+        , KnownNat (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg))
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg

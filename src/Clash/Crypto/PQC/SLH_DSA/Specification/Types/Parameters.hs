@@ -13,6 +13,7 @@ functional description.
 Decisions
 Param
 -}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -477,3 +478,13 @@ type family SHAVersionSLH_DSA (alg ∷ SLH_DSA) where
     SHAVersionSLH_DSA  SLH_DSA_SHAKE_256f = SHAThree 
     SHAVersionSLH_DSA  _                  = SHATwo    
 
+type SHAVersionPRFᵐˢᵍ ∷ SHAVersion → SecurityLevel → SHA.SHA
+type family SHAVersionPRFᵐˢᵍ (sha ∷ SHAVersion) (security ∷ SecurityLevel) where
+    SHAVersionPRFᵐˢᵍ  SHATwo SecurityOne     = SHA.SHA256   
+    SHAVersionPRFᵐˢᵍ  SHATwo SecurityThree   = SHA.SHA512   
+    SHAVersionPRFᵐˢᵍ  SHATwo SecurityFive    = SHA.SHA512   
+    -- SHAVersionPRFᵐˢᵍ  SHAThree SecurityOne   = SHA.SHA256    
+    -- SHAVersionPRFᵐˢᵍ  SHAThree SecurityThree = SHA.SHA512    
+    -- SHAVersionPRFᵐˢᵍ  SHAThree SecurityFive  = SHA.SHA512  
+    SHAVersionPRFᵐˢᵍ  _ _                    = SHA.SHA256   
+type SHAVersionPRFᵐˢᵍSLH_DSA alg = SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg)
