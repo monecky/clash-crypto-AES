@@ -331,7 +331,7 @@ serializePrependHMAC
     -- -- ^ streamed input that needs to be split up and preprend
     →  DataStream dom (Index ((BlockSize alg `Div` 8) + 1)) e (ByteType)
   → DataStream dom (Index ((BlockSize alg `Div` 8) + 1)) () (BitVector n)
-serializePrependHMAC input
+serializePrependHMAC inputC inputD
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
   , Rewrite ← using @(CancelMultiple (BitSize a) n)
   , SHAFacts {} ← knownSHA @alg
