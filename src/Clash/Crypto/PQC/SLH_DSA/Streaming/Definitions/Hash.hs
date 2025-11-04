@@ -73,6 +73,7 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                   = unconcatBitVector#  output
                   where
                         -- TODO this is only true for SHA256, SHA224,SHA1 , originally with truncˡ it should work but the type checker doesn't like it.
+                        -- Although this function is only used for sha256
                         ax :: Dict ((N alg) * ByteSize ~ MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg))
                         ax = unsafeCoerce (Dict @(() ~ ()))                 
                 go ∷ (KnownSLH_DSAParameters alg) 
