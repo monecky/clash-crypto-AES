@@ -61,9 +61,9 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
     _PRFᵐˢᵍStreaming alg inputC inputD  
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
-        , Rewrite ← using @(ModTimes (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) + N alg) ByteSize)
+        , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
         -- , Dict ← ax
-            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) (serializePrependHMAC  @(SHAVersionPRFᵐˢᵍSLH_DSA alg) @ByteSize transfer inputD))
+            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) (serializePrependHMAC  @(alg) @ByteSize transfer inputD))
                 where
                 transfer = fmap go inputC
                 makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg
@@ -77,10 +77,10 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                         ax = unsafeCoerce (Dict @(() ~ ()))                 
                 go ∷ (KnownSLH_DSAParameters alg) 
                   ⇒ (SKPrfType alg, Opt_randType alg) 
-                  → BitVector ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) + N alg) * ByteSize)
+                  → BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) * ByteSize)
                 go (skPrf, opt_rand)
                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                    = concatBitVector# (skPrf ‖ unconcatBitVector# @(BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) - N alg) @ByteSize 0x0 ‖ opt_rand)
+                    = concatBitVector# (skPrf ‖ unconcatBitVector# @(Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) @ByteSize 0x0 ‖ opt_rand)
 
                     
     _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
@@ -326,105 +326,107 @@ type ChunksPerInput a n = Div (BitSize a) n
 serializePrependHMAC
   ∷ ∀ alg (n ∷ Nat) (dom ∷ Domain) a e . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
-  , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0, KnownSHA alg) ⇒ 
+  , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0, KnownSHA (SHAVersionPRFᵐˢᵍSLH_DSA alg), KnownSLH_DSAParameters alg) ⇒ 
     Channel  dom a
     -- -- ^ streamed input that needs to be split up and preprend
-    →  DataStream dom (Index ((BlockSize alg `Div` 8) + 1)) e (ByteType)
-  → DataStream dom (Index ((BlockSize alg `Div` 8) + 1)) () (BitVector n)
+    →  DataStream dom (Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` 8) + 1)) e (ByteType)
+  → DataStream dom (Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` 8) + 1)) () (BitVector n)
 serializePrependHMAC inputC inputD
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
   , Rewrite ← using @(CancelMultiple (BitSize a) n)
-  , SHAFacts {} ← knownSHA @alg
-  = errorX "TODO: Not implemented yet"
--- ∷
--- serializePrependHash inputC inputD
---   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
---   , Rewrite ← using @(CancelMultiple (BitSize a) n)
---   , Rewrite ← using @(DivTimes (BitSize a) n)
---     = leToPlusKN @1 @(BitSize a `Div` n)
---   $ mealy (~~>)
---       ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
---       , 0 ∷ Index ((BitSize a `Div` n) + 1)
---       , repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
---       , 0 ∷ Index ((BitSize a `Div` n) + 1)
---       -- , NoData ∷ Frame () (Index n) (BitVector n)
---       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
---  where
---   (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
---     ⇒  (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
---         , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
---         , Vec (BitSize a1 `Div` n1) (BitVector n1) -- data stream buffer
---         , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
---         -- , Frame () (Index n1) (BitVector n1)
---         ) 
---     → (Maybe a1, Bool, Frame s (Index n1) (BitVector n1)) 
---     → (
---         (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
---         , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
---         , Vec (BitSize a1 `Div` n1) (BitVector n1) -- data stream buffer
---         , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
---         -- , Frame () (Index n1) (BitVector n1)
---         )
---       , Frame () (Index n1) (BitVector n1))
---   -- Sending received data from datastream without endframe.
---   (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
---       |Rewrite ← using @(DivTimes (BitSize a1) n1)
---       , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
---       , idxC == 0
---           = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame $ (buffC !! idxD))
---          where
---             frame ∷ BitVector n1 → Frame () (Index n1) (BitVector n1)
---             frame | idxD > 1         = Middle 
---                   | otherwise        = End 0               
+  , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
+  , Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
+  , Rewrite ← using @(CancelMultiple (BitSize a) n)
+  , Rewrite ← using @(DivTimes (BitSize a) n)
+    = leToPlusKN @1 @(BitSize a `Div` n)
+  $ mealy (~~>)
+      ( repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
+      , 0 ∷ Index ((BitSize a `Div` n) + 1)
+      , repeat neval ∷ Vec (BitSize a `Div` n) (BitVector n)
+      , 0 ∷ Index ((BitSize a `Div` n) + 1)
+      -- , NoData ∷ Frame () (Index n) (BitVector n)
+      ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
+ where
+  (~~>) ∷ ∀ a1 n1 e . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+    ⇒  (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
+        , Vec (BitSize a1 `Div` n1) (BitVector n1) -- data stream buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
+        -- , Frame () (Index n1) (BitVector n1)
+        ) 
+    → (Maybe a1, Bool, Frame (Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` 8) + 1)) e (ByteType)) 
+    → (
+        (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
+        , Vec (BitSize a1 `Div` n1) (BitVector n1) -- data stream buffer
+        , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
+        -- , Frame () (Index n1) (BitVector n1)
+        )
+      , Frame (Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` 8) + 1)) () (BitVector n))
+  -- Sending received data from datastream without endframe.
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
+      |Rewrite ← using @(DivTimes (BitSize a1) n1)
+      , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
+      , idxC == 0
+          = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame $ (buffC !! idxD))
+         where
+            frame ∷ BitVector n1 → Frame () (Index n1) (BitVector n1)
+            frame | idxD > 1         = Middle 
+                  | otherwise        = End 0               
               
---             goBuff ∷ Frame () (Index n1) (BitVector n1)
---                   → Vec (BitSize a1 `Div` n1) (BitVector n1)
---             goBuff (Start _ y) = y +>> buffD
---             goBuff (Middle  y) = y +>> buffD
---             goBuff _ = buffD
+            goBuff ∷ Frame () (Index n1) (BitVector n1)
+                  → Vec (BitSize a1 `Div` n1) (BitVector n1)
+            goBuff (Start _ y) = y +>> buffD
+            goBuff (Middle  y) = y +>> buffD
+            goBuff _ = buffD
 
---             goIdx Start{} = 0 -- just in edge case
---             goIdx Middle{} = idxD
---             goIdx End{} = idxD
---             goIdx _ = satPred SatBound idxD
---   -- Sending received data from channel without endframe.
---   (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
---       |Rewrite ← using @(DivTimes (BitSize a1) n1)
---       , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
---       , idxC > 0
---       = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame)
---          where
---             frame ∷ Frame () (Index n1) (BitVector n1)
---             frame | idxC == maxBound = Start () (buffC !! 0)
---                   | idxC > 1         = Middle (buffC !! 0)
---                   | idxC == 0        = Middle (buffC !! 0)
---                   | otherwise        = NoData
+            goIdx Start{} = 0 -- just in edge case
+            goIdx Middle{} = idxD
+            goIdx End{} = idxD
+            goIdx _ = satPred SatBound idxD
+  -- Sending received data from channel without endframe.
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, False, pretendFrame) 
+      |Rewrite ← using @(DivTimes (BitSize a1) n1)
+      , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
+      , idxC > 0
+      = ((buffC <<+ neval, satPred SatBound idxC,buffD, idxD), frame)
+         where
+            frame ∷ Frame () (Index n1) (BitVector n1)
+            frame | idxC == maxBound = Start () (buffC !! 0)
+                  | idxC > 1         = Middle (buffC !! 0)
+                  | idxC == 0        = Middle (buffC !! 0)
+                  | otherwise        = NoData
               
---             goBuff ∷ Frame () (Index n1) (BitVector n1)
---                   → Vec (BitSize a1 `Div` n1) (BitVector n1)
---             goBuff (Start _ y) = y +>> buffD
---             goBuff (Middle  y) = y +>> buffD
---             goBuff _ = buffD
---             goIdx Start{} = 1
---             goIdx Middle{} = satSucc SatBound idxD
---             goIdx End{} = satSucc SatBound idxD
---             goIdx _ = idxD
---   -- New data is into the channel ready to send.
---   (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, True, pretendFrame) 
---       |Rewrite ← using @(DivTimes (BitSize a1) n1)
---       , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
---       = ((bitCoerce x, maxBound, goBuff pretendFrame, goIdx pretendFrame), Idle)
---       where 
---         goBuff ∷ Frame s (Index n1) (BitVector n1)
---               → Vec (BitSize a1 `Div` n1) (BitVector n1)
---         goBuff (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` n1) (BitVector n1))
---         -- Middle and end frames are ignored.
---         goBuff _ = repeat neval ∷ Vec (BitSize a1 `Div` n1) (BitVector n1)
---         goIdx Start{} = 1
---         goIdx _ = 0
---   -- Defining the idle state 
---   (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, pretendFrame)
---     | idxC > 0 = (state, NoData)
---     | otherwise = (state, Idle)
---   neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.serializeEn: Mealy"
+            goBuff ∷ Frame () (Index n1) (BitVector n1)
+                  → Vec (BitSize a1 `Div` n1) (BitVector n1)
+            goBuff (Start _ y) = y +>> buffD
+            goBuff (Middle  y) = y +>> buffD
+            goBuff _ = buffD
+            goIdx Start{} = 1
+            goIdx Middle{} = satSucc SatBound idxD
+            goIdx End{} = satSucc SatBound idxD
+            goIdx _ = idxD
+  -- New data is into the channel ready to send.
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(Just x, _, Start s e) 
+      |Rewrite ← using @(DivTimes (BitSize a1) n1)
+      , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
+      , SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+      = ((vectorC, maxBound, goBuff pretendFrame, goIdx pretendFrame), Start (size) (vectorC !! 0))
+      where 
+        vectorC ∷ Vec (BitSize a1 `Div` n1) (BitVector n1)
+        vectorC = bitCoerce x
+        size ∷ (Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` 8) + 1))
+        size = satAdd SatBound s (natToNum @(Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg))
+        goBuff ∷ Frame s (Index n1) (BitVector n1)
+              → Vec (BitSize a1 `Div` n1) (BitVector n1)
+        goBuff (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` n1) (BitVector n1))
+        -- Middle and end frames are ignored.
+        goBuff _ = repeat neval ∷ Vec (BitSize a1 `Div` n1) (BitVector n1)
+        goIdx Start{} = 1
+        goIdx _ = 0
+  -- Defining the idle state 
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, pretendFrame)
+    | idxC > 0 = (state, NoData)
+    | otherwise = (state, Idle)
+  neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.serializeEn: Mealy"
 

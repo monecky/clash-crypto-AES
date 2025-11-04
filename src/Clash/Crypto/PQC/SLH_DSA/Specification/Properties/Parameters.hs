@@ -97,8 +97,8 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- PRFᵐˢᵍ constrains
         , KnownSHA (SHAVersionPRFᵐˢᵍSLH_DSA alg)
         ,  ByteSize <= BlockSize (SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg))
-        , N alg ≤ BlockSize (SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg))
-        , 1 ≤  ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) + N alg) * ByteSize
+        , N alg ≤ Div (BlockSize (SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg))) ByteSize
+        , 1 ≤  ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)+ N alg) * ByteSize
         , Mod (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize ~ 0
         , KnownNat (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg))
         ) ⇒
