@@ -488,3 +488,7 @@ type family SHAVersionPRFᵐˢᵍ (sha ∷ SHAVersion) (security ∷ SecurityLev
     -- SHAVersionPRFᵐˢᵍ  SHAThree SecurityFive  = SHA.SHA512  
     SHAVersionPRFᵐˢᵍ  _ _                    = SHA.SHA256   
 type SHAVersionPRFᵐˢᵍSLH_DSA alg = SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg)
+
+type DeterministicSLHDSA ∷ SLH_DSA → Bool
+type family DeterministicSLHDSA (alg ∷ SLH_DSA) where
+    DeterministicSLHDSA  _     = True  

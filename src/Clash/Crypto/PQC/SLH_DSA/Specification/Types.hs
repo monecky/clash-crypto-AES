@@ -80,6 +80,8 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , SecurityLevel (..)
   , SHAVersionPRFᵐˢᵍSLH_DSA
   , SHAVersionPRFᵐˢᵍ
+  -- Deterministic
+  , DeterministicSLHDSA
   -- FORS
   , MD
   , MDType
