@@ -66,9 +66,9 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                     = concatBitVector# (skPrf ‖ unconcatBitVector# @(BlockSize SHA256 - N alg) @ByteSize 0x0 ‖ opt_rand ‖ m)
   -- TODO make a DataStream as input because algorithm 19, 20
-    _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
+    _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
                   ⇒ Proxy alg 
-                  → Channel dom (RType alg, PKSeedType alg, PKRootType alg) → DataStream dom () (Index (ByteSize)) (ByteType) 
+                  → Channel dom (RType alg, PKSeedType alg, PKRootType alg) → DataStream dom s (Index (ByteSize)) (ByteType) 
                   →  Channel dom (HᵐˢᵍOutType alg)
     _HᵐˢᵍStreaming _ inputC inputD
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -205,12 +205,12 @@ serializeHash input
 -- Since we don't know when the user start sending data and we don't want to miss any. 
 -- We store it in a buffer.
 -- Assumption the datastream doesn't start before the channel has send the fresh label.s
-serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a s. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
     Channel  dom a
     -- -- ^ streamed input that needs to be split up and preprend
-    → DataStream dom () (Index n) (BitVector n)
+    → DataStream dom s (Index n) (BitVector n)
     → DataStream dom () (Index n) (BitVector n)
 serializePrependHash inputC inputD
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
@@ -232,7 +232,7 @@ serializePrependHash inputC inputD
         , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
         -- , Frame () (Index n1) (BitVector n1)
         ) 
-    → (Maybe a1, Bool, Frame () (Index n1) (BitVector n1)) 
+    → (Maybe a1, Bool, Frame s (Index n1) (BitVector n1)) 
     → (
         (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
         , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
@@ -290,7 +290,7 @@ serializePrependHash inputC inputD
       , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
       = ((bitCoerce x, maxBound, goBuff pretendFrame, goIdx pretendFrame), Idle)
       where 
-        goBuff ∷ Frame () (Index n1) (BitVector n1)
+        goBuff ∷ Frame s (Index n1) (BitVector n1)
               → Vec (BitSize a1 `Div` n1) (BitVector n1)
         goBuff (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` n1) (BitVector n1))
         -- Middle and end frames are ignored.
