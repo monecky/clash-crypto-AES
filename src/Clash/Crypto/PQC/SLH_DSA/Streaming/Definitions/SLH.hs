@@ -144,9 +144,18 @@ slh_sign_internal inputC inputD
       -- Code line 13
       adrs² ∷ Channel dom (ADRSType alg)
       adrs² = setKeyPairAddressC adrs¹ (thdOf3C digest{-idx leaf-})
-      sigᶠᵒʳˢ = fors_sign (zip4C (fstOf3C digest{-md-}) skSeed pkSeed adrs²)
-      pkᶠᵒʳˢ = fors_pkFromSig (zip4C sigᶠᵒʳˢ (fstOf3C digest{-md-}) skSeed adrs²)
-      sigʰᵗ = ht_sign (zip3C pkᶠᵒʳˢ skSeed pkSeed) (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-})
+      sigᶠᵒʳˢ ∷ Channel dom (SIGᶠᵒʳˢType alg)
+      sigᶠᵒʳˢ 
+         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+         = fors_sign (zip4C (fstOf3C digest{-md-}) skSeed pkSeed adrs²)
+      pkᶠᵒʳˢ ∷ Channel dom (NBlockType alg)
+      pkᶠᵒʳˢ 
+         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+         = fors_pkFromSig (zip4C sigᶠᵒʳˢ (fstOf3C digest{-md-}) skSeed adrs²)
+      sigʰᵗ ∷ Channel dom (SIGᴴᵀType alg)
+      sigʰᵗ 
+         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+         = ht_sign (zip3C pkᶠᵒʳˢ skSeed pkSeed) (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-})
 -- -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
 -- slh_verify_internal
