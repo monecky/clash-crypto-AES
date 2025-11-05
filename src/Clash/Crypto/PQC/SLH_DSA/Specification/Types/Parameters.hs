@@ -17,7 +17,7 @@ Param
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DuplicateRecordFields #-}
+
 {-# HLINT ignore "[]" #-}
 {-# HLINT ignore "Use camelCase" #-}
 module Clash.Crypto.PQC.SLH_DSA.Specification.Types.Parameters where
@@ -38,6 +38,7 @@ import Data.Proxy (Proxy(..))
 import Data.Type.Bool (If)
 import Clash.Crypto.Hash.SHA as SHA
 import Clash.Crypto.PQC.SLH_DSA.General.General
+import Clash.Sized.BitVector
 ---------------------------------------------------------------------------
 -- Parameters that define SLH_DSA defined in FIPS205
 -- Parameters according Table 2
@@ -297,8 +298,8 @@ type SKPrfType (alg ∷ SLH_DSA) = NBlockType alg
 type PKSeedType (alg ∷ SLH_DSA) = NBlockType alg
 type PKRootType (alg ∷ SLH_DSA) = NBlockType alg
 data SK (alg ∷ SLH_DSA)= SK {
-  seed ∷ SKSeedType alg,
-  prf ∷ SKPrfType alg
+  skSeed ∷ SKSeedType alg,
+  skPrf ∷ SKPrfType alg
 } deriving     ( Generic
     , Show
     , Typeable
@@ -310,8 +311,8 @@ deriving instance (KnownNat (N alg)) ⇒ Eq      (SK alg)
 deriving instance (KnownNat (N alg)) ⇒ Ord     (SK alg)
 -- deriving instance (KnownNat (N alg)) ⇒ Bounded (SK alg)
 data PK (alg ∷ SLH_DSA)= PK {
-  seed ∷ PKSeedType alg,
-  root ∷ PKRootType alg
+  pkSeed ∷ PKSeedType alg,
+  pkRoot ∷ PKRootType alg
 } deriving     ( Generic
     , Show
     , Typeable
@@ -324,8 +325,8 @@ deriving instance (KnownNat (N alg)) ⇒ Ord     (PK alg)
 -- deriving instance (KnownNat (N alg)) ⇒ Bounded (PK alg)
 -- According figure 15
 data PrivateKey (alg ∷ SLH_DSA) = PrivateKey {
-  private ∷ SK alg,
-  public ∷ PK alg
+  skPrivate ∷ SK alg,
+  skPublic ∷ PK alg
 } deriving     ( Generic
     , Show
     , Typeable
@@ -336,7 +337,7 @@ deriving anyclass instance (KnownNat (N alg)) ⇒ Eq      (PrivateKey alg)
 deriving anyclass instance (KnownNat (N alg)) ⇒ Ord     (PrivateKey alg)
 -- According figure 16
 newtype PublicKey (alg ∷ SLH_DSA) = PublicKey {
-  public ∷ PK alg
+  pkPublic ∷ PK alg
 } deriving     ( Generic
     , Show
     , Typeable
@@ -408,7 +409,7 @@ deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ Ord     (Ele
 -- type SIGᶠᵒʳˢType (alg ∷ SLH_DSA) = Vec ((N alg) * (K alg) * (1 + A alg)) ByteType
 
 type SIGᶠᵒʳˢType (alg ∷ SLH_DSA) = Vec (K alg) (ElemForsType alg)-- 0 .. k- 1
-type MD (alg ∷ SLH_DSA) = (K alg * A alg)
+type MD (alg ∷ SLH_DSA) = K alg * A alg
 type MDType (alg ∷ SLH_DSA) = (BitVector (MD alg))
 --------------------------------------------------------
 -- Security levels for different implementation of the
@@ -488,7 +489,6 @@ type family SHAVersionPRFᵐˢᵍ (sha ∷ SHAVersion) (security ∷ SecurityLev
     -- SHAVersionPRFᵐˢᵍ  SHAThree SecurityFive  = SHA.SHA512  
     SHAVersionPRFᵐˢᵍ  _ _                    = SHA.SHA256   
 type SHAVersionPRFᵐˢᵍSLH_DSA alg = SHAVersionPRFᵐˢᵍ (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg)
-
-type DeterministicSLHDSA ∷ SLH_DSA → Bool
-type family DeterministicSLHDSA (alg ∷ SLH_DSA) where
-    DeterministicSLHDSA  _     = True  
+-- Only used on functional
+deterministicSLHDSA ∷ Proxy alg → Bit
+deterministicSLHDSA alg = high  

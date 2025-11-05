@@ -84,9 +84,10 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                     = concatBitVector# (skPrf ‖ unconcatBitVector# @(Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) @ByteSize 0x0 ‖ opt_rand)
 
                     
-    _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
+    _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s e . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
                   ⇒ Proxy alg 
-                  → Channel dom (RType alg, PKSeedType alg, PKRootType alg) → DataStream dom s (Index (ByteSize)) (ByteType) 
+                  → Channel dom (RType alg, PKSeedType alg, PKRootType alg) 
+                  → DataStream dom s e (ByteType) 
                   →  Channel dom (HᵐˢᵍOutType alg)
     _HᵐˢᵍStreaming _ inputC inputD
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -223,12 +224,12 @@ serializeHash input
 -- Since we don't know when the user start sending data and we don't want to miss any. 
 -- We store it in a buffer.
 -- Assumption the datastream doesn't start before the channel has send the fresh label.s
-serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a s. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+serializePrependHash ∷ ∀ (n ∷ Nat) (dom ∷ Domain) a s e. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
     Channel  dom a
     -- -- ^ streamed input that needs to be split up and preprend
-    → DataStream dom s (Index n) (BitVector n)
+    → DataStream dom s e (BitVector n)
     → DataStream dom () (Index n) (BitVector n)
 serializePrependHash inputC inputD
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) n)
@@ -250,7 +251,7 @@ serializePrependHash inputC inputD
         , Index ((BitSize a1 `Div` n1) + 1) -- data stream pointer
         -- , Frame () (Index n1) (BitVector n1)
         ) 
-    → (Maybe a1, Bool, Frame s (Index n1) (BitVector n1)) 
+    → (Maybe a1, Bool, Frame s e (BitVector n1)) 
     → (
         (Vec (BitSize a1 `Div` n1) (BitVector n1) -- channel buffer
         , Index ((BitSize a1 `Div` n1) + 1) -- channel pointer
@@ -270,12 +271,12 @@ serializePrependHash inputC inputD
             frame | idxD > 1         = Middle 
                   | otherwise        = End 0               
               
-            goBuff ∷ Frame s (Index n1) (BitVector n1)
+            goBuff ∷ Frame s e (BitVector n1)
                   → Vec (BitSize a1 `Div` n1) (BitVector n1)
             goBuff (Start _ y) = y +>> buffD
             goBuff (Middle  y) = y +>> buffD
             goBuff _ = buffD
-            goIdx ∷ Frame s (Index n1) (BitVector n1)
+            goIdx ∷ Frame s e (BitVector n1)
                   → Index ((BitSize a1 `Div` n1) + 1)
             goIdx Start{} = 1 -- just in edge case
             goIdx Middle{} = idxD
@@ -294,12 +295,12 @@ serializePrependHash inputC inputD
                   | idxC == 0        = Middle (buffC !! 0)
                   | otherwise        = NoData
               
-            goBuff ∷ Frame s (Index n1) (BitVector n1)
+            goBuff ∷ Frame s e (BitVector n1)
                   → Vec (BitSize a1 `Div` n1) (BitVector n1)
             goBuff (Start _ y) = y +>> buffD
             goBuff (Middle  y) = y +>> buffD
             goBuff _ = buffD
-            goIdx ∷ Frame s (Index n1) (BitVector n1)
+            goIdx ∷ Frame s e (BitVector n1)
                   → Index ((BitSize a1 `Div` n1) + 1)
             goIdx Start{} = 1
             goIdx Middle{} = satSucc SatBound idxD
@@ -311,7 +312,7 @@ serializePrependHash inputC inputD
       , Rewrite ← using @(CancelMultiple (BitSize a1) n1)
       = ((bitCoerce x, maxBound, goBuff prependFrame, goIdx prependFrame), Idle)
       where 
-        goBuff ∷ Frame s (Index n1) (BitVector n1)
+        goBuff ∷ Frame s e (BitVector n1)
               → Vec (BitSize a1 `Div` n1) (BitVector n1)
         goBuff (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` n1) (BitVector n1))
         -- Middle and end frames are ignored.

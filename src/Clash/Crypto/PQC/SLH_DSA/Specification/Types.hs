@@ -81,7 +81,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , SHAVersionPRFᵐˢᵍSLH_DSA
   , SHAVersionPRFᵐˢᵍ
   -- Deterministic
-  , DeterministicSLHDSA
+  , deterministicSLHDSA
   -- FORS
   , MD
   , MDType
@@ -89,6 +89,11 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , PrivateKeyValueTreeType
   , AUTHTreeType
   , ElemForsType (..)
+  -- Keys
+  , PrivateKey (..)
+  , PublicKey (..)
+  , PK (..)
+  , SK (..)
 )where
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)

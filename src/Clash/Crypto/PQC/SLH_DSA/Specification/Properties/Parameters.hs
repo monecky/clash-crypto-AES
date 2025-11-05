@@ -87,6 +87,7 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , 1 ≤ N alg, 1 ≤ ((N alg + N alg) + N alg)
         -- FORS
         , KnownNat (MD alg)
+        -- , (Mod (MD alg) 8 ~ 0)
         -- H msg constain
             -- security level 1
         , (M alg) * ByteSize ≤ (CeilXDivY ((M alg) * ByteSize) (MessageDigestSize SHA256) ) * MessageDigestSize SHA256

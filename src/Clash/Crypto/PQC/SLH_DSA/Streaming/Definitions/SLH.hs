@@ -11,6 +11,7 @@ Algorithm 18-23
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MagicHash #-}
+
 {-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
 {-# OPTIONS_GHC -fno-max-relevant-binds #-}
 {-# HLINT ignore "[]" #-}
@@ -34,6 +35,7 @@ import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus 
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address 
 import Clash.Signal.Extra(apWhen)
+import Clash.Signal.DataStream
 
 -- Algorithm 18
 slh_keygen_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
@@ -54,7 +56,40 @@ slh_keygen_internal input
           | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
           = xmss_node (fmap (\(sks,skp,pks) → (sks,pks, adrs)) input) (fmap (\x → 0x0 ∷ IdxType alg) input) (fmap (\x → (natToNum @(H' alg)) ∷ IdxType alg) input)
 -- Algorithm 19
--- slh_sign_internalDeterministic ∷ 
+slh_sign_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
+    ⇒ Channel dom (PrivateKey alg, Opt_randType alg)  
+    → DataStream dom () () (ByteType) 
+    -- ^ Message of arbritrary length
+     → Channel dom ((SKSeedType alg, SKPrfType alg, PKSeedType alg, PKRootType alg), (PKSeedType alg, PKRootType alg))
+slh_sign_internal inputC inputD
+   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+   =  errorX "No random generator implemented"
+    where
+      -- Code line 1
+      adrs ∷ ADRSType alg
+      adrs = getInitADRS
+      -- Code line 2
+      optRand ∷ Channel dom (Opt_randType alg)
+      optRand 
+        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+        = if testBit (deterministicSLHDSA alg) 0 then ifthen else elsethen
+        where
+          elsethen ∷ Channel dom (Opt_randType alg)
+          elsethen = errorX "No random generator implemented"
+          ifthen ∷ Channel dom (Opt_randType alg)
+          ifthen = fmap go (fstC inputC)
+            where 
+              go ∷ PrivateKey alg → Opt_randType alg
+              go PrivateKey {skPublic = PK {pkSeed = seed}} = seed
+      r ∷ Channel dom (PRFᵐˢᵍOutType alg)
+      r = _PRFᵐˢᵍStream @alg (zipC skprf optRand) inputD
+        where
+          skprf = fmap go (fstC inputC)
+            where
+              go ∷ PrivateKey alg → SKPrfType alg
+              go PrivateKey {skPrivate = SK {skPrf = x}} = x 
+      -- Code line 5 - 10
+      -- digest ∷ (IdxType, IdxType)
 -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
 -- slh_verify_internal
