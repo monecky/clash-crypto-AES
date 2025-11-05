@@ -89,13 +89,17 @@ slh_sign_internal inputC inputD
               go ∷ PrivateKey alg → SKPrfType alg
               go PrivateKey {skPrivate = SK {skPrf = x}} = x 
       -- Code line 5 - 10
-      digest ∷ (MDType alg, IdxType alg, IdxType alg)
-      digest = error "TODO"
+      digest ∷ Channel dom (MDType alg, IdxType alg, IdxType alg)
+      digest = error "todo" -- fmap go⁰ digv
         where
-          dig ∷ Channel dom (BitVector (M alg * ByteSize))
+          digv ∷ Channel dom (Vec (M alg * ByteSize) Bit)
+          digv 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = fmap (bv2v . concatBitVector#) dig
+          dig ∷ Channel dom (MBlockType alg)
           dig 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = fmap (concatBitVector#) (_HᵐˢᵍStream @alg (zip3C r pkSeed pkRoot) inputD)
+            = (_HᵐˢᵍStream @alg (zip3C r pkSeed pkRoot) inputD)
           pkSeed = fmap go (fstC inputC)
             where
               go ∷ PrivateKey alg → PKSeedType alg
@@ -104,6 +108,13 @@ slh_sign_internal inputC inputD
             where
               go ∷ PrivateKey alg → PKSeedType alg
               go PrivateKey {skPublic = PK {pkRoot = x}} = x 
+
+          go⁰ ∷ Vec (M alg * ByteSize) Bit → MDType alg -- (MDType alg, IdxType alg, IdxType alg)
+          go⁰ d 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = (v2bv (select d0 d1 (SNat @(K alg * A alg))d))
+                -- , resize (v2bv (selectI (natSing @((CeilXDivY (K alg * A alg) ByteSize) * ByteSize)) d1 d))
+                -- , v2bv (selectI d0 d1 d))
 -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
 -- slh_verify_internal

@@ -102,6 +102,8 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , 1 ≤  ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)+ N alg) * ByteSize
         , Mod (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize ~ 0
         , KnownNat (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg))
+        -- ALgorithm 19
+        , (K alg * A alg) + 1 <= (M alg * ByteSize) + 1
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg

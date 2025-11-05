@@ -38,6 +38,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , SKPrfType
   , ByteSize
   , NBlockType
+  , MBlockType
   , MType
   , M¹Type
   , M²Type
