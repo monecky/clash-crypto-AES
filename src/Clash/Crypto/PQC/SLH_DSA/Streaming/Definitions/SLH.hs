@@ -89,7 +89,21 @@ slh_sign_internal inputC inputD
               go ∷ PrivateKey alg → SKPrfType alg
               go PrivateKey {skPrivate = SK {skPrf = x}} = x 
       -- Code line 5 - 10
-      -- digest ∷ (IdxType, IdxType)
+      digest ∷ (MDType alg, IdxType alg, IdxType alg)
+      digest = error "TODO"
+        where
+          dig ∷ Channel dom (BitVector (M alg * ByteSize))
+          dig 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = fmap (concatBitVector#) (_HᵐˢᵍStream @alg (zip3C r pkSeed pkRoot) inputD)
+          pkSeed = fmap go (fstC inputC)
+            where
+              go ∷ PrivateKey alg → PKSeedType alg
+              go PrivateKey {skPublic = PK {pkSeed = x}} = x 
+          pkRoot = fmap go (fstC inputC)
+            where
+              go ∷ PrivateKey alg → PKSeedType alg
+              go PrivateKey {skPublic = PK {pkRoot = x}} = x 
 -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
 -- slh_verify_internal
