@@ -456,7 +456,7 @@ ht_sign input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
                                 = root⁰
 
 -- Algorithm 13
-ht_verify ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
+ht_verify ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (NBlockType alg, SIGᴴᵀType alg, PKSeedType alg, PKRootType alg) 
      → Channel dom (IdxType alg) -- idx_tree
      → Channel dom (IdxType alg) -- idx_leaf 

@@ -56,14 +56,14 @@ slh_keygen_internal input
           | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
           = xmss_node (fmap (\(sks,skp,pks) → (sks,pks, adrs)) input) (fmap (\x → 0x0 ∷ IdxType alg) input) (fmap (\x → (natToNum @(H' alg)) ∷ IdxType alg) input)
 -- Algorithm 19
-slh_sign_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
+slh_sign_internal ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (PrivateKey alg, Opt_randType alg)  
     → DataStream dom () () (ByteType) 
     -- ^ Message of arbritrary length
-     → Channel dom ((SKSeedType alg, SKPrfType alg, PKSeedType alg, PKRootType alg), (PKSeedType alg, PKRootType alg))
+     → Channel dom (SIGType alg)
 slh_sign_internal inputC inputD
    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-   =  errorX "No random generator implemented"
+   =  liftA3 (\x y z → SIGType {r = x, sigᶠᵒʳˢ = y, sigʰᵗ = z}) r sigᶠᵒʳˢ sigʰᵗ
     where
       skSeed = fmap go (fstC inputC)
             where
@@ -151,13 +151,101 @@ slh_sign_internal inputC inputD
       pkᶠᵒʳˢ ∷ Channel dom (NBlockType alg)
       pkᶠᵒʳˢ 
          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-         = fors_pkFromSig (zip4C sigᶠᵒʳˢ (fstOf3C digest{-md-}) skSeed adrs²)
+         = fors_pkFromSig (zip4C sigᶠᵒʳˢ (fstOf3C digest{-md-}) pkSeed adrs²)
       sigʰᵗ ∷ Channel dom (SIGᴴᵀType alg)
       sigʰᵗ 
          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
          = ht_sign (zip3C pkᶠᵒʳˢ skSeed pkSeed) (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-})
--- -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
+-- The required check |SIG| ≠ (1 + k(1 + a) + h + d ⋅ len) ⋅ n, is always checked for
+slh_verify_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
+    ⇒ Channel dom (SIGType alg, PublicKey alg)  
+    → DataStream dom () () (ByteType) 
+    -- ^ Message of arbritrary length
+     → Channel dom (Bool)
+slh_verify_internal inputC inputD = ht_verify (zip4C pkᶠᵒʳˢ sigʰᵗ pkSeed pkRoot)  (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-})
+  where
+      adrs ∷ Channel dom (ADRSType alg)
+      adrs = fmap (const getInitADRS) inputC
+      pkSeed = fmap go (sndC inputC)
+            where
+              go ∷ PublicKey alg → PKSeedType alg
+              go PublicKey {pkPublic = PK {pkSeed = x}} = x 
+      pkRoot = fmap go (sndC inputC)
+            where
+              go ∷ PublicKey alg → PKSeedType alg
+              go PublicKey {pkPublic = PK {pkRoot = x}} = x
+      sig ∷ Channel dom (SIGType alg)
+      sig 
+        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+        = fstC inputC
+      -- Code line 5
+      r ∷ Channel dom (PRFᵐˢᵍOutType alg)
+      r = fmap go sig
+        where
+          go ∷ SIGType alg → RType alg
+          go SIGType {r = x} = x 
+      -- Code line 6
+      sigᶠᵒʳˢ ∷ Channel dom (SIGᶠᵒʳˢType alg)
+      sigᶠᵒʳˢ = fmap go sig
+        where
+          go ∷ SIGType alg → SIGᶠᵒʳˢType alg
+          go SIGType {sigᶠᵒʳˢ = x} = x 
+      -- Code line 7
+      sigʰᵗ ∷ Channel dom (SIGᴴᵀType alg)
+      sigʰᵗ = fmap go sig
+        where
+          go ∷ SIGType alg → SIGᴴᵀType alg
+          go SIGType {sigʰᵗ = x} = x
+       -- Code line 8 - 13
+      digest ∷ Channel dom (MDType alg, IdxType alg, IdxType alg)
+      digest = fmap go⁰ digv
+        where
+          digv ∷ Channel dom (Vec (M alg * ByteSize) Bit)
+          digv 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = fmap (bv2v . concatBitVector#) dig
+          dig ∷ Channel dom (MBlockType alg)
+          dig 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = (_HᵐˢᵍStream @alg (zip3C r pkSeed pkRoot) inputD)
+
+
+          go⁰ ∷ Vec (M alg * ByteSize) Bit → (MDType alg, IdxType alg, IdxType alg)
+          go⁰ d 
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = (v2bv (select d0 d1 (SNat @(K alg * A alg)) d),getIdxTree,  getIdxLeaf)
+              where
+                afterMD ∷ (KnownNat n, (CeilXDivY (K alg * A alg) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ Vec (M alg * ByteSize) Bit
+                afterMD 
+                   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = fst (shiftOutFrom0 (SNat @(CeilXDivY (K alg * A alg) ByteSize)) d)
+                afterIdxTree ∷ (KnownNat n, (CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ Vec (M alg * ByteSize) Bit
+                afterIdxTree 
+                   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = fst (shiftOutFrom0 (SNat @(CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize)) (afterMD @((M alg  * ByteSize) - (CeilXDivY (K alg * A alg) ByteSize))))
+                getIdxTree ∷ IdxType alg
+                getIdxTree                    
+                    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = resize  ( v2bv (select d0 d1  (SNat @(CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize)) (afterMD @((M alg  * ByteSize) - (CeilXDivY (K alg * A alg) ByteSize)))))
+                getIdxLeaf ∷  IdxType alg
+                getIdxLeaf                    
+                    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = resize  ( v2bv (select d0 d1 (SNat @(CeilXDivY (H alg - Div (H alg) ((D alg) * ByteSize)) ByteSize)) (afterIdxTree @(M alg * ByteSize - CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize))))
+      -- Code line 11
+      adrs⁰ ∷ Channel dom (ADRSType alg)
+      adrs⁰ = setTreeAddressC adrs (sndOf3C digest{-idx tree-})
+      -- Code line 12
+      adrs¹ ∷ Channel dom (ADRSType alg)
+      adrs¹ = setTypeAndClearC adrs⁰ FORS_TREE 
+      -- Code line 13
+      adrs² ∷ Channel dom (ADRSType alg)
+      adrs² = setKeyPairAddressC adrs¹ (thdOf3C digest{-idx leaf-})
+      pkᶠᵒʳˢ ∷ Channel dom (NBlockType alg)
+      pkᶠᵒʳˢ 
+         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+         = fors_pkFromSig (zip4C sigᶠᵒʳˢ (fstOf3C digest{-md-}) pkSeed adrs²)
+      
 -- slh_verify_internal
 -- Algorithm 21
 slh_keygen ∷  Channel dom ((SKSeedType alg, SKPrfType alg, PKSeedType alg, PKRootType alg), (PKSeedType alg, PKRootType alg))
