@@ -65,9 +65,21 @@ slh_sign_internal inputC inputD
    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
    =  errorX "No random generator implemented"
     where
+      skSeed = fmap go (fstC inputC)
+            where
+              go ∷ PrivateKey alg → PKSeedType alg
+              go PrivateKey {skPrivate = SK {skSeed = x}} = x 
+      pkSeed = fmap go (fstC inputC)
+            where
+              go ∷ PrivateKey alg → PKSeedType alg
+              go PrivateKey {skPublic = PK {pkSeed = x}} = x 
+      pkRoot = fmap go (fstC inputC)
+            where
+              go ∷ PrivateKey alg → PKSeedType alg
+              go PrivateKey {skPublic = PK {pkRoot = x}} = x 
       -- Code line 1
-      adrs ∷ ADRSType alg
-      adrs = getInitADRS
+      adrs ∷ Channel dom (ADRSType alg)
+      adrs = fmap (const getInitADRS) inputC
       -- Code line 2
       optRand ∷ Channel dom (Opt_randType alg)
       optRand 
@@ -90,7 +102,7 @@ slh_sign_internal inputC inputD
               go PrivateKey {skPrivate = SK {skPrf = x}} = x 
       -- Code line 5 - 10
       digest ∷ Channel dom (MDType alg, IdxType alg, IdxType alg)
-      digest = error "todo" -- fmap go⁰ digv
+      digest = fmap go⁰ digv
         where
           digv ∷ Channel dom (Vec (M alg * ByteSize) Bit)
           digv 
@@ -100,16 +112,9 @@ slh_sign_internal inputC inputD
           dig 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
             = (_HᵐˢᵍStream @alg (zip3C r pkSeed pkRoot) inputD)
-          pkSeed = fmap go (fstC inputC)
-            where
-              go ∷ PrivateKey alg → PKSeedType alg
-              go PrivateKey {skPublic = PK {pkSeed = x}} = x 
-          pkRoot = fmap go (fstC inputC)
-            where
-              go ∷ PrivateKey alg → PKSeedType alg
-              go PrivateKey {skPublic = PK {pkRoot = x}} = x 
 
-          go⁰ ∷ (KnownNat n, KnownNat m) ⇒ Vec (M alg * ByteSize) Bit → (MDType alg, IdxType alg, IdxType alg)
+
+          go⁰ ∷ Vec (M alg * ByteSize) Bit → (MDType alg, IdxType alg, IdxType alg)
           go⁰ d 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
             = (v2bv (select d0 d1 (SNat @(K alg * A alg)) d),getIdxTree,  getIdxLeaf)
@@ -130,7 +135,18 @@ slh_sign_internal inputC inputD
                 getIdxLeaf                    
                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                    = resize  ( v2bv (select d0 d1 (SNat @(CeilXDivY (H alg - Div (H alg) ((D alg) * ByteSize)) ByteSize)) (afterIdxTree @(M alg * ByteSize - CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize))))
-
+      -- Code line 11
+      adrs⁰ ∷ Channel dom (ADRSType alg)
+      adrs⁰ = setTreeAddressC adrs (sndOf3C digest{-idx tree-})
+      -- Code line 12
+      adrs¹ ∷ Channel dom (ADRSType alg)
+      adrs¹ = setTypeAndClearC adrs⁰ FORS_TREE 
+      -- Code line 13
+      adrs² ∷ Channel dom (ADRSType alg)
+      adrs² = setKeyPairAddressC adrs¹ (thdOf3C digest{-idx leaf-})
+      sigᶠᵒʳˢ = fors_sign (zip4C (fstOf3C digest{-md-}) skSeed pkSeed adrs²)
+      pkᶠᵒʳˢ = fors_pkFromSig (zip4C sigᶠᵒʳˢ (fstOf3C digest{-md-}) skSeed adrs²)
+      sigʰᵗ = ht_sign (zip3C pkᶠᵒʳˢ skSeed pkSeed) (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-})
 -- -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
 -- slh_verify_internal

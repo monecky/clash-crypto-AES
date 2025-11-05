@@ -353,8 +353,19 @@ deriving newtype instance (KnownNat (N alg)) ⇒ Ord     (PublicKey alg)
 ---------------------------------------------------------------------------
 type RType (alg ∷ SLH_DSA) = NBlockType alg
 type SIGᴴᵀType (alg ∷ SLH_DSA) = Vec (D alg) (SIGˣᵐˢˢType alg)
-
-
+data SIGType (alg ∷ SLH_DSA) = SIGType {
+  r ∷ RType alg
+  , sigᶠᵒʳˢ ∷ SIGᶠᵒʳˢType alg
+  , sigʰᵗ ∷ SIGᴴᵀType alg
+  
+  } deriving     ( Generic
+    , Show
+    , Typeable
+    )
+deriving anyclass instance (KnownNat (N alg), KnownNat (D alg), KnownNat (A alg), KnownNat (K alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ BitPack (SIGType alg)
+deriving anyclass instance (KnownNat (N alg), KnownNat (D alg), KnownNat (A alg), KnownNat (K alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ NFDataX (SIGType alg)
+deriving anyclass instance (KnownNat (N alg), KnownNat (D alg), KnownNat (A alg), KnownNat (K alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ Eq      (SIGType alg)
+deriving anyclass instance (KnownNat (N alg), KnownNat (D alg), KnownNat (A alg), KnownNat (K alg), KnownNat (H' alg), KnownNat (Len alg)) ⇒ Ord     (SIGType alg)
 ---------------------------------------------------------------------------
 -- WOTS that is define in SLH_DSA 
 -- according Figure 10 in FIPS205

@@ -57,6 +57,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   , AUTHType
   , SIGˣᵐˢˢType(..)
   , SIGᴴᵀType
+  , SIGType(..)
   -- Address
   , ADRSType(..)
   , ADRSTypeType(..)
