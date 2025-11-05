@@ -109,13 +109,17 @@ slh_sign_internal inputC inputD
               go ∷ PrivateKey alg → PKSeedType alg
               go PrivateKey {skPublic = PK {pkRoot = x}} = x 
 
-          go⁰ ∷ Vec (M alg * ByteSize) Bit → MDType alg -- (MDType alg, IdxType alg, IdxType alg)
+          go⁰ ∷ (KnownNat n, KnownNat m) ⇒ Vec (M alg * ByteSize) Bit → MDType alg--(MDType alg, BitVector n, BitVector m)
           go⁰ d 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = (v2bv (select d0 d1 (SNat @(K alg * A alg))d))
-                -- , resize (v2bv (selectI (natSing @((CeilXDivY (K alg * A alg) ByteSize) * ByteSize)) d1 d))
-                -- , v2bv (selectI d0 d1 d))
--- slh_sign_internalRandom ∷ 
+            = (v2bv (select d0 d1 (SNat @(K alg * A alg)) d))
+              where
+                secondVersionOfMD ∷ (KnownNat n, (CeilXDivY (K alg * A alg) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ MDType alg
+                secondVersionOfMD 
+                   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = resize  ( v2bv (snd (shiftOutFrom0 (SNat @(CeilXDivY (K alg * A alg) ByteSize)) d)))
+
+-- -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
 -- slh_verify_internal
 -- Algorithm 21
