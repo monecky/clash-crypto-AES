@@ -105,7 +105,12 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         -- ALgorithm 19
         , (K alg * A alg) + 1 <= (M alg * ByteSize) + 1
         , Div (H alg) (D alg) <= H alg
-        , (CeilXDivY (K alg * A alg) ByteSize) * ByteSize + 1 <= (M alg * ByteSize)
+        , Div (H alg) (D alg * ByteSize) <= H alg
+        , Div (H alg) (ByteSize * D alg) <= H alg
+        , (CeilXDivY (K alg * A alg) ByteSize) <= (M alg * ByteSize)
+        , (CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize) ≤ (M alg  * ByteSize)
+        , (CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize) + (M alg  * ByteSize) - (CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize) ≤ (M alg  * ByteSize)
+        , (CeilXDivY (H alg - Div (H alg) ((D alg) * ByteSize)) ByteSize) ≤ M alg * ByteSize
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg

@@ -109,15 +109,27 @@ slh_sign_internal inputC inputD
               go ∷ PrivateKey alg → PKSeedType alg
               go PrivateKey {skPublic = PK {pkRoot = x}} = x 
 
-          go⁰ ∷ (KnownNat n, KnownNat m) ⇒ Vec (M alg * ByteSize) Bit → MDType alg--(MDType alg, BitVector n, BitVector m)
+          go⁰ ∷ (KnownNat n, KnownNat m) ⇒ Vec (M alg * ByteSize) Bit → (MDType alg, IdxType alg, IdxType alg)
           go⁰ d 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = (v2bv (select d0 d1 (SNat @(K alg * A alg)) d))
+            = (v2bv (select d0 d1 (SNat @(K alg * A alg)) d),getIdxTree,  getIdxLeaf)
               where
-                secondVersionOfMD ∷ (KnownNat n, (CeilXDivY (K alg * A alg) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ MDType alg
-                secondVersionOfMD 
+                afterMD ∷ (KnownNat n, (CeilXDivY (K alg * A alg) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ Vec (M alg * ByteSize) Bit
+                afterMD 
                    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                   = resize  ( v2bv (snd (shiftOutFrom0 (SNat @(CeilXDivY (K alg * A alg) ByteSize)) d)))
+                   = fst (shiftOutFrom0 (SNat @(CeilXDivY (K alg * A alg) ByteSize)) d)
+                afterIdxTree ∷ (KnownNat n, (CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ Vec (M alg * ByteSize) Bit
+                afterIdxTree 
+                   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = fst (shiftOutFrom0 (SNat @(CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize)) (afterMD @((M alg  * ByteSize) - (CeilXDivY (K alg * A alg) ByteSize))))
+                getIdxTree ∷ IdxType alg
+                getIdxTree                    
+                    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = resize  ( v2bv (select d0 d1  (SNat @(CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize)) (afterMD @((M alg  * ByteSize) - (CeilXDivY (K alg * A alg) ByteSize)))))
+                getIdxLeaf ∷  IdxType alg
+                getIdxLeaf                    
+                    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                   = resize  ( v2bv (select d0 d1 (SNat @(CeilXDivY (H alg - Div (H alg) ((D alg) * ByteSize)) ByteSize)) (afterIdxTree @(M alg * ByteSize - CeilXDivY (H alg - Div (H alg) (D alg)) ByteSize))))
 
 -- -- slh_sign_internalRandom ∷ 
 -- Algorithm 20
