@@ -36,6 +36,17 @@ import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address 
 import Clash.Signal.Extra(apWhen)
 import Clash.Signal.DataStream
+import GHC.TypeNats.Proof (Rewrite(..), using)
+
+import GHC.TypeLits.Extra
+import Data.Proxy
+import Data.Constraint
+import Unsafe.Coerce
+import Data.Constraint.Nat.Extra
+  ( ModBound, TimesMonotoneRight, LeTrans, CancelMultiple, CancelFactor
+  , CondMonotoneGE, ModZero, KeepsPositiveIfMultiple, DivTimes, ModTimes
+  )
+import Language.Haskell.Unicode (type (≤))
 
 -- Algorithm 18
 slh_keygen_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
@@ -158,7 +169,7 @@ slh_sign_internal inputC inputD
          = ht_sign (zip3C pkᶠᵒʳˢ skSeed pkSeed) (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-})
 -- Algorithm 20
 -- The required check |SIG| ≠ (1 + k(1 + a) + h + d ⋅ len) ⋅ n, is always checked for
-slh_verify_internal ∷ ∀ (alg ∷ SLH_DSA)  dom ℓ . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownNat ℓ) 
+slh_verify_internal ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (SIGType alg, PublicKey alg)  
     → DataStream dom () () (ByteType) 
     -- ^ Message of arbritrary length
@@ -249,10 +260,82 @@ slh_verify_internal inputC inputD = ht_verify (zip4C pkᶠᵒʳˢ sigʰᵗ pkSee
 -- slh_verify_internal
 -- Algorithm 21
 slh_keygen ∷  Channel dom ((SKSeedType alg, SKPrfType alg, PKSeedType alg, PKRootType alg), (PKSeedType alg, PKRootType alg))
-slh_keygen = errorX "This function should generate SK.seed, SK.prf, PK.seed and if succesful then call slh_keygen_internal."
--- Algorithm 22
--- slh_signDeterministic ∷ 
--- slh_signRandom ∷ 
+slh_keygen = errorX "TODO: Implement when random number generator is in place.\n This function should generate SK.seed, SK.prf, PK.seed and if succesful then call slh_keygen_internal."
+-- -- Algorithm 22
+-- slh_sign ∷ DataStream dom  (Index 255) () (ByteType) → Channel dom (SIGType alg)
+-- -- Index 255 represent the size of ctx send with the start frame
+-- -- The first group(of multiple frames) represent the SIG
+-- -- The second group(of multiple frames) represent PK
+-- -- The thrid group is ctx with a maximum size of 255, 
+-- -- that size is send over with the first frame with the first group
+-- -- The last group is M of arbritrary size.
+
+-- -- Algorithm 23
+-- hash_slh_sign ∷ DataStream dom  (Index 255) () (ByteType) → Channel dom (SIGType alg)
+
+-- -- Algorithm 24
+-- slh_verify ∷ DataStream dom  (Index 255) () (ByteType) → Channel dom (Bool)
+-- -- Index 255 represent the size of ctx send with the start frame
+-- -- The first group(of multiple frames) represent the SIG
+-- -- The second group(of multiple frames) represent PK
+-- -- The thrid group is ctx with a maximum size of 255, 
+-- -- that size is send over with the first frame with the first group
+-- -- The last group is M of arbritrary size.
+-- -- Algorithm 25
+-- hash_slh_verify ∷ 
+--------------------------------------
+--
+--
+--------------------------------------
+-- Interface where the user needs to do formating for algorithm 22 and 23
+slh_sign ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+  (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+  ⇒  DataStream dom () () (ByteType) 
+  → Channel dom (SIGType alg)
+slh_sign inputD
+         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+         = error "TODO" -- slh_sign_internal (channel (transferToC inputD)) (transferToD inputD)
+         where
+          transferToC ∷ ∀ a n . (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
+            ⇒ DataStream dom () () (BitVector n) → Signal dom (a, ProviderAction) 
+          transferToC = mealy (~~>) 
+              -- Starting state
+              (repeat 0x0 ∷ Vec (BitSize a `Div` n) (BitVector n)
+              , 0 ∷ Index ((BitSize a `Div` n) + 1) 
+              )
+              where
+                (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+                        ⇒  ( -- Current state
+                            Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
+                            , Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                            ) 
+                        → (Frame () () (BitVector n1)) 
+                        → ( -- Next state
+                            (Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
+                            , Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                            )
+                            -- Output
+                          , (a1, ProviderAction))
+                (~~>) state@(vObject, counter) (Start () x) = (((repeat neval) <<+ x, maxBound), ((unpacked vObject), Keep))
+                  where 
+                    goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
+                    goBuff frame idx
+                      | idx /= 0, isStartFrame frame = vObject <<+ x
+                (~~>) state@(vObject, counter) (Start () x) = (((repeat neval) <<+ x, maxBound), ((unpacked vObject), Keep))
+                -- State when nothing is received for PK or addrnd.
+                (~~>) state@(vObject, counter) input = (state, ((unpacked vObject), Keep)) 
+                unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
+                unpacked 
+                  | Rewrite ← using @(DivTimes (BitSize a) n)
+                  , Rewrite ← using @(CancelMultiple (BitSize a) n)
+                  = unpack . concatBitVector#
+          neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
+-- Interface where the user needs to do formatting for algorithm 24 and 25
+-- slh_verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+--   (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+--   ⇒  DataStream dom () () (ByteType) 
+--   → Channel dom (SIGType alg)
+
 ----------------------------------------
 -- The following might be too specific.
 -- Maybe moved to somewhere else
