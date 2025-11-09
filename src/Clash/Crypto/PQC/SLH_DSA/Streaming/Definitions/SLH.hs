@@ -330,8 +330,8 @@ record2bv XMSSType {
 --
 -----------
 transferToC ∷ ∀ a n dom. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
-            ⇒ DataStream dom () () (BitVector n) → Signal dom (a, ProviderAction) 
-transferToC = mealy (~~>) 
+            ⇒ DataStream dom () () (BitVector n) → Channel dom a 
+transferToC = channel . mealy (~~>) 
     -- Starting state
     (repeat 0x0 ∷ Vec (BitSize a `Div` n) (BitVector n)
     , 0 ∷ Index ((BitSize a `Div` n) + 1) 
@@ -379,4 +379,38 @@ transferToC = mealy (~~>)
         | Rewrite ← using @(DivTimes (BitSize a) n)
         , Rewrite ← using @(CancelMultiple (BitSize a) n)
         = unpack . concatBitVector#
-neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
+      neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
+-- Ignores the Div BitSize a n frames and continures from there
+transferToD ∷ ∀ a n dom. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
+            ⇒ DataStream dom () () (BitVector n) → DataStream dom () () (BitVector n) 
+transferToD = mealy  ((~~>) @a @n)
+    -- Starting state
+    ( 0 ∷ Index ((BitSize a `Div` n) + 1) 
+    , False
+    )
+    where
+      (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) ⇒  ( -- Current state
+                  Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  , Bool
+                  ) 
+              → (Frame () () (BitVector n1)) 
+              → ( -- Next state
+                  (Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  , Bool
+                  )
+                  -- Output
+                , Frame () () (BitVector n1))
+      (~~>) state@(counter, isStarted) frame = ((goIdx @a1 @n1 frame counter, (counter == 1) && (goIdx @a1 @n1 frame counter == 0)), (goFrame @a1 @n1 frame counter isStarted))
+        where 
+          goFrame ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+              ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Bool → Frame () () (BitVector n1)
+          goFrame (Middle x) idx isStarted
+            | idx /= 0 = NoData
+            | idx == 0, isStarted = Start () x
+            | otherwise = Middle x
+          goFrame f _ idx = f
+          goIdx ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+              ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
+          goIdx (Start _ x) idx = maxBound
+          goIdx frame idx       = satPred SatBound idx
+      neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
