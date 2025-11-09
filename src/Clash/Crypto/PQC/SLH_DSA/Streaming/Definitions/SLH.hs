@@ -296,40 +296,7 @@ slh_sign inputD
          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
          = error "TODO" -- slh_sign_internal (channel (transferToC inputD)) (transferToD inputD)
          where
-          transferToC ∷ ∀ a n . (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
-            ⇒ DataStream dom () () (BitVector n) → Signal dom (a, ProviderAction) 
-          transferToC = mealy (~~>) 
-              -- Starting state
-              (repeat 0x0 ∷ Vec (BitSize a `Div` n) (BitVector n)
-              , 0 ∷ Index ((BitSize a `Div` n) + 1) 
-              )
-              where
-                (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
-                        ⇒  ( -- Current state
-                            Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
-                            , Index ((BitSize a1 `Div` n1) + 1) -- Counter
-                            ) 
-                        → (Frame () () (BitVector n1)) 
-                        → ( -- Next state
-                            (Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
-                            , Index ((BitSize a1 `Div` n1) + 1) -- Counter
-                            )
-                            -- Output
-                          , (a1, ProviderAction))
-                (~~>) state@(vObject, counter) (Start () x) = (((repeat neval) <<+ x, maxBound), ((unpacked vObject), Keep))
-                  where 
-                    goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
-                    goBuff frame idx
-                      | idx /= 0, isStartFrame frame = vObject <<+ x
-                (~~>) state@(vObject, counter) (Start () x) = (((repeat neval) <<+ x, maxBound), ((unpacked vObject), Keep))
-                -- State when nothing is received for PK or addrnd.
-                (~~>) state@(vObject, counter) input = (state, ((unpacked vObject), Keep)) 
-                unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
-                unpacked 
-                  | Rewrite ← using @(DivTimes (BitSize a) n)
-                  , Rewrite ← using @(CancelMultiple (BitSize a) n)
-                  = unpack . concatBitVector#
-          neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
+          
 -- Interface where the user needs to do formatting for algorithm 24 and 25
 -- slh_verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
 --   (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
@@ -357,3 +324,59 @@ record2bv XMSSType {
   sig_ots,
   auth
   } = concat (sig_ots ‖ auth)
+
+----------
+-- Generalized methodes
+--
+-----------
+transferToC ∷ ∀ a n dom. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
+            ⇒ DataStream dom () () (BitVector n) → Signal dom (a, ProviderAction) 
+transferToC = mealy (~~>) 
+    -- Starting state
+    (repeat 0x0 ∷ Vec (BitSize a `Div` n) (BitVector n)
+    , 0 ∷ Index ((BitSize a `Div` n) + 1) 
+    , Clear
+    )
+    where
+      (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+              ⇒  ( -- Current state
+                  Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
+                  , Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  , ProviderAction
+                  ) 
+              → (Frame () () (BitVector n1)) 
+              → ( -- Next state
+                  (Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
+                  , Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  ,ProviderAction
+                  )
+                  -- Output
+                , (a1, ProviderAction))
+      (~~>) state@(vObject, counter, prevProviderAction) frame = ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction), ((unpacked vObject), (goProviderAction frame counter prevProviderAction)))
+        where 
+          goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
+          goBuff (Start _ x) idx
+            | idx /= 0 = vObject <<+ x
+            | otherwise = vObject
+          goBuff (Middle x) idx
+            | idx /= 0 = vObject <<+ x
+            | otherwise = vObject
+          goBuff (End _ x) idx
+            | idx == 1 = vObject <<+ x
+            | otherwise = vObject
+          goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
+          goIdx (Start _ x) idx = maxBound
+          goIdx frame idx       = satPred SatBound idx
+          goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
+          goProviderAction (Start _ x) _ _ = Clear
+          goProviderAction (Middle x) idx prev
+            | idx == 1 = Release
+            | idx == 0 = Keep
+            | otherwise = prev
+          goProviderAction (End _ x) _  _= Keep
+      unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
+      unpacked 
+        | Rewrite ← using @(DivTimes (BitSize a) n)
+        , Rewrite ← using @(CancelMultiple (BitSize a) n)
+        = unpack . concatBitVector#
+neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
