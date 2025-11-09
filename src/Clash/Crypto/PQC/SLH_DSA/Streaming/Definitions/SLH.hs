@@ -263,46 +263,66 @@ slh_keygen ∷  Channel dom ((SKSeedType alg, SKPrfType alg, PKSeedType alg, PKR
 slh_keygen = errorX "TODO: Implement when random number generator is in place.\n This function should generate SK.seed, SK.prf, PK.seed and if succesful then call slh_keygen_internal."
 -- -- Algorithm 22
 -- slh_sign ∷ DataStream dom  (Index 255) () (ByteType) → Channel dom (SIGType alg)
--- -- Index 255 represent the size of ctx send with the start frame
--- -- The first group(of multiple frames) represent the SIG
--- -- The second group(of multiple frames) represent PK
--- -- The thrid group is ctx with a maximum size of 255, 
--- -- that size is send over with the first frame with the first group
--- -- The last group is M of arbritrary size.
-
--- -- Algorithm 23
--- hash_slh_sign ∷ DataStream dom  (Index 255) () (ByteType) → Channel dom (SIGType alg)
-
--- -- Algorithm 24
--- slh_verify ∷ DataStream dom  (Index 255) () (ByteType) → Channel dom (Bool)
--- -- Index 255 represent the size of ctx send with the start frame
--- -- The first group(of multiple frames) represent the SIG
--- -- The second group(of multiple frames) represent PK
--- -- The thrid group is ctx with a maximum size of 255, 
--- -- that size is send over with the first frame with the first group
--- -- The last group is M of arbritrary size.
--- -- Algorithm 25
--- hash_slh_verify ∷ 
---------------------------------------
---
---
---------------------------------------
--- Interface where the user needs to do formating for algorithm 22 and 23
-slh_sign ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+-- A purposed DataStream interface
+-- Index 255 represent the size of ctx send with the start frame
+-- The first group(of multiple frames) represent the SIG
+-- The second group(of multiple frames) represent PK
+-- The thrid group is ctx with a maximum size of 255, 
+-- that size is send over with the first frame with the first group
+-- The last group is M of arbritrary size.
+slh_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . 
   (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
   ⇒  DataStream dom () () (ByteType) 
   → Channel dom (SIGType alg)
-slh_sign inputD
+slh_sign = error "TODO: Implement \n Alternative format the input the string yourself and use verify.\n"
+
+-- -- Algorithm 23
+hash_slh_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . 
+  (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+  ⇒  DataStream dom () () (ByteType) 
+  → Channel dom (SIGType alg)
+hash_slh_sign = error "TODO: Implement \n Alternative format the input the string yourself and use verify.\n"
+-- -- Algorithm 24
+-- slh_verify ∷ DataStream dom  (Index 255) () (ByteType) → Channel dom (Bool)
+-- A purposed DataStream interface:
+-- Index 255 represent the size of ctx send with the start frame
+-- The first group(of multiple frames) represent the SIG
+-- The second group(of multiple frames) represent PK
+-- The thrid group is ctx with a maximum size of 255, 
+-- that size is send over with the first frame with the first group
+-- The last group is M of arbritrary size.
+slh_verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+  (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+  ⇒  DataStream dom () () (ByteType) 
+  → Channel dom Bool
+slh_verify = error "TODO: Implement \n Alternative format the input the string yourself and use verify.\n"
+-- -- Algorithm 25
+hash_slh_verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+  (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+  ⇒  DataStream dom () () (ByteType) 
+  → Channel dom Bool
+hash_slh_verify = error "TODO: Implement \n Alternative format the input the string yourself and use verify.\n"
+--------------------------------------
+-- Interfaces
+-- sign for algorithm 22 and 23
+-- verify for algorithm 24 and 24
+--------------------------------------
+-- Interface where the user needs to do formating for algorithm 22 and 23
+sign ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+  (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+  ⇒  DataStream dom () () (ByteType) 
+  → Channel dom (SIGType alg)
+sign inputD
          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
          = slh_sign_internal (transferToC @(PrivateKey alg, Opt_randType alg) @ByteSize inputD) (transferToD @(PrivateKey alg, Opt_randType alg) @ByteSize inputD)
 
           
 -- Interface where the user needs to do formatting for algorithm 24 and 25
-slh_verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
   (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
   ⇒  DataStream dom () () (ByteType) 
   → Channel dom Bool
-slh_verify inputD
+verify inputD
          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
          = slh_verify_internal (transferToC @(SIGType alg, PublicKey alg) @ByteSize inputD) (transferToD @(SIGType alg, PublicKey alg) @ByteSize inputD)
 
