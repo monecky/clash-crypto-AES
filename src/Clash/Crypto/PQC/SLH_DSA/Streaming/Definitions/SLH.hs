@@ -294,14 +294,17 @@ slh_sign ∷  ∀ (alg ∷ SLH_DSA)  dom .
   → Channel dom (SIGType alg)
 slh_sign inputD
          | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-         = error "TODO" -- slh_sign_internal (channel (transferToC inputD)) (transferToD inputD)
-         where
+         = slh_sign_internal (transferToC @(PrivateKey alg, Opt_randType alg) @ByteSize inputD) (transferToD @(PrivateKey alg, Opt_randType alg) @ByteSize inputD)
+
           
 -- Interface where the user needs to do formatting for algorithm 24 and 25
--- slh_verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
---   (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
---   ⇒  DataStream dom () () (ByteType) 
---   → Channel dom (SIGType alg)
+slh_verify ∷  ∀ (alg ∷ SLH_DSA)  dom . 
+  (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+  ⇒  DataStream dom () () (ByteType) 
+  → Channel dom Bool
+slh_verify inputD
+         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+         = slh_verify_internal (transferToC @(SIGType alg, PublicKey alg) @ByteSize inputD) (transferToD @(SIGType alg, PublicKey alg) @ByteSize inputD)
 
 ----------------------------------------
 -- The following might be too specific.
