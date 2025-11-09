@@ -335,19 +335,6 @@ concatMapC Nil = errorX "Invalid vector"
 concatMapC ( x `Cons` Nil) = fmap singleton  x 
 concatMapC (x `Cons` xs) = liftA2 (++) (fmap singleton x) (concatMapC xs)
 
-
-
-transferAddressC ∷ ∀ alg dom . (KnownSLH_DSAParameters alg) ⇒ Channel dom (ADRSType alg) → ADRSTypeType → Channel dom (ADRSType alg) 
-transferAddressC adrs t 
-    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-    = liftA2 (\ad ad¹  → setKeyPairAddress ad¹ (getKeyPairAddress ad)) (setTypeAndClearC adrs t) adrs
-
-record2bv ∷ SIGˣᵐˢˢType alg → Vec ((H' alg + Len alg)* N alg) ByteType
-record2bv XMSSType {
-  sig_ots,
-  auth
-  } = concat (sig_ots ‖ auth)
-
 ----------
 -- Generalized methodes
 --
