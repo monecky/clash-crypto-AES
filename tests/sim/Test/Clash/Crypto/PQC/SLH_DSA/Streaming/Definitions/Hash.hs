@@ -7,42 +7,71 @@ Portability : POSIX
 
 Test suite for 'Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash'
 -}
+{-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+
 
 module Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash (tastyTests) where
 
 import Clash.Prelude
-
 import Hedgehog
 import Test.Tasty
 import Test.Tasty.Hedgehog
 
-import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 
+import Control.Monad.IO.Class
+
+import System.IO (appendFile)
+import qualified Data.List as List
+
+import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions
 
 tastyTests ∷ TestTree
-tastyTests = localOption (HedgehogTestLimit (Just 100)) $  testGroup "Clash.Crypto.PQC.SLH_DSA.Specification.Definitions"
-  [
-   testProperty "Test division with ceiling operator" $ property $ do
-        a ← forAll $ genDefinedBitVector
-        b ← forAll $ genDefinedBitVector
-        testPropertyCeilXdivY a b,
-    testProperty "Test division with floor operator" $ property $ do
-          a ← forAll $ genDefinedBitVector
-          b ← forAll $ genDefinedBitVector
-          testPropertyFloorXdivY a b] 
+tastyTests =
+  localOption (HedgehogTestLimit (Just 100)) $
+    testGroup
+      "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash"
+      [ testProperty "Test division with ceiling operator" $ property $ do
+          a ← forAll genDefinedBitVector
+          b ← forAll genDefinedBitVector
+          testPropertyCeilXdivY a b
+      , testProperty "Test division with floor operator" $ property $ do
+          a ← forAll genDefinedBitVector
+          b ← forAll genDefinedBitVector
+          testPropertyFloorXdivY a b
+      ]
 
 type TestLen = 8
-testPropertyCeilXdivY ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
-testPropertyCeilXdivY x y = if y /= (0b0 ∷ BitVector TestLen) then ceilXdivY x y === fromInteger (result + rounder) else x === x
-    where 
-        division = divMod (toInteger x) (toInteger y)
-        result = fst division
-        remainder = snd division
-        rounder = if remainder /= 0 then 1 else 0
 
-testPropertyFloorXdivY ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
-testPropertyFloorXdivY x y = if y /= (0b0 ∷ BitVector TestLen) then floorXdivY x y === fromInteger result else x === x
-    where 
-        result = div (toInteger x) (toInteger y)
- 
+testPropertyCeilXdivY
+  ∷ (Monad m)
+  ⇒ BitVector TestLen
+  → BitVector TestLen
+  → PropertyT m ()
+testPropertyCeilXdivY x y =
+  if y /= (0b0 ∷ BitVector TestLen)
+    then ceilXdivY x y === fromInteger (result + rounder)
+    else x === x
+ where
+  division = divMod (toInteger x) (toInteger y)
+  result = fst division
+  remainder = snd division
+  rounder = if remainder /= 0 then 1 else 0
+
+testPropertyFloorXdivY
+  ∷ (Monad m, MonadIO m)
+  ⇒ BitVector TestLen
+  → BitVector TestLen
+  → PropertyT m ()
+testPropertyFloorXdivY x y =
+  if y /= (0b0 ∷ BitVector TestLen)
+    then do
+      let result = div (toInteger x) (toInteger y)
+      liftIO $
+        appendFile "floor_div_results.csv"
+          (List.intercalate "," [show (toInteger x), show (toInteger y), show result] <> "\n")
+      floorXdivY x y === fromInteger result
+    else x === x
+
