@@ -8,6 +8,5 @@ Portability : POSIX
 Formalized SLH-DSA specification according to
 [FIPS PUB 205: Stateless Hash-Based Digital Signature Standard (SLH-DSA)](https://doi.org/10.6028/NIST.FIPS.205).
 -}
-module Clash.Crypto.PQC.SLH_DSA.Specification
-  ( 
-  ) where
+module Clash.Crypto.PQC.SLH_DSA.Specification where
+import Clash.Crypto.PQC.SLH_DSA.Specification.Types 

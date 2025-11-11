@@ -12,6 +12,6 @@ Notes:
 2. All integers in the documentation are BitVectors, to reduce the size.
 3. All subscribe are superscribes
 -}
-module Clash.Crypto.PQC.SLH_DSA
-  ( -- All functions that are present in the FIPS.
-  ) where
+module Clash.Crypto.PQC.SLH_DSA where
+import Clash.Crypto.PQC.SLH_DSA.Streaming
+import Clash.Crypto.PQC.SLH_DSA.Specification
