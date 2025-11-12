@@ -87,13 +87,13 @@ tastyTests =
     --       testProperty   "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128s" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → _PRFᵐˢᵍStream @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s)x))))
     --       , testProperty "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128f" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → _PRFᵐˢᵍStream @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f)x))))
     --       ]
-    -- , localOption (HedgehogTestLimit (Just 100)) $
-    --     testGroup
-    --       "Hash.Hᵐˢᵍ"
-    --       [ 
-    --       testProperty   "Hash Hᵐˢᵍ SLH_DSA_SHA2_128s" $ hashProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(HᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → _HᵐˢᵍStream @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x))) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s)x))))
-    --       , testProperty "Hash Hᵐˢᵍ SLH_DSA_SHA2_128f" $ hashProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(HᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → _HᵐˢᵍStream @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x))) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f)x))))
-    --       ]
+    , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "Hash.Hᵐˢᵍ"
+          [ 
+          testProperty   "Hash Hᵐˢᵍ SLH_DSA_SHA2_128s" $ hashProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(HᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → _HᵐˢᵍStream @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x))) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s)x))))
+          , testProperty "Hash Hᵐˢᵍ SLH_DSA_SHA2_128f" $ hashProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(HᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → _HᵐˢᵍStream @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x))) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f)x))))
+          ]
     , localOption (HedgehogTestLimit (Just 100)) $
         testGroup
           "Test transferToC, used also later"
@@ -270,10 +270,12 @@ transferToD = mealy  ((~~>) @a @n)
           goFrame ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
               ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Bool → Frame () () (BitVector n1)
           goFrame (Middle x) idx isStarted
-            | idx /= 0 = NoData
-            | idx == 0, isStarted = Start () x
+            | idx /= 1 = NoData
+            | idx == 1 = Start () x
             | otherwise = Middle x
-          goFrame f _ idx = f
+          goFrame f idx isStarted
+            | isStarted = Start () (0x0)
+            | otherwise = End () (0x0)
           goIdx ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
               ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
           goIdx (Start _ x) idx = maxBound
