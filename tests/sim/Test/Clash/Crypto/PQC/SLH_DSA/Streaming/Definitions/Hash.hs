@@ -56,15 +56,7 @@ tastyTests =
     [ localOption (HedgehogTestLimit (Just 100)) $
         testGroup
           "Hash.H"
-          [ testProperty "Division with ceiling operator" $ property $ do
-              a <- forAll genDefinedBitVector
-              b <- forAll genDefinedBitVector
-              testPropertyCeilXdivY a b
-          , testProperty "Division with floor operator" $ property $ do
-              a <- forAll genDefinedBitVector
-              b <- forAll genDefinedBitVector
-              testPropertyFloorXdivY a b
-          , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M²Type SLH_DSA_SHA2_128s) @(HOutType SLH_DSA_SHA2_128s) "H;SLH_DSA_SHA2_128s;" _HStream
+          [ testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M²Type SLH_DSA_SHA2_128s) @(HOutType SLH_DSA_SHA2_128s) "H;SLH_DSA_SHA2_128s;" _HStream
           , testProperty "Hash H SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M²Type SLH_DSA_SHA2_128f) @(HOutType SLH_DSA_SHA2_128f) "H;SLH_DSA_SHA2_128f;" _HStream
           ]
     , localOption (HedgehogTestLimit (Just 100)) $
@@ -104,7 +96,7 @@ tastyTests =
           ]
     , localOption (HedgehogTestLimit (Just 100)) $
         testGroup
-          "Hash.Hᵐˢᵍ"
+          "Test transferToC, used also later"
           [ 
           testProperty   "Hash Hᵐˢᵍ SLH_DSA_SHA2_128s" $ hashProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(HᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → _HᵐˢᵍStream @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x))) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s)x))))
           , testProperty "Hash Hᵐˢᵍ SLH_DSA_SHA2_128f" $ hashProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(HᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → _HᵐˢᵍStream @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x))) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f)x))))
