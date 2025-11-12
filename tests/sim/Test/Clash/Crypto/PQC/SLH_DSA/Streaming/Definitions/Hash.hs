@@ -203,13 +203,14 @@ transferToC = channel . mealy (~~>)
           goIdx (Start _ x) idx = maxBound
           goIdx frame idx       = satPred SatBound idx
           goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
-          goProviderAction (Start _ x) _ _ = Clear
+          goProviderAction (Start _ x) _ _ = Release
           goProviderAction (Middle x) idx prev
             | idx == 1 = Release
-            | idx == 0 = Keep
+            | idx == 0 = Release
             | otherwise = prev
-          goProviderAction (End _ x) _  _= Keep
-          goProviderAction _ _ _ = Keep -- TODO weird
+          goProviderAction (End _ x) _  _= Release
+          goProviderAction Idle _ _ = Keep -- TODO weird
+          goProviderAction NoData _ _ = Release -- TODO weird
       unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
       unpacked 
         | Rewrite ← using @(DivTimes (BitSize a) n)
