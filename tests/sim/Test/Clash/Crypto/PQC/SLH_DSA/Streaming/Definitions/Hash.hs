@@ -136,7 +136,7 @@ hashProperty name hashComp = property $ do
     $ Keep : Keep : Release : List.repeat Keep
 
 
-transferToCProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
+transferToCProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, a~b) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
 transferToCProperty name hashComp = property $ do
   f <- forAll $ genDefinedBitVector 
   let f' = compute $ unpack f
@@ -144,7 +144,7 @@ transferToCProperty name hashComp = property $ do
         appendFile "hash_test_results.csv"
           (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
   -- Just to satisfy the test environment.
-  pack f' === pack f'
+  pack f' === f
  where
   moduloError =
     error "Since the modulo of the field is prime, the inverse always exists."
@@ -209,7 +209,7 @@ transferToC = channel . mealy (~~>)
             | idx == 0 = Keep
             | otherwise = prev
           goProviderAction (End _ x) _  _= Keep
-          goProviderAction _ _ _ = Release -- TODO weird
+          goProviderAction _ _ _ = Keep -- TODO weird
       unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
       unpacked 
         | Rewrite ← using @(DivTimes (BitSize a) n)
