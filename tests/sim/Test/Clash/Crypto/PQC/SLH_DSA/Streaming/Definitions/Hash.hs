@@ -33,6 +33,7 @@ import Data.Monoid (First(..))
 import Data.Maybe (fromMaybe)
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
 import  Clash.Crypto.PQC.SLH_DSA.Streaming.Types
+type TestLen = 33
 tastyTests :: TestTree
 tastyTests =
   testGroup
@@ -48,30 +49,28 @@ tastyTests =
               a <- forAll genDefinedBitVector
               b <- forAll genDefinedBitVector
               testPropertyFloorXdivY a b
-          , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M²Type SLH_DSA_SHA2_128s) @(HOutType SLH_DSA_SHA2_128s) "H: SLH_DSA_SHA2_128s" _HStream
-          , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M²Type SLH_DSA_SHA2_128f) @(HOutType SLH_DSA_SHA2_128f) "H: SLH_DSA_SHA2_128f" _HStream
-          -- , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_192s, ADRSType SLH_DSA_SHA2_192s, M²Type SLH_DSA_SHA2_192s) @(HOutType SLH_DSA_SHA2_192s) "H: SLH_DSA_SHA2_192s" _HStream
-          -- , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_192f, ADRSType SLH_DSA_SHA2_192f, M²Type SLH_DSA_SHA2_192f) @(HOutType SLH_DSA_SHA2_192f) "H: SLH_DSA_SHA2_192f" _HStream
-          -- , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M²Type SLH_DSA_SHA2_128s) @(HOutType SLH_DSA_SHA2_128s) "H: SLH_DSA_SHA2_128s" _HStream
-          -- , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_256s, ADRSType SLH_DSA_SHA2_256s, M²Type SLH_DSA_SHA2_256s) @(HOutType SLH_DSA_SHA2_256s) "H: SLH_DSA_SHA2_256s" _HStream
-          -- , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_256f, ADRSType SLH_DSA_SHA2_256f, M²Type SLH_DSA_SHA2_256f) @(HOutType SLH_DSA_SHA2_256f) "H: SLH_DSA_SHA2_256f" _HStream
+          , testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M²Type SLH_DSA_SHA2_128s) @(HOutType SLH_DSA_SHA2_128s) "H;SLH_DSA_SHA2_128s;" _HStream
+          , testProperty "Hash H SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M²Type SLH_DSA_SHA2_128f) @(HOutType SLH_DSA_SHA2_128f) "H;SLH_DSA_SHA2_128f;" _HStream
           ]
     , localOption (HedgehogTestLimit (Just 100)) $
         testGroup
           "Hash.F"
           [ 
-          testProperty "Hash F SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M¹Type SLH_DSA_SHA2_128s) @(FOutType SLH_DSA_SHA2_128s) "F SLH_DSA_SHA2_128s" _FStream
-          , testProperty "Hash F SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M¹Type SLH_DSA_SHA2_128f) @(FOutType SLH_DSA_SHA2_128f) "F SLH_DSA_SHA2_128f" _FStream
-          -- , testProperty "Hash F SLH_DSA_SHA2_192s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_192s, ADRSType SLH_DSA_SHA2_192s, M¹Type SLH_DSA_SHA2_192s) @(FOutType SLH_DSA_SHA2_192s) "F SLH_DSA_SHA2_192s" _FStream
-          -- , testProperty "Hash F SLH_DSA_SHA2_192f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_192f, ADRSType SLH_DSA_SHA2_192f, M¹Type SLH_DSA_SHA2_192f) @(FOutType SLH_DSA_SHA2_192f) "F SLH_DSA_SHA2_192f" _FStream
-          -- , testProperty "Hash F SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M¹Type SLH_DSA_SHA2_128s) @(FOutType SLH_DSA_SHA2_128s) "F SLH_DSA_SHA2_128s" _FStream
-          -- , testProperty "Hash F SLH_DSA_SHA2_256s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_256s, ADRSType SLH_DSA_SHA2_256s, M¹Type SLH_DSA_SHA2_256s) @(FOutType SLH_DSA_SHA2_256s) "F SLH_DSA_SHA2_256s" _FStream
-          -- , testProperty "Hash F SLH_DSA_SHA2_256f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_256f, ADRSType SLH_DSA_SHA2_256f, M¹Type SLH_DSA_SHA2_256f) @(FOutType SLH_DSA_SHA2_256f) "F SLH_DSA_SHA2_256f" _FStream
+          testProperty   "Hash F SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M¹Type SLH_DSA_SHA2_128s) @(FOutType SLH_DSA_SHA2_128s) "F;SLH_DSA_SHA2_128s;" _FStream
+          , testProperty "Hash F SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M¹Type SLH_DSA_SHA2_128f) @(FOutType SLH_DSA_SHA2_128f) "F;SLH_DSA_SHA2_128f;" _FStream
           ]
+    , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "Hash.Tl"
+          [ 
+          testProperty   "Hash Tl SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, MˡType TestLen SLH_DSA_SHA2_128s) @(TˡOutType SLH_DSA_SHA2_128s) "Tl;SLH_DSA_SHA2_128s;" _TˡStream
+          , testProperty "Hash Tl SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, MˡType TestLen SLH_DSA_SHA2_128f) @(TˡOutType SLH_DSA_SHA2_128f) "Tl;SLH_DSA_SHA2_128f;" _TˡStream
+          ]
+      
     ]
   
 
-type TestLen = 8
+
 
 testPropertyCeilXdivY
   ∷ (Monad m)
