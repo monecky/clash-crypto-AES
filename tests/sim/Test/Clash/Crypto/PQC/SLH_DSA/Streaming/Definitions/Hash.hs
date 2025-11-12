@@ -197,8 +197,17 @@ transferToC = channel . mealy (~~>)
             | idx /= 0 = vObject <<+ x
             | otherwise = vObject
           goBuff (End _ x) idx
-            | idx == 1 = vObject <<+ x
-            | otherwise = vObject <<+ x
+            -- | idx == 1 = vObject <<+ x
+            -- | idx == 2 = vObject <<+ x 
+            -- | idx == 0 = vObject <<+ x 
+            | idx == 2 = vObject <<+ x
+            -- | idx == 4 = vObject <<+ x 
+            -- | idx == 5 = vObject <<+ x 
+            -- | idx == 6 = vObject <<+ x
+            -- | idx == 7 = vObject <<+ x 
+            -- | idx == 8 = vObject <<+ x 
+            -- | idx == maxBound = vObject <<+ x
+            | otherwise = vObject -- <<+ x 
           goBuff _ _ = vObject
           goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
           goIdx (Start _ x) idx = maxBound
@@ -206,7 +215,7 @@ transferToC = channel . mealy (~~>)
           goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
           goProviderAction (Start _ x) _ _ = Clear
           goProviderAction (Middle x) idx prev
-            | idx == 1 = Keep
+            | idx == 1 = Release
             | idx == 0 = Keep
             | otherwise = prev
           goProviderAction (End _ x) _  _= Release
