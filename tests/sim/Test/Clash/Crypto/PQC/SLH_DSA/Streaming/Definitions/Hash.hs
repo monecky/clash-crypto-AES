@@ -105,39 +105,6 @@ tastyTests =
   
 
 
-
-testPropertyCeilXdivY
-  ∷ (Monad m)
-  ⇒ BitVector TestLen
-  → BitVector TestLen
-  → PropertyT m ()
-testPropertyCeilXdivY x y =
-  if y /= (0b0 ∷ BitVector TestLen)
-    then ceilXdivY x y === fromInteger (result + rounder)
-    else x === x
- where
-  division = divMod (toInteger x) (toInteger y)
-  result = fst division
-  remainder = snd division
-  rounder = if remainder /= 0 then 1 else 0
-
-testPropertyFloorXdivY
-  ∷ (Monad m, MonadIO m)
-  ⇒ BitVector TestLen
-  → BitVector TestLen
-  → PropertyT m ()
-testPropertyFloorXdivY x y =
-  if y /= (0b0 ∷ BitVector TestLen)
-    then do
-      let result = div (toInteger x) (toInteger y)
-      liftIO $
-        appendFile "floor_div_results.csv"
-          (List.intercalate "," [show (toInteger x), show (toInteger y), show result] <> "\n")
-      floorXdivY x y === fromInteger result
-    else x === x
-
-
-
 type HashComponent a b dom =
  HiddenClockResetEnable dom =>
  Channel dom (a) ->
