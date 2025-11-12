@@ -98,8 +98,10 @@ tastyTests =
         testGroup
           "Test transferToC, used also later"
           [ 
-          testProperty   "transferToC" $ transferToCProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x))))
-          , testProperty "transferToC" $ transferToCProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x))))
+          testProperty   "transferToC" $ transferToCEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x))))
+          , testProperty "transferToC" $ transferToCEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x))))
+          , testProperty   "transferToC" $ transferToCNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x))))
+          , testProperty "transferToC" $ transferToCNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x))))
           ]
     ]
   
@@ -136,8 +138,8 @@ hashProperty name hashComp = property $ do
     $ Keep : Keep : Release : List.repeat Keep
 
 
-transferToCProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, a~b) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
-transferToCProperty name hashComp = property $ do
+transferToCEqualProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, a~b) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
+transferToCEqualProperty name hashComp = property $ do
   f <- forAll $ genDefinedBitVector 
   let f' = compute $ unpack f
   liftIO $
@@ -145,6 +147,30 @@ transferToCProperty name hashComp = property $ do
           (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
   -- Just to satisfy the test environment.
   pack f' === f
+ where
+  moduloError =
+    error "Since the modulo of the field is prime, the inverse always exists."
+  compute input
+    = fromMaybe (error "The returned list was empty")
+    $ getFirst
+    $ foldMap First
+    $ sampleN @System 10000000
+    $ withClockResetEnable @System clockGen resetGen enableGen
+    $ newsfeed
+    $ hashComp
+    $ channel
+    $ fmap (input, )
+    $ fromList
+    $ Keep : Keep : Release : List.repeat Keep
+transferToCNotEqualProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, BitSize b ≤ BitSize a, BitSize a ~ (BitSize b + (BitSize a - BitSize b))) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
+transferToCNotEqualProperty name hashComp = property $ do
+  f <- forAll $ genDefinedBitVector 
+  let f' = compute $ unpack f
+  liftIO $
+        appendFile "hash_test_results.csv"
+          (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
+  -- Just to satisfy the test environment.
+  (pack f') === ((v2bv . takeI @(BitSize b) . bv2v) f)
  where
   moduloError =
     error "Since the modulo of the field is prime, the inverse always exists."
@@ -190,37 +216,29 @@ transferToC = channel . mealy (~~>)
       (~~>) state@(vObject, counter, prevProviderAction) frame = ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction), ((unpacked (goBuff frame counter)), (goProviderAction frame counter prevProviderAction)))
         where 
           goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
-          goBuff (Start _ x) idx
-            | idx /= 0 = vObject <<+ x
-            | otherwise = vObject <<+ x
+          goBuff (Start _ x) idx = vObject <<+ x
           goBuff (Middle x) idx
-            | idx /= 0 = vObject <<+ x
+            | idx /= 1, idx /= 0 = vObject <<+ x
             | otherwise = vObject
           goBuff (End _ x) idx
-            -- | idx == 1 = vObject <<+ x
-            -- | idx == 2 = vObject <<+ x 
-            -- | idx == 0 = vObject <<+ x 
             | idx == 2 = vObject <<+ x
-            -- | idx == 4 = vObject <<+ x 
-            -- | idx == 5 = vObject <<+ x 
-            -- | idx == 6 = vObject <<+ x
-            -- | idx == 7 = vObject <<+ x 
-            -- | idx == 8 = vObject <<+ x 
-            -- | idx == maxBound = vObject <<+ x
-            | otherwise = vObject -- <<+ x 
+            | otherwise = vObject 
           goBuff _ _ = vObject
           goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
-          goIdx (Start _ x) idx = maxBound
-          goIdx frame idx       = satPred SatBound idx
+          goIdx (Start _ _) idx = maxBound
+          goIdx (Middle _) idx       = satPred SatBound idx
+          goIdx (End _ _) idx       = satPred SatBound idx
+          goIdx _ idx       = idx
           goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
           goProviderAction (Start _ x) _ _ = Clear
           goProviderAction (Middle x) idx prev
-            | idx == 1 = Release
+            | idx == 2 = Release
+            | idx == 1 = Keep
             | idx == 0 = Keep
             | otherwise = prev
           goProviderAction (End _ x) _  _= Release
-          goProviderAction Idle _ _ = Keep -- TODO weird
-          goProviderAction NoData _ _ = Keep -- TODO weird
+          goProviderAction Idle _ _ = Keep
+          goProviderAction NoData _ _ = Clear
       unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
       unpacked 
         | Rewrite ← using @(DivTimes (BitSize a) n)
