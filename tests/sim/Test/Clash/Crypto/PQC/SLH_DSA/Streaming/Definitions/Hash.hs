@@ -187,30 +187,31 @@ transferToC = channel . mealy (~~>)
                   )
                   -- Output
                 , (a1, ProviderAction))
-      (~~>) state@(vObject, counter, prevProviderAction) frame = ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction), ((unpacked vObject), (goProviderAction frame counter prevProviderAction)))
+      (~~>) state@(vObject, counter, prevProviderAction) frame = ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction), ((unpacked (goBuff frame counter)), (goProviderAction frame counter prevProviderAction)))
         where 
           goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
           goBuff (Start _ x) idx
             | idx /= 0 = vObject <<+ x
-            | otherwise = vObject
+            | otherwise = vObject <<+ x
           goBuff (Middle x) idx
             | idx /= 0 = vObject <<+ x
             | otherwise = vObject
           goBuff (End _ x) idx
             | idx == 1 = vObject <<+ x
-            | otherwise = vObject
+            | otherwise = vObject <<+ x
+          goBuff _ _ = vObject
           goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
           goIdx (Start _ x) idx = maxBound
           goIdx frame idx       = satPred SatBound idx
           goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
-          goProviderAction (Start _ x) _ _ = Release
+          goProviderAction (Start _ x) _ _ = Clear
           goProviderAction (Middle x) idx prev
-            | idx == 1 = Release
-            | idx == 0 = Release
+            | idx == 1 = Keep
+            | idx == 0 = Keep
             | otherwise = prev
           goProviderAction (End _ x) _  _= Release
           goProviderAction Idle _ _ = Keep -- TODO weird
-          goProviderAction NoData _ _ = Release -- TODO weird
+          goProviderAction NoData _ _ = Keep -- TODO weird
       unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
       unpacked 
         | Rewrite ← using @(DivTimes (BitSize a) n)
