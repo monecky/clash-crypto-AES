@@ -63,7 +63,7 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
         -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
         , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
         -- , Dict ← ax
-            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (\y → ()) (serializePrependHMAC  @(alg) transfer inputD))))
+            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (\y → ()) (serializePrependHMAC transfer inputD))))
                 where
                 transfer = fmap go inputC
                 makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg
@@ -329,17 +329,16 @@ serializePrependHash inputC inputD
 
 
 serializePrependHMAC
-  ∷ ∀ alg (dom ∷ Domain) a s e . (KnownDomain dom, HiddenClockResetEnable dom, NFDataX s) ⇒ 
+  ∷ ∀ a e (dom ∷ Domain) . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a)
-  , 1 ≤ ByteSize, 1 ≤ BitSize a, BitSize a `Mod` ByteSize ~ 0, KnownSHA (SHAVersionPRFᵐˢᵍSLH_DSA alg), KnownSLH_DSAParameters alg) ⇒ 
+  , 1 ≤ ByteSize, 1 ≤ BitSize a, BitSize a `Mod` ByteSize ~ 0) ⇒ 
     Channel  dom a
     -- -- ^ streamed input that needs to be split up and preprend
-    →  DataStream dom s e (ByteType)
-  → DataStream dom s e (ByteType)
+    →  DataStream dom () e (ByteType)
+  → DataStream dom () e (ByteType)
 serializePrependHMAC inputC inputD
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) ByteSize)
   , Rewrite ← using @(CancelMultiple (BitSize a) ByteSize)
-  , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
   , Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) ByteSize)
   , Rewrite ← using @(CancelMultiple (BitSize a) ByteSize)
   , Rewrite ← using @(DivTimes (BitSize a) ByteSize)
@@ -349,7 +348,6 @@ serializePrependHMAC inputC inputD
       , 0 ∷ Index ((BitSize a `Div` ByteSize) + 1)
       , repeat neval ∷ Vec (BitSize a `Div` ByteSize) (ByteType)
       , 0 ∷ Index ((BitSize a `Div` ByteSize) + 1)
-      , neval ∷ s
       -- , NoData ∷ Frame () (Index n) (BitVector n)
       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
  where
@@ -358,62 +356,90 @@ serializePrependHMAC inputC inputD
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- data stream buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- data stream pointer
-        , s
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
         ) 
-    → (Maybe a1, Bool, Frame s e (ByteType)) 
+    → (Maybe a1, Bool, Frame () e (ByteType)) 
     → (
         (Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- channel buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- data stream buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- data stream pointer
-        , s
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
         )
-      , Frame s e (ByteType))
-  (~~>) state@(buffC, idxC, buffD, idxD, sD ) input@(maybeC, updataC, prependFrame) 
+      , Frame () e (ByteType))
+  (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, prependFrame) 
     = (
       (
         goBuffC maybeC updataC prependFrame
       , goIdxC maybeC updataC prependFrame
       , goBuffD maybeC updataC prependFrame
       , goIdxD maybeC updataC prependFrame
-      , getS maybeC updataC prependFrame
       )
       , goFrame maybeC updataC prependFrame)
         where
+          vectorC ∷ a1 → Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize)
+          vectorC x
+              |Rewrite ← using @(DivTimes (BitSize a1) ByteSize)
+              , Rewrite ← using @(CancelMultiple (BitSize a1) ByteSize)
+              = bitCoerce x
           goIdxC ∷ Maybe a1 → Bool → Frame s e (ByteType)
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
           goIdxC Nothing _ _ = 0
           goIdxC (Just x) True _ = maxBound
           goIdxC _ _ NoData = idxD
           goIdxC _ _ Idle = idxD
-          goIdxC _ _ _ = satSucc SatBound idxD
-          goBuffC ∷ Maybe a1 → Bool → Frame s e (ByteType)
+          goIdxC _ _ _ = satPred SatBound idxC
+          goBuffC ∷ Maybe a1 → Bool → Frame () e (ByteType)
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
-          goBuffC _ _ (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
+          goBuffC (Just x) True _ = vectorC x
           -- Middle and end frames are ignored.
-          goBuffC _ _ (Middle y) = y +>> buffC
-          goBuffC _ _ (End _ y) = y +>> buffC
-
-          goIdxD ∷ Maybe a1 → Bool → Frame s e (ByteType)
+          goBuffC (Just x) False _ = buffC <<+ neval
+          goBuffC Nothing _ _ = (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
+          goIdxD ∷ Maybe a1 → Bool → Frame () e (ByteType)
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
           goIdxD Nothing _ _ = 0
-          goIdxD (Just x) True _ = maxBound
+          goIdxD (Just x) True _ = minBound
           goIdxD _ _ NoData = idxD
           goIdxD _ _ Idle = idxD
           goIdxD _ _ _ = satSucc SatBound idxD
-          goBuffD ∷ Maybe a1 → Bool → Frame s e (ByteType)
+          goBuffD ∷ Maybe a1 → Bool → Frame () e (ByteType)
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
           goBuffD _ _ (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
           -- Middle and end frames are ignored.
           goBuffD _ _ (Middle y) = y +>> buffD
           goBuffD _ _ (End _ y) = y +>> buffD
-          getS ∷ Maybe a1 → Bool → Frame s e (ByteType)
-              → s
-          getS _ _ (Start s _) = s
-          goFrame ∷ Maybe a1 → Bool → Frame s e (ByteType)
-              →  Frame s e (BitVector ByteSize)
-          goFrame _ _ f = f
+
+          goFrame ∷ Maybe a1 → Bool → Frame () e (ByteType)
+              →  Frame () e (BitVector ByteSize)
+          -- goFrame (Just x) False (Start _ y)
+          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
+          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
+          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
+          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
+          --   | otherwise = Middle 0xff -- ((buffC) !! 0)  
+          -- goFrame (Just x) False (Middle y)
+          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
+          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
+          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
+          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
+          --   | otherwise = Middle 0xff -- ((buffC) !! 0)  
+          -- goFrame (Just x) False Idle
+          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
+          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
+          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
+          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
+          --   | otherwise = Middle 0xff -- ((buffC) !! 0)  
+          -- goFrame (Just x) False NoData
+          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
+          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
+          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
+          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
+          --   | otherwise = Middle 0xff -- ((buffC) !! 0) 
+          goFrame (Just x) True _ = Start () 0xff
+          goFrame (Just x) False _ = Middle 0xdd 
+          goFrame _ _ (Start _ x) = Middle 0xef
+          goFrame _ _ (Middle x) = Middle 0xee
+          goFrame _ _ (End e x) = End e 0xed
+          goFrame _ _ _ = Middle 0x2
   neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.HMAC.serializeEn: Mealy"
 
