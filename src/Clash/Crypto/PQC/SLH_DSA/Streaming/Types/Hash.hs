@@ -56,12 +56,12 @@ import Language.Haskell.Unicode (type (≤))
 import Clash.Crypto.Hash.SHA as SHA
 class (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream  (sha ∷ SHAVersion) (security ∷ SecurityLevel) (alg ∷ SLH_DSA)where
   -- Since a DataStream is used for flexible size messages and that is neded for algorithm 19, 20, PRFᵐˢᵍ and Hᵐˢᵍ, need to take a stream as input.
-  _PRFᵐˢᵍStreaming ∷ ∀ sha security alg dom s e . (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
+  _PRFᵐˢᵍStreaming ∷ ∀ sha security alg dom. (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
                   ⇒ Proxy alg 
                   → Channel dom (SKPrfType alg, Opt_randType alg) 
-                  → DataStream dom s e (ByteType)
+                  → DataStream dom () () (ByteType)
                   → Channel dom (PRFᵐˢᵍOutType alg)
-  _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s e . (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
+  _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s e. (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg) 
                   ⇒ Proxy alg 
                   → Channel dom (RType alg, PKSeedType alg, PKRootType alg) 
                   → DataStream dom s e (ByteType) 
@@ -74,9 +74,9 @@ class (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream  (sha ∷ SHAVersion) 
 
 type family  SLH_DSA_hashStreamFact (alg ∷ SLH_DSA) where
     SLH_DSA_hashStreamFact alg = SLH_DSA_hashStream (SHAVersionSLH_DSA alg) (SecurityLevelSLH_DSA alg) alg
-_PRFᵐˢᵍStream ∷ ∀ alg dom s e . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom) 
+_PRFᵐˢᵍStream ∷ ∀ alg dom . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom) 
                   ⇒ Channel dom (SKPrfType alg, Opt_randType alg) 
-                  → DataStream dom s e (ByteType)
+                  → DataStream dom () () (ByteType)
                   →  Channel dom (PRFᵐˢᵍOutType alg)
 _PRFᵐˢᵍStream 
   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
