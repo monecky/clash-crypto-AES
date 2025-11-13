@@ -323,7 +323,7 @@ serializePrependHash inputC inputD
   (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, prependFrame)
     | idxC > 0 = (state, NoData)
     | otherwise = (state, Idle)
-  neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.serializeEn: Mealy"
+  neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.prependHash.serializeEn: Mealy"
 
 
 
@@ -434,12 +434,13 @@ serializePrependHMAC inputC inputD
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
         goBuff (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
         -- Middle and end frames are ignored.
-        goBuff _ = repeat neval ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType)
+        goBuff (Middle y) = y +>> buffD
+        goBuff (End _ y) = y +>> buffD
         goIdx Start{} = 1
         goIdx _ = 0
   -- Defining the idle state 
   (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, prependFrame)
     | idxC > 0 = (state, NoData)
     | otherwise = (state, Idle)
-  neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.serializeEn: Mealy"
+  neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.HMAC.serializeEn: Mealy"
 
