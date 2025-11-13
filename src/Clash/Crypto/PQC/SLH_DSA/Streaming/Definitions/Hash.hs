@@ -348,6 +348,7 @@ serializePrependHMAC inputC inputD
       , 0 ∷ Index ((BitSize a `Div` ByteSize) + 1)
       , repeat neval ∷ Vec (BitSize a `Div` ByteSize) (ByteType)
       , 0 ∷ Index ((BitSize a `Div` ByteSize) + 1)
+      , False
       -- , NoData ∷ Frame () (Index n) (BitVector n)
       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
  where
@@ -356,6 +357,7 @@ serializePrependHMAC inputC inputD
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- data stream buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- data stream pointer
+        , Bool -- Sending 1 combi data.
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
         ) 
     → (Maybe a1, Bool, Frame () e (ByteType)) 
@@ -364,18 +366,20 @@ serializePrependHMAC inputC inputD
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- data stream buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- data stream pointer
+        , Bool -- Sending 1 combi data.
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
         )
       , Frame () e (ByteType))
-  (~~>) state@(buffC, idxC, buffD, idxD) input@(maybeC, updataC, prependFrame) 
+  (~~>) state@(buffC, idxC, buffD, idxD, busy) input@(maybeC, updataC, prependFrame) 
     = (
       (
         goBuffC maybeC updataC prependFrame
       , goIdxC maybeC updataC prependFrame
       , goBuffD maybeC updataC prependFrame
       , goIdxD maybeC updataC prependFrame
+      , goBusy maybeC updataC prependFrame
       )
-      , goFrame maybeC updataC prependFrame)
+      , goFrame maybeC updataC prependFrame busy)
         where
           vectorC ∷ a1 → Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize)
           vectorC x
@@ -395,6 +399,7 @@ serializePrependHMAC inputC inputD
           -- Middle and end frames are ignored.
           goBuffC (Just x) False _ = buffC <<+ neval
           goBuffC Nothing _ _ = (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
+          goBuffC _ _ _ = buffC
           goIdxD ∷ Maybe a1 → Bool → Frame () e (ByteType)
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
           goIdxD Nothing _ _ = 0
@@ -408,8 +413,8 @@ serializePrependHMAC inputC inputD
           -- Middle and end frames are ignored.
           goBuffD _ _ (Middle y) = y +>> buffD
           goBuffD _ _ (End _ y) = y +>> buffD
-
-          goFrame ∷ Maybe a1 → Bool → Frame () e (ByteType)
+          goBuffD _ _ _ = buffD
+          goFrame ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool
               →  Frame () e (BitVector ByteSize)
           -- goFrame (Just x) False (Start _ y)
           --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
@@ -435,11 +440,32 @@ serializePrependHMAC inputC inputD
           --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
           --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
           --   | otherwise = Middle 0xff -- ((buffC) !! 0) 
-          goFrame (Just x) True _ = Start () 0xff
-          goFrame (Just x) False _ = Middle 0xdd 
-          goFrame _ _ (Start _ x) = Middle 0xef
-          goFrame _ _ (Middle x) = Middle 0xee
-          goFrame _ _ (End e x) = End e 0xed
-          goFrame _ _ _ = Middle 0x2
+          -- goFrame (Just x) True Idle         
+          --   | idxC == 0 = Start () 0xff
+          --   | idxC /=0 = Middle 0xf1
+          goFrame (Just x) True _ False = Start () 0x55
+          goFrame _ _ _ True = End neval 0x44
+          goFrame (Just x) False (Start _ y) True = Middle 0xf8
+          -- goFrame (Just x) True (Middle y)  = Start () 0xf9
+          -- goFrame (Just x) True (End _ y)   = Start () 0xfa
+          -- goFrame (Just x) True NoData      = Start () 0xfb
+          -- goFrame (Just x) True Idle        = Start () 0xfc
+          -- goFrame (Just x) False (Start _ y) = Middle 0xd1
+          -- goFrame (Just x) False (Middle y)  = Middle 0xd2
+          -- goFrame (Just x) False (End e y)   = End e 0xd3
+          -- goFrame (Just x) False NoData      = Middle 0xd4
+          -- goFrame (Just x) False Idle        = Middle 0xd5 
+          goFrame _ _ (Start _ y) _ = Start () 0xe6
+          goFrame _ _ (Middle y) _ = Middle 0xe7
+          goFrame (Just x) True (End e y) _   = End e 0xe8
+          goFrame _ _  Idle _                 = Idle
+          goFrame _ _ NoData _     = NoData
+          goFrame _ _ _ _ = NoData
+
+          goBusy ∷ Maybe a1 → Bool → Frame () e (ByteType)
+              → Bool
+          goBusy (Just x) True _ = True
+          goBusy (Just x) False _ = False
+          goBusy _ _ _ = busy
   neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.HMAC.serializeEn: Mealy"
 

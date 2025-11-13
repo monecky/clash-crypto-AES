@@ -104,17 +104,19 @@ tastyTests =
     --       , testProperty   "transferToC not equal" $ transferToCNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x))))
     --       , testProperty "transferToC not equal" $ transferToCNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x))))
     --       ]
-    -- , localOption (HedgehogTestLimit (Just 100)) $
-    --   testGroup
-    --     "Test transferToD, also used later \n An equal version won't work since data is contained in start and end frame"
-    --     [ 
+    , localOption (HedgehogTestLimit (Just 100)) $
+      testGroup
+        "Test transferToD, also used later \n An equal version won't work since data is contained in start and end frame"
+        [ 
         
-    --       testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(PKRootType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128s) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x)))))
-    --     , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(PKRootType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128f) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x)))))
-    --     , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) x)))))
-    --     , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) x)))))
+          testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) @(PKRootType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128s) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s) x)))))
+        , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) @(PKRootType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128f) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f) x)))))
+        , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) x)))))
+        , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) x)))))
+        , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, PRFᵐˢᵍOutType SLH_DSA_SHA2_128s)  @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize  @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) x)))))
+        , testProperty "transferToD not equal" $ transferToDNotEqualProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, PRFᵐˢᵍOutType SLH_DSA_SHA2_128f)  @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize  @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) x)))))
 
-    --     ]
+        ]
     , localOption (HedgehogTestLimit (Just 100)) $
       testGroup
         "Test serializePrepend, also used later \n"
@@ -127,7 +129,7 @@ tastyTests =
                                   (serializePrependHMAC @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) 
                                                       (transferToC @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) 
                                                                     (mapEnd (\y → ()) (serializeHash @ByteSize  @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, PRFᵐˢᵍOutType SLH_DSA_SHA2_128s)  x))) 
-                                                      (transferToD @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) @ByteSize 
+                                                      (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize 
                                                                     (mapEnd (\y → ()) (serializeHash @ByteSize  @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, PRFᵐˢᵍOutType SLH_DSA_SHA2_128s)  x)))))
         , testProperty "serializePrepend equal" $ transferToCEqualProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) 
                                                                                @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) 
@@ -136,10 +138,10 @@ tastyTests =
                                  (serializePrependHMAC @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) 
                                                       (transferToC @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) 
                                                           (mapEnd (\y → ()) (serializeHash @ByteSize  @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) x))) 
-                                                      (transferToD @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) @ByteSize 
+                                                      (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize 
                                                           (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) x)))))
-        , testProperty "serializePrepend not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) x)))))
-        , testProperty "serializePrepend not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) x)))))
+        -- , testProperty "serializePrepend not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128s, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, PKRootType SLH_DSA_SHA2_128s, MType TestLen) x)))))
+        -- , testProperty "serializePrepend not equal" $ transferToDNotEqualProperty @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → (transferToC @(PKRootType SLH_DSA_SHA2_128f, MType TestLen) (transferToD @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f) (mapEnd (\y → ()) (serializeHash @ByteSize @(RType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, PKRootType SLH_DSA_SHA2_128f, MType TestLen) x)))))
 
         ]
     ]
@@ -304,7 +306,7 @@ transferToC = channel . mealy (~~>)
             | idx == 0 = Keep
             | otherwise = prev
           goProviderAction (End _ x) _  _= Release
-          goProviderAction Idle _ _ = Keep
+          goProviderAction Idle _ _ = Clear
           goProviderAction NoData _ _ = Clear
       unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
       unpacked 
@@ -342,7 +344,7 @@ transferToD = mealy  ((~~>) @a @n)
           goFrame (Middle x) idx isStarted
             | idx /= 1  = Middle x
             | idx == 1  = Start () x
-            | otherwise = NoData
+            | otherwise = Idle
           goFrame (End _ x) idx isStarted = End () x
           goFrame NoData idx isStarted = NoData
           goFrame Idle idx isStarted = Idle
