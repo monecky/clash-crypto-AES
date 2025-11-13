@@ -291,7 +291,7 @@ transferToC = channel . mealy (~~>)
             | otherwise = vObject
           goBuff (End _ x) idx
             | idx == 2 = vObject <<+ x
-            | otherwise = vObject 
+            | otherwise = vObject <<+ x -- In case an End frame was send earlier
           goBuff _ _ = vObject
           goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
           goIdx (Start _ _) idx = maxBound
