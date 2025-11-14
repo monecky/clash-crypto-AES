@@ -179,7 +179,7 @@ hashProperty name hashComp = property $ do
     $ Keep : Keep : Release : List.repeat Keep
 
 
-transferToCEqualProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, a~b, (17*ByteSize) ≤ BitSize b) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
+transferToCEqualProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, a~b, (32*ByteSize) ≤ BitSize b) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
 transferToCEqualProperty name hashComp = property $ do
   f <- forAll $ genDefinedBitVector 
   let f' = compute $ unpack f
@@ -187,7 +187,7 @@ transferToCEqualProperty name hashComp = property $ do
         appendFile "hash_test_results.csv"
           (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
   -- Just to satisfy the test environment.
-  v2bv (takeI @(17*ByteSize) @(BitSize b - (17*ByteSize)) (bv2v (pack f'))) === v2bv (takeI @(17*ByteSize) @(BitSize b - (17*ByteSize))  (bv2v  f))
+  v2bv (takeI @(32*ByteSize) @(BitSize b - (32*ByteSize)) (bv2v (pack f'))) === v2bv (takeI @(32*ByteSize) @(BitSize b - (32*ByteSize))  (bv2v  f))
  where
   moduloError =
     error "Since the modulo of the field is prime, the inverse always exists."
