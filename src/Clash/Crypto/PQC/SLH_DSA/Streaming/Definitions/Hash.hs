@@ -414,8 +414,10 @@ serializePrependHMAC inputC inputD
           goIdxD _ _ Idle   _    False = idxD
           goIdxD _ _ NoData False True = satPred SatBound idxD
           goIdxD _ _ Idle   False True = satPred SatBound idxD
-          goIdxD _ _ _      False True = idxD
-          goIdxD _ _ _      _     _    = satSucc SatBound idxD
+          goIdxD _ _ _      False True = satPred SatBound idxD
+          goIdxD _ _ (Middle _)  _  _  = satSucc SatBound idxD
+          goIdxD _ _ (End _ _)   _  _  = satSucc SatBound idxD
+          goIdxD _ _ _         _  _    = idxD
           goBuffD ∷ Maybe a1 → Bool → Frame () e (ByteType)
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
           goBuffD _ _ (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
@@ -455,8 +457,8 @@ serializePrependHMAC inputC inputD
           goFrame (Just x) True _ False False = NoData 
           goFrame _ _ _ True _ 
             | idxC == maxBound = Start () 0x55
-            | idxC /= 2 = Middle 0x44
-            | idxC == 2 = NoData -- Middle 0xff
+            | idxC /= 1 = Middle 0x44
+            | idxC == 1 = NoData -- Middle 0xff
           goFrame _ _ _ False True 
             | endD, idxD /= 0      = Middle 0xdd
             | endD, idxD == 0      = End neval 0x66
@@ -481,8 +483,8 @@ serializePrependHMAC inputC inputD
           goBusyC ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool
               → Bool
           goBusyC _ _ _ True 
-            | idxC /= 2 = True
-            | idxC == 2 = False
+            | idxC /= 1 = True
+            | idxC == 1 = False
           goBusyC (Just x) True _ _= True
           goBusyC (Just x) False _ _= False
           goBusyC _ _ _ _= busyC
