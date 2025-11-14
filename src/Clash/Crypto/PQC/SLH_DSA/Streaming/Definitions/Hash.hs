@@ -402,13 +402,11 @@ serializePrependHMAC inputC inputD
           goBuffC ∷ Maybe a1 → Bool → Frame () e (ByteType)
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
           goBuffC (Just x) True _ = vectorC x
-          -- Middle and end frames are ignored.
           goBuffC (Just x) False _ = buffC <<+ neval
           goBuffC Nothing _ _ = (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
           goBuffC _ _ _ = buffC
           goIdxD ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
-          -- goIdxD Nothing _ _ = 0
           goIdxD _ _ (Start _ _) _ _   = satSucc SatBound minBound
           goIdxD _ _ NoData _    False = idxD
           goIdxD _ _ Idle   _    False = idxD
@@ -421,39 +419,11 @@ serializePrependHMAC inputC inputD
           goBuffD ∷ Maybe a1 → Bool → Frame () e (ByteType)
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
           goBuffD _ _ (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
-          -- Middle and end frames are ignored.
           goBuffD _ _ (Middle y) = y +>> buffD
           goBuffD _ _ (End _ y) = y +>> buffD
           goBuffD _ _ _ = buffD
           goFrame ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
               →  Frame () e (BitVector ByteSize)
-          -- goFrame (Just x) False (Start _ y)
-          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
-          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
-          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
-          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
-          --   | otherwise = Middle 0xff -- ((buffC) !! 0)  
-          -- goFrame (Just x) False (Middle y)
-          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
-          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
-          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
-          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
-          --   | otherwise = Middle 0xff -- ((buffC) !! 0)  
-          -- goFrame (Just x) False Idle
-          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
-          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
-          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
-          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
-          --   | otherwise = Middle 0xff -- ((buffC) !! 0)  
-          -- goFrame (Just x) False NoData
-          --   | idxC == maxBound = Start () 0xff -- ((buffC) !! 0)  
-          --   | idxC /= 0 = Middle  0xff --((buffC) !! 0)  
-          --   | idxC == 0 && idxD /= 0 = Middle  0xff --((vectorC x) !! (satPred SatBound idxD)) 
-          --   | idxC == 0 && idxD == 0 = Middle  0xff -- y
-          --   | otherwise = Middle 0xff -- ((buffC) !! 0) 
-          -- goFrame (Just x) True Idle         
-          --   | idxC == 0 = Start () 0xff
-          --   | idxC /=0 = Middle 0xf1
           goFrame (Just x) True _ False False = NoData 
           goFrame _ _ _ True _ 
             | idxC == maxBound = Start () 0x55
@@ -464,15 +434,6 @@ serializePrependHMAC inputC inputD
             | endD, idxD == 0      = End neval 0x66
             | otherwise = Middle 0x77
           goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
-          -- goFrame (Just x) True (Middle y)  = Start () 0xf9
-          -- goFrame (Just x) True (End _ y)   = Start () 0xfa
-          -- goFrame (Just x) True NoData      = Start () 0xfb
-          -- goFrame (Just x) True Idle        = Start () 0xfc
-          -- goFrame (Just x) False (Start _ y) = Middle 0xd1
-          -- goFrame (Just x) False (Middle y)  = Middle 0xd2
-          -- goFrame (Just x) False (End e y)   = End e 0xd3
-          -- goFrame (Just x) False NoData      = Middle 0xd4
-          -- goFrame (Just x) False Idle        = Middle 0xd5 
           goFrame _ _ (Start _ y) _ _ = Middle 0xe6
           goFrame _ _ (Middle y)  _ _ = Middle 0xe7
           goFrame (Just x) True (End e y) _ _  = End neval 0xe8
@@ -493,9 +454,8 @@ serializePrependHMAC inputC inputD
               → Bool
           goBusyD _ _ _ True 
             | idxD /= 0 = True
-            | idxD == 0 = False -- False
+            | idxD == 0 = False
           goBusyD _ _ (Start _ _) _= True
-          -- goBusyD _ _ _ _= False
           goBusyD _ _ _ _= busyD
           goEndD ∷  Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
               → Bool
