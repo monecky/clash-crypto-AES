@@ -379,7 +379,7 @@ serializePrependHMAC inputC inputD
   (~~>) state@(buffC, idxC, busyC, buffD, idxD, busyD, endD) input@(maybeC, updataC, prependFrame) 
     = (
       (
-        goBuffC maybeC updataC prependFrame
+        goBuffC maybeC updataC prependFrame busyC busyD
       , goIdxC maybeC updataC prependFrame busyC busyD
       , goBusyC maybeC updataC prependFrame busyC
       , goBuffD maybeC updataC prependFrame
@@ -399,12 +399,13 @@ serializePrependHMAC inputC inputD
           goIdxC (Just x) True _ False False = maxBound
           goIdxC _ _ _ True _ = satPred SatBound idxC
           goIdxC _ _ _ _ _ = idxC
-          goBuffC ∷ Maybe a1 → Bool → Frame () e (ByteType)
+          goBuffC ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
-          goBuffC (Just x) True _ = vectorC x
-          goBuffC (Just x) False _ = buffC <<+ neval
-          goBuffC Nothing _ _ = (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
-          goBuffC _ _ _ = buffC
+          goBuffC _ _ _ True _ = buffC <<+ neval --ignore new input
+          goBuffC (Just x) True _ False _ = vectorC x
+          goBuffC (Just x) False _ _ _ = buffC <<+ neval
+          goBuffC Nothing _ _ _ _= (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
+          goBuffC _ _ _ _ _ = buffC
           goIdxD ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
           goIdxD _ _ (Start _ _) _ _   = satSucc SatBound minBound
