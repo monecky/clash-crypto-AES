@@ -412,7 +412,7 @@ serializePrependHMAC inputC inputD
           goIdxD _ _ Idle   _    False = idxD
           goIdxD _ _ NoData False True = satPred SatBound idxD
           goIdxD _ _ Idle   False True = satPred SatBound idxD
-          goIdxD _ _ _      False True = satPred SatBound idxD
+          goIdxD _ _ _      False True = idxD
           goIdxD _ _ (Middle _)  _  _  = satSucc SatBound idxD
           goIdxD _ _ (End _ _)   _  _  = satSucc SatBound idxD
           goIdxD _ _ _         _  _    = idxD
@@ -428,11 +428,11 @@ serializePrependHMAC inputC inputD
           goFrame _ _ _ True _ 
             | idxC == maxBound = Start () (buffC !! 0)
             | idxC /= 1 = Middle (buffC !! 0)
-            | idxC == 1 = NoData -- Middle 0xff
+            | idxC == 1 = Middle (buffC !! 0) --NoData -- Middle 0xff
           goFrame _ _ _ False True 
-            | endD, idxD /= 0      = Middle (buffD !! idxD)
-            | endD, idxD == 0      = End neval (buffD !! idxD)
-            | otherwise = Middle 0x77
+            | endD, idxD /= 0      = Middle (buffD !! (satPred SatBound idxD))
+            | endD, idxD == 0      = End neval (buffD !! (satPred SatBound idxD))
+            | otherwise = End neval (buffD !! (satPred SatBound idxD))
           goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
           goFrame _ _ (Start _ y) _ _ = Middle 0xe6
           goFrame _ _ (Middle y)  _ _ = Middle 0xe7
