@@ -354,7 +354,7 @@ serializePrependHMAC inputC inputD
       -- , NoData ∷ Frame () (Index n) (BitVector n)
       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
  where
-  (~~>) ∷ ∀ a1 e . (BitPack a1, BitSize a1 `Mod` ByteSize ~ 0, 1 ≤ ByteSize) 
+  (~~>) ∷ ∀ a1 e . (BitPack a1, BitSize a1 `Mod` ByteSize ~ 0, 1 ≤ ByteSize, 1 ≤ BitSize a1) 
     ⇒  (Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- channel buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Bool -- Sending stored Channel
@@ -426,12 +426,12 @@ serializePrependHMAC inputC inputD
               →  Frame () e (BitVector ByteSize)
           goFrame (Just x) True _ False False = NoData 
           goFrame _ _ _ True _ 
-            | idxC == maxBound = Start () 0x55
-            | idxC /= 1 = Middle 0x44
+            | idxC == maxBound = Start () (buffC !! 0)
+            | idxC /= 1 = Middle (buffC !! 0)
             | idxC == 1 = NoData -- Middle 0xff
           goFrame _ _ _ False True 
-            | endD, idxD /= 0      = Middle 0xdd
-            | endD, idxD == 0      = End neval 0x66
+            | endD, idxD /= 0      = Middle (buffD !! idxD)
+            | endD, idxD == 0      = End neval (buffD !! idxD)
             | otherwise = Middle 0x77
           goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
           goFrame _ _ (Start _ y) _ _ = Middle 0xe6
