@@ -113,6 +113,10 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , (CeilXDivY (H alg - Div (H alg) ((D alg) * ByteSize)) ByteSize) ≤ M alg * ByteSize
         , Mod (BitSize (PrivateKey alg, Opt_randType alg)) ByteSize ~ 0
         , Mod (BitSize (SIGType alg, PublicKey alg)) ByteSize ~ 0
+        --prfmsg
+        , N alg ≤ Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize
+        , Mod (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize ~ 0
+        , KnownNat (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) 
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg

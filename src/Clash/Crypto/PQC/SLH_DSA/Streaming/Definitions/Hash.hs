@@ -66,16 +66,21 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
             = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (\y → ()) (serializePrepend transfer inputD))))
                 where
                 transfer = fmap go inputC
-                makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg
+                makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg -- N alg * ByteSize == 16*8 = 128 while SHA 256 == 256
                 makeOutput output 
-                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                  , Dict ← ax
-                  = unconcatBitVector#  output
-                  where
+                  | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                  , Rewrite ← using @(DivTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+                  , Rewrite ← using @(ModTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+                  , Rewrite ← using @(CancelMultiple (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+
+                  -- , Rewrite ← using @(CancelMultiple (Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) ByteSize)
+                  -- , Dict ← ax
+                  = takeI @(N alg) @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) (unconcatBitVector# @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) @(ByteSize) output)
+                  -- where
                         -- TODO this is only true for SHA256, SHA224,SHA1 , originally with truncˡ it should work but the type checker doesn't like it.
                         -- Although this function is only used for sha256
-                        ax :: Dict ((N alg) * ByteSize ~ MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg))
-                        ax = unsafeCoerce (Dict @(() ~ ()))                 
+                        -- ax :: Dict ((N alg) * ByteSize ~ MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg))
+                        -- ax = unsafeCoerce (Dict @(() ~ ()))                 
                 go ∷ (KnownSLH_DSAParameters alg) 
                   ⇒ (SKPrfType alg, Opt_randType alg) 
                   → BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) * ByteSize)
@@ -98,7 +103,7 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                       | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                       , Rewrite ← using @(DivTimes (((N alg + N alg) + N alg) * ByteSize)  ByteSize)
                       , Rewrite ← using @(ModTimes ((N alg + N alg) + N alg)  ByteSize)
-                      = SHA.sha @SHA256 ( mapEnd (\y → (0 ∷ Index ByteSize)) (serializePrepend transfer⁰ inputD))
+                      = SHA.sha @SHA256 ( mapEnd (const (0 :: Index ByteSize)) (serializePrepend transfer⁰ inputD))
                     where
                         transfer⁰ ∷ Channel dom (BitVector ((N alg + N alg + N alg) * ByteSize))
                         transfer⁰ 
