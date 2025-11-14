@@ -380,7 +380,7 @@ serializePrependHMAC inputC inputD
     = (
       (
         goBuffC maybeC updataC prependFrame
-      , goIdxC maybeC updataC prependFrame
+      , goIdxC maybeC updataC prependFrame busyC busyD
       , goBusyC maybeC updataC prependFrame busyC
       , goBuffD maybeC updataC prependFrame
       , goIdxD maybeC updataC prependFrame busyC busyD
@@ -394,13 +394,11 @@ serializePrependHMAC inputC inputD
               |Rewrite ← using @(DivTimes (BitSize a1) ByteSize)
               , Rewrite ← using @(CancelMultiple (BitSize a1) ByteSize)
               = bitCoerce x
-          goIdxC ∷ Maybe a1 → Bool → Frame s e (ByteType)
+          goIdxC ∷ Maybe a1 → Bool → Frame s e (ByteType) → Bool → Bool
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
-          goIdxC Nothing _ _ = 0
-          goIdxC (Just x) True _ = maxBound
-          goIdxC _ _ NoData = idxD
-          goIdxC _ _ Idle = idxD
-          goIdxC _ _ _ = satPred SatBound idxC
+          goIdxC (Just x) True _ False False = maxBound
+          goIdxC _ _ _ True _ = satPred SatBound idxC
+          goIdxC _ _ _ _ _ = idxC
           goBuffC ∷ Maybe a1 → Bool → Frame () e (ByteType)
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
           goBuffC (Just x) True _ = vectorC x
@@ -454,10 +452,11 @@ serializePrependHMAC inputC inputD
           -- goFrame (Just x) True Idle         
           --   | idxC == 0 = Start () 0xff
           --   | idxC /=0 = Middle 0xf1
-          goFrame (Just x) True _ False False = Start () 0x55
+          goFrame (Just x) True _ False False = NoData 
           goFrame _ _ _ True _ 
-            | idxC /= 0 = Middle 0x44
-            | idxC == 0 = Middle 0xff
+            | idxC == maxBound = Start () 0x55
+            | idxC /= 2 = Middle 0x44
+            | idxC == 2 = NoData -- Middle 0xff
           goFrame _ _ _ False True 
             | endD, idxD /= 0      = Middle 0xdd
             | endD, idxD == 0      = End neval 0x66
@@ -482,8 +481,8 @@ serializePrependHMAC inputC inputD
           goBusyC ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool
               → Bool
           goBusyC _ _ _ True 
-            | idxC /= 0 = True
-            | idxC == 0 = False
+            | idxC /= 2 = True
+            | idxC == 2 = False
           goBusyC (Just x) True _ _= True
           goBusyC (Just x) False _ _= False
           goBusyC _ _ _ _= busyC
