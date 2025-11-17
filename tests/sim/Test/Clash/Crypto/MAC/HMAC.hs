@@ -30,25 +30,13 @@ import qualified Hedgehog.Range as Range
 -- Reference implementation
 import qualified "cryptohash" Crypto.MAC.HMAC as Spec
 import qualified Data.ByteString as BS
-import Data.ByteString (ByteString)
-
-
-import Test.Tasty
 
 import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import System.Process (readProcess)
-import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Base16 as B16
-import Data.ByteString.Base16
-import Data.Proxy
--- import Data.Char
-import GHC.TypeLits
--- import Crypto.Hash (CryptoHash)
--- import SHA (SHA, KnownSHA(..), SHAFacts(..), BlockSize)
--- import Utils (natToNum)
+
 tastyTests :: TestTree
 tastyTests =
   testGroup "Test.Clash.Crypto.MAC.HMAC"
@@ -158,7 +146,7 @@ testPropertyPythonMatchesRef ::
   forall alg. (KnownSHA alg, CryptoHash alg, 8 <= BlockSize alg, Mod (BlockSize alg) 8 ~ 0) =>
   String → Bool → Property
 testPropertyPythonMatchesRef name contiguous
-  | SHAFacts alg <- knownSHA @alg
+  | SHAFacts {} <- knownSHA @alg
   = property $ do
       let n = natToNum @(BlockSize alg `Div` 8)
           m = 499
@@ -201,9 +189,9 @@ hexToBs s =
 hmacRefImplPython ::
   forall alg. (KnownSHA alg, CryptoHash alg) =>
   String -> (ByteString, ByteString) -> IO ByteString
-hmacRefImplPython sha (key, msg)
-  | SHAFacts alg <- knownSHA @alg =
-      let digestName = sha
+hmacRefImplPython name (key, msg)
+  | SHAFacts {} <- knownSHA @alg =
+      let digestName = name
       in do
           outputHex <- readProcess
               "python3"
