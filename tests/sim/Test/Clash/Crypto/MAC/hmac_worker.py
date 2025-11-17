@@ -12,8 +12,7 @@ def main():
 
     key = binascii.unhexlify(hex_key)
     msg = binascii.unhexlify(hex_msg)
-
-    # blocksize argument is optional, ignore if present
+    
     result = hmac_digest(key, msg, digest_name)
     print(binascii.hexlify(result).decode())
 
