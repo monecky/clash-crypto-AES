@@ -44,6 +44,7 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Base16
 import Data.Proxy
+-- import Data.Char
 import GHC.TypeLits
 -- import Crypto.Hash (CryptoHash)
 -- import SHA (SHA, KnownSHA(..), SHAFacts(..), BlockSize)
@@ -53,10 +54,10 @@ tastyTests =
   testGroup "Test.Clash.Crypto.MAC.HMAC"
     [ testProperty "Contiguous Input"     $ testHmacHedgehog @SHA256 True
     , testProperty "Non-contiguous Input" $ testHmacHedgehog @SHA256 False
-    , testProperty "SHA256 matches" $ property $ do
-      key <- forAll (Gen.bytes (Range.linear 1 32))
-      msg <- forAll (Gen.bytes (Range.linear 1 512))
-      prop_hmac_python_matches_ref @SHA256 key msg
+    , testProperty "SHA256 matches contiguous" $ testPropertyPythonMatchesRef @SHA256 "sha256" True
+    , testProperty "SHA512 matches contiguous" $ testPropertyPythonMatchesRef @SHA512 "sha512" True
+    , testProperty "SHA256 matches non-contiguous" $ testPropertyPythonMatchesRef @SHA256 "sha256" False
+    , testProperty "SHA512 matches non-contiguous" $ testPropertyPythonMatchesRef @SHA512 "sha512" False 
     ]
 
 testHmacHedgehog ::
@@ -153,14 +154,29 @@ hmacImpl (keySpacings, msgSpacings) (keyData, msgData)
         $ fromList hmacTestInput
     in
       BS.pack $ toList $ unpack <$> output
-prop_hmac_python_matches_ref ::
-  forall alg. (KnownSHA alg, CryptoHash alg) =>
-  ByteString -> ByteString -> PropertyT IO ()
-prop_hmac_python_matches_ref key msg = do
-    let input = (key, msg)
-    ref    <- liftIO (pure $ hmacRefImpl @alg input)
-    python <- liftIO (hmacRefImplPython @alg input)
-    ref === python
+testPropertyPythonMatchesRef ::
+  forall alg. (KnownSHA alg, CryptoHash alg, 8 <= BlockSize alg, Mod (BlockSize alg) 8 ~ 0) =>
+  String → Bool → Property
+testPropertyPythonMatchesRef name contiguous
+  | SHAFacts alg <- knownSHA @alg
+  = property $ do
+      let n = natToNum @(BlockSize alg `Div` 8)
+          m = 499
+          genSpacings contiguous bs
+            | contiguous = pure $ List.replicate (BS.length bs) 0
+            | otherwise  = Gen.list (Range.singleton $ BS.length bs)
+                         $ Gen.integral @_ @Int $ Range.linear 1 100
+      testKey <- forAll $ Gen.bytes $ Range.linear 1 n
+      testMsg <- forAll $ Gen.bytes $ Range.linear 1 m
+      keySpacings <- forAll $ genSpacings contiguous testKey
+      msgSpacings <- forAll $ genSpacings contiguous testMsg
+      let testInput = (testKey, testMsg)
+      ref    <- liftIO $ pure $ hmacRefImpl @alg testInput
+      python <- liftIO $ hmacRefImplPython @alg name testInput
+      let clash = hmacImpl @alg (keySpacings, msgSpacings) testInput
+      ref    === python
+      python === clash
+
 
 hmacRefImpl ::
   forall (alg :: SHA).
@@ -183,11 +199,11 @@ hexToBs s =
     Left err -> error ("hexToBs: invalid hex input: " <> err)
 
 hmacRefImplPython ::
-  forall alg. (KnownSHA alg, CryptoHash alg) =>
+  forall alg. (KnownSHA alg, CryptoHash alg) => String → 
   (ByteString, ByteString) -> IO ByteString
-hmacRefImplPython (key, msg)
+hmacRefImplPython sha (key, msg)
   | SHAFacts alg <- knownSHA @alg =
-      let digestName = "sha256"--show alg              -- e.g. "sha256"
+      let digestName = sha
           blockSize  = show (natToNum @(BlockSize alg `Div` 8))
       in do
           outputHex ∷ String <- readProcess

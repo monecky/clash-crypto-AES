@@ -16,8 +16,6 @@ def main():
     msg = binascii.unhexlify(hex_msg)
 
     result = hmac_digest(key, msg, digest_name)
-
-    # print hex result for Haskell to parse
     print(binascii.hexlify(result).decode())
 
 if __name__ == "__main__":
