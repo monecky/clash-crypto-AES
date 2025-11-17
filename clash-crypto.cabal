@@ -175,6 +175,12 @@ test-suite simulation
     , memory >= 0.18.0 
     , constraints >= 0.14.2
     --
+    -- HMAC
+    , process >= 1.6.19.0
+    , base16-bytestring >= 1.0.2.0
+    --
+    , crypton >= 1.0.4
+    ---
     --AES
     , crypton >= 1.0.4
     ---
