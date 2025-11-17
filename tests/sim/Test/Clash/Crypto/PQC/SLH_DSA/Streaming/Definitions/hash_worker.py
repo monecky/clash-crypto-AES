@@ -11,12 +11,9 @@ def main():
     shaVersion = sys.argv[2]
     shaObject = findShaObject(function)
     input1 =[binascii.unhexlify(i) for i in sys.argv[3:]]
-
-
-
-
-    result = hmac_digest(key, msg, digest_name)
+    result = findShaObject(function, input1)
     print(binascii.hexlify(result).decode())
+    
 def findShaObject(strFunction):
     match (strFunction):
         case "SLH_DSA_SHA2_128s":

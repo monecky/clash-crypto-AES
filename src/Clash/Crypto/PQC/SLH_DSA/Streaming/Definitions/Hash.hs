@@ -62,8 +62,8 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
         , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
-        -- , Dict ← ax
-            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (\y → ()) (serializePrepend transfer inputD))))
+        , Rewrite ← using @(ModTimes (N alg + N alg) ByteSize)
+            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD))))
                 where
                 transfer = fmap go inputC
                 makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg -- N alg * ByteSize == 16*8 = 128 while SHA 256 == 256
@@ -72,24 +72,16 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                   , Rewrite ← using @(DivTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
                   , Rewrite ← using @(ModTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
                   , Rewrite ← using @(CancelMultiple (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
-
-                  -- , Rewrite ← using @(CancelMultiple (Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) ByteSize)
-                  -- , Dict ← ax
-                  = takeI @(N alg) @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) (unconcatBitVector# @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) @(ByteSize) output)
-                  -- where
-                        -- TODO this is only true for SHA256, SHA224,SHA1 , originally with truncˡ it should work but the type checker doesn't like it.
-                        -- Although this function is only used for sha256
-                        -- ax :: Dict ((N alg) * ByteSize ~ MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg))
-                        -- ax = unsafeCoerce (Dict @(() ~ ()))                 
+                  = takeI @(N alg) @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) (unconcatBitVector# @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) @(ByteSize) output)       
                 go ∷ (KnownSLH_DSAParameters alg) 
                   ⇒ (SKPrfType alg, Opt_randType alg) 
                   → BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) * ByteSize)
                 go (skPrf, opt_rand)
                     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                    = concatBitVector# (skPrf ‖ unconcatBitVector# @(Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) @ByteSize 0x0 ‖ opt_rand)
+                    = concatBitVector# (skPrf ‖ unconcatBitVector# @((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) - N alg) @ByteSize 0x0 ‖ opt_rand)
 
                     
-    _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s e . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
+    _HᵐˢᵍStreaming   ∷ ∀ sha security alg dom s . (KnownDomain dom, HiddenClockResetEnable dom,KnownSLH_DSAParameters alg) 
                   ⇒ Proxy alg 
                   → Channel dom (RType alg, PKSeedType alg, PKRootType alg) 
                   → DataStream dom () () (ByteType) 
@@ -230,13 +222,13 @@ serializeHash input
 -- We store it in a buffer.
 -- Assumption the datastream doesn't start before the channel has send the fresh label.s
 serializePrepend
-  ∷ ∀ a e (dom ∷ Domain) . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
+  ∷ ∀ a (dom ∷ Domain) . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a)
   , 1 ≤ ByteSize, 1 ≤ BitSize a, BitSize a `Mod` ByteSize ~ 0) ⇒ 
     Channel  dom a
     -- -- ^ streamed input that needs to be split up and preprend
-    →  DataStream dom () e (ByteType)
-  → DataStream dom () e (ByteType)
+    →  DataStream dom () () (ByteType)
+  → DataStream dom () () (ByteType)
 serializePrepend inputC inputD
   | Rewrite ← using @(KeepsPositiveIfMultiple (BitSize a) ByteSize)
   , Rewrite ← using @(CancelMultiple (BitSize a) ByteSize)
@@ -255,7 +247,7 @@ serializePrepend inputC inputD
       -- , NoData ∷ Frame () (Index n) (BitVector n)
       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
  where
-  (~~>) ∷ ∀ a1 e . (BitPack a1, BitSize a1 `Mod` ByteSize ~ 0, 1 ≤ ByteSize, 1 ≤ BitSize a1) 
+  (~~>) ∷ ∀ a1 . (BitPack a1, BitSize a1 `Mod` ByteSize ~ 0, 1 ≤ ByteSize, 1 ≤ BitSize a1) 
     ⇒  (Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- channel buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Bool -- Sending stored Channel
@@ -265,7 +257,7 @@ serializePrepend inputC inputD
         , Bool -- End combi
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
         ) 
-    → (Maybe a1, Bool, Frame () e (ByteType)) 
+    → (Maybe a1, Bool, Frame () () (ByteType)) 
     → (
         (Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- channel buffer
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
@@ -276,7 +268,7 @@ serializePrepend inputC inputD
         , Bool -- End combi
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
         )
-      , Frame () e (ByteType))
+      , Frame () () (ByteType))
   (~~>) state@(buffC, idxC, busyC, buffD, idxD, busyD, endD) input@(maybeC, updataC, prependFrame) 
     = (
       (
@@ -295,19 +287,19 @@ serializePrepend inputC inputD
               |Rewrite ← using @(DivTimes (BitSize a1) ByteSize)
               , Rewrite ← using @(CancelMultiple (BitSize a1) ByteSize)
               = bitCoerce x
-          goIdxC ∷ Maybe a1 → Bool → Frame s e (ByteType) → Bool → Bool
+          goIdxC ∷ Maybe a1 → Bool → Frame s () (ByteType) → Bool → Bool
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
           goIdxC (Just x) True _ False False = maxBound
           goIdxC _ _ _ True _ = satPred SatBound idxC
           goIdxC _ _ _ _ _ = idxC
-          goBuffC ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
+          goBuffC ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool → Bool
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
           goBuffC _ _ _ True _ = buffC <<+ neval --ignore new input
           goBuffC (Just x) True _ False _ = vectorC x
           goBuffC (Just x) False _ _ _ = buffC <<+ neval
           goBuffC Nothing _ _ _ _= (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
           goBuffC _ _ _ _ _ = buffC
-          goIdxD ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
+          goIdxD ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool → Bool
                    → Index ((BitSize a1 `Div` ByteSize) + 1)
           goIdxD _ _ (Start _ _) _ _   = satSucc SatBound minBound
           goIdxD _ _ NoData _    False = idxD
@@ -318,14 +310,14 @@ serializePrepend inputC inputD
           goIdxD _ _ (Middle _)  _  _  = satSucc SatBound idxD
           goIdxD _ _ (End _ _)   _  _  = satSucc SatBound idxD
           goIdxD _ _ _         _  _    = idxD
-          goBuffD ∷ Maybe a1 → Bool → Frame () e (ByteType)
+          goBuffD ∷ Maybe a1 → Bool → Frame () () (ByteType)
               → Vec (BitSize a1 `Div` ByteSize) (ByteType)
           goBuffD _ _ (Start _ y) = y +>> (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
           goBuffD _ _ (Middle y) = y +>> buffD
           goBuffD _ _ (End _ y) = y +>> buffD
           goBuffD _ _ _ = buffD
-          goFrame ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
-              →  Frame () e (BitVector ByteSize)
+          goFrame ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool → Bool
+              →  Frame () () (BitVector ByteSize)
           goFrame (Just x) True _ False False = NoData 
           goFrame _ _ _ True _ 
             | idxC == maxBound = Start () (buffC !! 0)
@@ -333,17 +325,17 @@ serializePrepend inputC inputD
             | idxC == 1 = Middle (buffC !! 0) --NoData -- Middle 0xff
           goFrame _ _ _ False True 
             | endD, idxD /= 0      = Middle (buffD !! (satPred SatBound idxD))
-            | endD, idxD == 0      = End neval (buffD !! (satPred SatBound idxD))
-            | otherwise = End neval (buffD !! (satPred SatBound idxD))
+            | endD, idxD == 0      = End () (buffD !! (satPred SatBound idxD))
+            | otherwise = End () (buffD !! (satPred SatBound idxD))
           goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
           goFrame _ _ (Start _ y) _ _ = Middle 0xe6
           goFrame _ _ (Middle y)  _ _ = Middle 0xe7
-          goFrame (Just x) True (End e y) _ _  = End neval 0xe8
+          goFrame (Just x) True (End () y) _ _  = End () 0xe8
           goFrame _ _  Idle _ _                = Idle
           goFrame _ _ NoData _ _    = NoData
           goFrame _ _ _ _ _ = NoData
 
-          goBusyC ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool
+          goBusyC ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool
               → Bool
           goBusyC _ _ _ True 
             | idxC /= 1 = True
@@ -352,14 +344,14 @@ serializePrepend inputC inputD
           goBusyC (Just x) False _ _= False
           goBusyC _ _ _ _= busyC
           
-          goBusyD ∷ Maybe a1 → Bool → Frame () e (ByteType) → Bool
+          goBusyD ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool
               → Bool
           goBusyD _ _ _ True 
             | idxD /= 0 = True
             | idxD == 0 = False
           goBusyD _ _ (Start _ _) _= True
           goBusyD _ _ _ _= busyD
-          goEndD ∷  Maybe a1 → Bool → Frame () e (ByteType) → Bool → Bool
+          goEndD ∷  Maybe a1 → Bool → Frame () () (ByteType) → Bool → Bool
               → Bool
           goEndD _ _ (End _ _) _ _ = True
           goEndD _ _ (Start _ _) _ _ = False
