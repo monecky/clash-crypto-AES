@@ -1,9 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 module Test.Clash.Crypto.MAC.HMAC where
 
-import Clash.Prelude
+import Clash.Prelude hiding (init, length, (!!), foldr, map)
 import Clash.Signal.Channel
 import Clash.Signal.DataStream
 
@@ -29,11 +32,31 @@ import qualified "cryptohash" Crypto.MAC.HMAC as Spec
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 
+
+import Test.Tasty
+
+import Control.Monad.IO.Class (liftIO)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import System.Process (readProcess)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Base16 as B16
+import Data.ByteString.Base16
+import Data.Proxy
+import GHC.TypeLits
+-- import Crypto.Hash (CryptoHash)
+-- import SHA (SHA, KnownSHA(..), SHAFacts(..), BlockSize)
+-- import Utils (natToNum)
 tastyTests :: TestTree
 tastyTests =
   testGroup "Test.Clash.Crypto.MAC.HMAC"
     [ testProperty "Contiguous Input"     $ testHmacHedgehog @SHA256 True
     , testProperty "Non-contiguous Input" $ testHmacHedgehog @SHA256 False
+    , testProperty "SHA256 matches" $ property $ do
+      key <- forAll (Gen.bytes (Range.linear 1 32))
+      msg <- forAll (Gen.bytes (Range.linear 1 512))
+      prop_hmac_python_matches_ref @SHA256 key msg
     ]
 
 testHmacHedgehog ::
@@ -130,6 +153,14 @@ hmacImpl (keySpacings, msgSpacings) (keyData, msgData)
         $ fromList hmacTestInput
     in
       BS.pack $ toList $ unpack <$> output
+prop_hmac_python_matches_ref ::
+  forall alg. (KnownSHA alg, CryptoHash alg) =>
+  ByteString -> ByteString -> PropertyT IO ()
+prop_hmac_python_matches_ref key msg = do
+    let input = (key, msg)
+    ref    <- liftIO (pure $ hmacRefImpl @alg input)
+    python <- liftIO (hmacRefImplPython @alg input)
+    ref === python
 
 hmacRefImpl ::
   forall (alg :: SHA).
@@ -139,3 +170,34 @@ hmacRefImpl ::
 hmacRefImpl (key, msg)
   | SHAFacts alg <- knownSHA @alg
   = Spec.hmac (cryptoHash alg) (natToNum @(BlockSize alg `Div` 8)) key msg
+
+
+-- Convert ByteString to hex for safe CLI passing
+bsToHex :: ByteString -> String
+bsToHex = BC.unpack . B16.encode
+
+hexToBs :: String -> ByteString
+hexToBs s =
+  case B16.decode (BC.pack s) of
+    Right bs -> bs
+    Left err -> error ("hexToBs: invalid hex input: " <> err)
+
+hmacRefImplPython ::
+  forall alg. (KnownSHA alg, CryptoHash alg) =>
+  (ByteString, ByteString) -> IO ByteString
+hmacRefImplPython (key, msg)
+  | SHAFacts alg <- knownSHA @alg =
+      let digestName = "sha256"--show alg              -- e.g. "sha256"
+          blockSize  = show (natToNum @(BlockSize alg `Div` 8))
+      in do
+          outputHex ∷ String <- readProcess
+              "python3"
+              [ "hmac_worker.py"
+              , bsToHex key
+              , bsToHex msg
+              , digestName
+              , blockSize
+              ]
+              ""
+          pure (hexToBs (List.init outputHex))   -- init: remove newline
+
