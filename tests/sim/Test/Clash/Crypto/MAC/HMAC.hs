@@ -199,19 +199,19 @@ hexToBs s =
     Left err -> error ("hexToBs: invalid hex input: " <> err)
 
 hmacRefImplPython ::
-  forall alg. (KnownSHA alg, CryptoHash alg) => String → 
-  (ByteString, ByteString) -> IO ByteString
+  forall alg. (KnownSHA alg, CryptoHash alg) =>
+  String -> (ByteString, ByteString) -> IO ByteString
 hmacRefImplPython sha (key, msg)
   | SHAFacts alg <- knownSHA @alg =
       let digestName = sha
       in do
-          outputHex ∷ String <- readProcess
+          outputHex <- readProcess
               "python3"
-              [ "hmac_worker.py"
+              [ "tests/sim/Test/Clash/Crypto/MAC/hmac_worker.py"
               , bsToHex key
               , bsToHex msg
               , digestName
               ]
               ""
-          pure (hexToBs (List.init outputHex))   -- init: remove newline
+          pure (hexToBs (List.init outputHex))
 
