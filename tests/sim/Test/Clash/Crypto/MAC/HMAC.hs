@@ -204,7 +204,6 @@ hmacRefImplPython ::
 hmacRefImplPython sha (key, msg)
   | SHAFacts alg <- knownSHA @alg =
       let digestName = sha
-          blockSize  = show (natToNum @(BlockSize alg `Div` 8))
       in do
           outputHex ∷ String <- readProcess
               "python3"
@@ -212,7 +211,6 @@ hmacRefImplPython sha (key, msg)
               , bsToHex key
               , bsToHex msg
               , digestName
-              , blockSize
               ]
               ""
           pure (hexToBs (List.init outputHex))   -- init: remove newline
