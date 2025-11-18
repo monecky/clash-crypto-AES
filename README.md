@@ -26,8 +26,8 @@ source test/bin/activate
 pip3 install slh-dsa
 ``` 
 6. **Using this Python environment inside a Nix shell:**
-    1. First, enter the Nix environment:`bash nix develop`
+    1. First, enter the Nix environment:`nix develop`
 
-    2. Then activate the Python virtual environment: `bash source test/bin/activate`
+    2. Then activate the Python virtual environment: `source test/bin/activate`
 
 Now you can run `cabal test simulation` and it will use the Python reference implementation correctly.
