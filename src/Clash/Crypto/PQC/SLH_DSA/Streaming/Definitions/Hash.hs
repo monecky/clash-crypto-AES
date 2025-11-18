@@ -63,8 +63,8 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
         -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
         , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
         , Rewrite ← using @(ModTimes (N alg + N alg) ByteSize)
-            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD))))
-                where
+            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD)))) 
+            where
                 transfer = fmap go inputC
                 makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg -- N alg * ByteSize == 16*8 = 128 while SHA 256 == 256
                 makeOutput output 
@@ -357,4 +357,102 @@ serializePrepend inputC inputD
           goEndD _ _ (Start _ _) _ _ = False
           goEndD _ _ _ _ _ = endD
   neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash.HMAC.serializeEn: Mealy"
+transferToC ∷ ∀ a n dom. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
+            ⇒ DataStream dom () () (BitVector n) → Channel dom a 
+transferToC = channel . mealy (~~>) 
+    -- Starting state
+    (repeat 0x0 ∷ Vec (BitSize a `Div` n) (BitVector n)
+    , 0 ∷ Index ((BitSize a `Div` n) + 1) 
+    , Clear
+    )
+    where
+      (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+              ⇒  ( -- Current state
+                  Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
+                  , Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  , ProviderAction
+                  ) 
+              → (Frame () () (BitVector n1)) 
+              → ( -- Next state
+                  (Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
+                  , Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  ,ProviderAction
+                  )
+                  -- Output
+                , (a1, ProviderAction))
+      (~~>) state@(vObject, counter, prevProviderAction) frame = ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction), ((unpacked (goBuff frame counter)), (goProviderAction frame counter prevProviderAction)))
+        where 
+          goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
+          goBuff (Start _ x) idx = vObject <<+ x
+          goBuff (Middle x) idx
+            | idx /= 1, idx /= 0 = vObject <<+ x
+            | otherwise = vObject
+          goBuff (End _ x) idx
+            | idx == 2 = vObject <<+ x
+            | otherwise = vObject -- vObject <<+ x -- In case an End frame was send earlier
+          goBuff _ _ = vObject
+          goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
+          goIdx (Start _ _) idx = maxBound
+          goIdx (Middle _) idx       = satPred SatBound idx
+          goIdx (End _ _) idx       = satPred SatBound idx
+          goIdx _ idx       = idx
+          goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
+          goProviderAction (Start _ x) _ _ = Clear
+          goProviderAction (Middle x) idx prev
+            | idx == 2 = Release
+            | idx == 1 = Keep
+            | idx == 0 = Keep
+            | otherwise = prev
+          goProviderAction (End _ x) _  _= Release
+          goProviderAction Idle _ _ = Clear
+          goProviderAction NoData _ _ = Clear
+      unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
+      unpacked 
+        | Rewrite ← using @(DivTimes (BitSize a) n)
+        , Rewrite ← using @(CancelMultiple (BitSize a) n)
+        = unpack . concatBitVector#
+      neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
+-- Ignores the Div BitSize a n frames and continures from there
+transferToD ∷ ∀ a n dom. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
+            ⇒ DataStream dom () () (BitVector n) → DataStream dom () () (BitVector n) 
+transferToD = mealy  ((~~>) @a @n)
+    -- Starting state
+    ( 0 ∷ Index ((BitSize a `Div` n) + 1) 
+    , False
+    )
+    where
+      (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) ⇒  ( -- Current state
+                  Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  , Bool
+                  ) 
+              → Frame () () (BitVector n1) 
+              → ( -- Next state
+                  (Index ((BitSize a1 `Div` n1) + 1) -- Counter
+                  , Bool
+                  )
+                  -- Output
+                , Frame () () (BitVector n1))
+      (~~>) state@(counter, isStarted) frame = ((goIdx @a1 @n1 frame counter, (counter == 2) && (goIdx @a1 @n1 frame counter == 1)), (goFrame @a1 @n1 frame counter isStarted))
+        where 
+          goFrame ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+              ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Bool → Frame () () (BitVector n1)
+          goFrame (Start _ x) idx isStarted
+            | natToNum @( BitSize a1 `Div` n1 ) == 0  = Start () 0xff
+            | otherwise  = NoData
+          goFrame (Middle x) idx isStarted
+            | idx /= 1  = Middle x
+            | idx == 1  = Start () x
+            | otherwise = Idle
+          goFrame (End _ x) idx isStarted = End () x
+          goFrame NoData idx isStarted = NoData
+          goFrame Idle idx isStarted = Idle
+          goIdx ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
+              ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
+          goIdx (Start _ _) idx      = maxBound
+          goIdx (Middle _) idx       
+            | idx /= 0 = satPred SatBound idx
+            | otherwise = idx
+          goIdx (End _ _) idx        = satPred SatBound idx
+          goIdx _ idx                = idx
+      neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
 

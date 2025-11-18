@@ -49,10 +49,15 @@ def findShaObject(strFunction):
 def calculateResult(strFunction, input1, version):
     match (strFunction):
         case "PRFmsg":
-            sk_prf = input1[0]
-            opt_rand = input1[1]
-            msg = input1[2]
+            sk_prf = input1[:version.n]
+            opt_rand = input1[version.n:version.n + version.n]
+            msg = input1[version.n + version.n:]
             return version.PRFmsg(sk_prf, opt_rand, msg)
+        case "PRFmsgthr":
+            sk_prf = input1[:version.n]
+            opt_rand = input1[version.n:version.n + version.n]
+            msg = input1[version.n + version.n:]
+            return input1[:len(version.PRFmsg(sk_prf, opt_rand, msg))]
         case "Hmsg":
             sk_prf = input1[0]
             opt_rand = input1[1]
@@ -60,14 +65,14 @@ def calculateResult(strFunction, input1, version):
             refResult = version.Hmsg(sk_prf, opt_rand, msg)
             return version.Hmsg
         case "PRF":
-            pkSeed = input1[0]
-            cmp_adrs = input1[2]
-            sk_seed = input1[1]
+            pkSeed = input1[:version.n]
+            sk_seed = input1[version.n:version.n + version.n]
+            cmp_adrs = input1[version.n + version.n:]
             return trunc(sha256(pkSeed + b"\x00" * (64 - version.n) + cmp_adrs + sk_seed).digest(), version.n)
         case "Tl":
-            pkSeed = input1[0]
-            cmp_adrs = input1[1]
-            m = input1[2]
+            pkSeed = input1[:version.n]
+            cmp_adrs = input1[version.n:version.n + 22]
+            m = input1[version.n + 22:]
             return trunc(sha256(pkSeed + b"\x00" * (64 - version.n) + cmp_adrs + m).digest(), version.n)
         case "H":
             pkSeed = input1[:version.n]

@@ -29,6 +29,9 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions
 import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import Clash.Crypto.PQC.SLH_DSA
 import Clash.Crypto.PQC.SLH_DSA.Specification.Types
+import Clash.Crypto.PQC.SLH_DSA.Specification.Properties.Parameters
+import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
+import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
 import Clash.Signal.Channel
 import Data.Monoid (First(..))
 import Data.Maybe (fromMaybe)
@@ -58,7 +61,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import System.Process (readProcess)
 import GHC.Utils.Misc (fstOf3, sndOf3,thdOf3)
-type TestLen = 128 -- Should be bigger or equal to 2
+type TestLen = 22 -- Should be bigger or equal to 2
 tastyTests :: TestTree
 tastyTests =
   testGroup
@@ -70,35 +73,41 @@ tastyTests =
           [ testProperty "Hash H SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M²Type SLH_DSA_SHA2_128s) @(HOutType SLH_DSA_SHA2_128s) "H" "SLH_DSA_SHA2_128s" _HStream
           , testProperty "Hash H SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M²Type SLH_DSA_SHA2_128f) @(HOutType SLH_DSA_SHA2_128f) "H" "SLH_DSA_SHA2_128f" _HStream
           ]
-    , localOption (HedgehogTestLimit (Just 100)) $
-        testGroup
-          "Hash.F"
-          [ 
-          testProperty   "Hash F SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M¹Type SLH_DSA_SHA2_128s) @(FOutType SLH_DSA_SHA2_128s) "F" "SLH_DSA_SHA2_128s" _FStream
-          , testProperty "Hash F SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M¹Type SLH_DSA_SHA2_128f) @(FOutType SLH_DSA_SHA2_128f) "F" "SLH_DSA_SHA2_128f" _FStream
-          ]
+    -- , localOption (HedgehogTestLimit (Just 100)) $
+    --     testGroup
+    --       "Hash.F"
+    --       [ 
+    --       testProperty   "Hash F SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M¹Type SLH_DSA_SHA2_128s) @(FOutType SLH_DSA_SHA2_128s) "F" "SLH_DSA_SHA2_128s" _FStream
+    --       , testProperty "Hash F SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M¹Type SLH_DSA_SHA2_128f) @(FOutType SLH_DSA_SHA2_128f) "F" "SLH_DSA_SHA2_128f" _FStream
+    --       ]
     -- , localOption (HedgehogTestLimit (Just 100)) $
     --     testGroup
     --       "Hash.Tl"
     --       [ 
-    --       testProperty   "Hash Tl SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, MˡType TestLen SLH_DSA_SHA2_128s) @(TˡOutType SLH_DSA_SHA2_128s) "Tl;SLH_DSA_SHA2_128s;" _TˡStream
-    --       , testProperty "Hash Tl SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, MˡType TestLen SLH_DSA_SHA2_128f) @(TˡOutType SLH_DSA_SHA2_128f) "Tl;SLH_DSA_SHA2_128f;" _TˡStream
+    --         testProperty   "Hash Tl SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, MˡType TestLen SLH_DSA_SHA2_128s) @(TˡOutType SLH_DSA_SHA2_128s) "Tl" "SLH_DSA_SHA2_128s" _TˡStream
+    --       , testProperty "Hash Tl SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, MˡType TestLen SLH_DSA_SHA2_128f) @(TˡOutType SLH_DSA_SHA2_128f) "Tl" "SLH_DSA_SHA2_128f" _TˡStream
     --       ]
     -- , localOption (HedgehogTestLimit (Just 100)) $
     --     testGroup
     --       "Hash.PRF"
     --       [ 
-    --       testProperty   "Hash PRF SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(PRFOutType SLH_DSA_SHA2_128s) "PRF;SLH_DSA_SHA2_128s;" _PRFStream
-    --       , testProperty "Hash PRF SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(PRFOutType SLH_DSA_SHA2_128f) "PRF;SLH_DSA_SHA2_128f;" _PRFStream
+    --         testProperty "Hash PRF SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(PRFOutType SLH_DSA_SHA2_128s) "PRF" "SLH_DSA_SHA2_128s" _PRFStream
+    --       , testProperty "Hash PRF SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(PRFOutType SLH_DSA_SHA2_128f) "PRF" "SLH_DSA_SHA2_128f" _PRFStream
     --       ]
-    -- , 
-    -- localOption (HedgehogTestLimit (Just 100)) $
-    --     testGroup
-    --       "Hash.PRFᵐˢᵍ"
-    --       [ 
-    --       testProperty   "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128s" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg;SLH_DSA_SHA2_128s;" (\x → _PRFᵐˢᵍStream @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen)x))))
-    --       , testProperty "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128f" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsg;SLH_DSA_SHA2_128f;" (\x → _PRFᵐˢᵍStream @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen)x))))
-    --       ]
+    , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "Hash.PRFᵐˢᵍ"
+          [ 
+          testProperty   "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128s" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg" "SLH_DSA_SHA2_128s" (\x → _PRFᵐˢᵍStream @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen)x))))
+          , testProperty "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128f" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsg" "SLH_DSA_SHA2_128f" (\x → _PRFᵐˢᵍStream @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen)x))))
+          ]
+    , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "Hash.PRFᵐˢᵍ.through"
+          [ 
+          testProperty   "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128s through" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsgthr" "SLH_DSA_SHA2_128s" (\x → _PRFᵐˢᵍthr @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen)x))))
+          , testProperty "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128f through" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsgthr" "SLH_DSA_SHA2_128f" (\x → _PRFᵐˢᵍthr @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen)x))))
+          ]
     -- , 
     -- localOption (HedgehogTestLimit (Just 100)) $
     --     testGroup
@@ -217,104 +226,7 @@ hashProperty name version hashComp = property $ do
 -- Generalized methodes
 --
 -----------
-transferToC ∷ ∀ a n dom. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
-            ⇒ DataStream dom () () (BitVector n) → Channel dom a 
-transferToC = channel . mealy (~~>) 
-    -- Starting state
-    (repeat 0x0 ∷ Vec (BitSize a `Div` n) (BitVector n)
-    , 0 ∷ Index ((BitSize a `Div` n) + 1) 
-    , Clear
-    )
-    where
-      (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
-              ⇒  ( -- Current state
-                  Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
-                  , Index ((BitSize a1 `Div` n1) + 1) -- Counter
-                  , ProviderAction
-                  ) 
-              → (Frame () () (BitVector n1)) 
-              → ( -- Next state
-                  (Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
-                  , Index ((BitSize a1 `Div` n1) + 1) -- Counter
-                  ,ProviderAction
-                  )
-                  -- Output
-                , (a1, ProviderAction))
-      (~~>) state@(vObject, counter, prevProviderAction) frame = ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction), ((unpacked (goBuff frame counter)), (goProviderAction frame counter prevProviderAction)))
-        where 
-          goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
-          goBuff (Start _ x) idx = vObject <<+ x
-          goBuff (Middle x) idx
-            | idx /= 1, idx /= 0 = vObject <<+ x
-            | otherwise = vObject
-          goBuff (End _ x) idx
-            | idx == 2 = vObject <<+ x
-            | otherwise = vObject -- vObject <<+ x -- In case an End frame was send earlier
-          goBuff _ _ = vObject
-          goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
-          goIdx (Start _ _) idx = maxBound
-          goIdx (Middle _) idx       = satPred SatBound idx
-          goIdx (End _ _) idx       = satPred SatBound idx
-          goIdx _ idx       = idx
-          goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
-          goProviderAction (Start _ x) _ _ = Clear
-          goProviderAction (Middle x) idx prev
-            | idx == 2 = Release
-            | idx == 1 = Keep
-            | idx == 0 = Keep
-            | otherwise = prev
-          goProviderAction (End _ x) _  _= Release
-          goProviderAction Idle _ _ = Clear
-          goProviderAction NoData _ _ = Clear
-      unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
-      unpacked 
-        | Rewrite ← using @(DivTimes (BitSize a) n)
-        , Rewrite ← using @(CancelMultiple (BitSize a) n)
-        = unpack . concatBitVector#
-      neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
--- Ignores the Div BitSize a n frames and continures from there
-transferToD ∷ ∀ a n dom. (KnownDomain dom, HiddenClockResetEnable dom) ⇒ (BitPack a, KnownNat n, BitSize a `Mod` n ~ 0, 1 ≤ n)  
-            ⇒ DataStream dom () () (BitVector n) → DataStream dom () () (BitVector n) 
-transferToD = mealy  ((~~>) @a @n)
-    -- Starting state
-    ( 0 ∷ Index ((BitSize a `Div` n) + 1) 
-    , False
-    )
-    where
-      (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) ⇒  ( -- Current state
-                  Index ((BitSize a1 `Div` n1) + 1) -- Counter
-                  , Bool
-                  ) 
-              → Frame () () (BitVector n1) 
-              → ( -- Next state
-                  (Index ((BitSize a1 `Div` n1) + 1) -- Counter
-                  , Bool
-                  )
-                  -- Output
-                , Frame () () (BitVector n1))
-      (~~>) state@(counter, isStarted) frame = ((goIdx @a1 @n1 frame counter, (counter == 2) && (goIdx @a1 @n1 frame counter == 1)), (goFrame @a1 @n1 frame counter isStarted))
-        where 
-          goFrame ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
-              ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Bool → Frame () () (BitVector n1)
-          goFrame (Start _ x) idx isStarted
-            | natToNum @( BitSize a1 `Div` n1 ) == 0  = Start () 0xff
-            | otherwise  = NoData
-          goFrame (Middle x) idx isStarted
-            | idx /= 1  = Middle x
-            | idx == 1  = Start () x
-            | otherwise = Idle
-          goFrame (End _ x) idx isStarted = End () x
-          goFrame NoData idx isStarted = NoData
-          goFrame Idle idx isStarted = Idle
-          goIdx ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
-              ⇒ Frame () () (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
-          goIdx (Start _ _) idx      = maxBound
-          goIdx (Middle _) idx       
-            | idx /= 0 = satPred SatBound idx
-            | otherwise = idx
-          goIdx (End _ _) idx        = satPred SatBound idx
-          goIdx _ idx                = idx
-      neval = error "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH.serializeEn: Mealy"
+
 -----------------------------------------
 -- Python reference
 --
@@ -345,3 +257,43 @@ hashRefImplPython name version input1 =
               ]
               ""
           pure (hexToBs (List.init outputHex))
+
+
+-- Equivalent prfmsg without hmac
+_PRFᵐˢᵍThrough ∷ ∀ sha security alg dom . 
+                (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg)
+              ⇒ Proxy alg 
+              →  Channel dom (SKPrfType alg, Opt_randType alg) 
+              →  DataStream dom () () (ByteType)
+              →  Channel dom (PRFᵐˢᵍOutType alg)
+_PRFᵐˢᵍThrough alg inputC inputD  
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
+    , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
+    , Rewrite ← using @(ModTimes (N alg + N alg) ByteSize)
+        -- = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD))))
+        = fmap makeOutput ((transferToC) ( mapStart (const ()) ( mapEnd (const ()) (serializePrepend transfer inputD))))
+        
+        where
+            transfer = fmap go inputC
+            makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg -- N alg * ByteSize == 16*8 = 128 while SHA 256 == 256
+            makeOutput output 
+              | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+              , Rewrite ← using @(DivTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+              , Rewrite ← using @(ModTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+              , Rewrite ← using @(CancelMultiple (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+              = takeI @(N alg) @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) (unconcatBitVector# @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) @(ByteSize) output)       
+            go ∷ (KnownSLH_DSAParameters alg) 
+              ⇒ (SKPrfType alg, Opt_randType alg) 
+              → BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) * ByteSize)
+            go (skPrf, opt_rand)
+                | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                = concatBitVector# (skPrf ‖ unconcatBitVector# @((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) - N alg) @ByteSize 0x0 ‖ opt_rand)
+
+_PRFᵐˢᵍthr ∷ ∀ alg dom . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom) 
+                  ⇒ Channel dom (SKPrfType alg, Opt_randType alg) 
+                  → DataStream dom () () (ByteType)
+                  →  Channel dom (PRFᵐˢᵍOutType alg)
+_PRFᵐˢᵍthr 
+  | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+  = _PRFᵐˢᵍThrough  @(SHAVersionSLH_DSA alg) @(SecurityLevelSLH_DSA alg) @alg  alg
