@@ -108,6 +108,13 @@ tastyTests =
           testProperty   "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128s through" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsgthr" "SLH_DSA_SHA2_128s" (\x → _PRFᵐˢᵍthr @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen)x))))
           , testProperty "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128f through" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128f) "PRFmsgthr" "SLH_DSA_SHA2_128f" (\x → _PRFᵐˢᵍthr @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen)x))))
           ]
+   , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "Hash.PRFᵐˢᵍ.Fthrough"
+          [ 
+          testProperty   "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128s Fthrough" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) @(BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA SLH_DSA_SHA2_128s)) ByteSize + N SLH_DSA_SHA2_128s) * ByteSize)) "PRFmsgFthr" "SLH_DSA_SHA2_128s" (\x → _PRFᵐˢᵍFthr @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen)x))))
+          , testProperty "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128f Fthrough" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) @(BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA SLH_DSA_SHA2_128f)) ByteSize + N SLH_DSA_SHA2_128f) * ByteSize)) "PRFmsgFthr" "SLH_DSA_SHA2_128f" (\x → _PRFᵐˢᵍFthr @SLH_DSA_SHA2_128f (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128f, Opt_randType SLH_DSA_SHA2_128f, MType TestLen)x))))
+          ]
     -- , 
     -- localOption (HedgehogTestLimit (Just 100)) $
     --     testGroup
@@ -297,3 +304,43 @@ _PRFᵐˢᵍthr ∷ ∀ alg dom . (KnownSLH_DSAParameters alg, SLH_DSA_hashStrea
 _PRFᵐˢᵍthr 
   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
   = _PRFᵐˢᵍThrough  @(SHAVersionSLH_DSA alg) @(SecurityLevelSLH_DSA alg) @alg  alg
+
+
+_PRFᵐˢᵍFThrough ∷ ∀ sha security alg dom . 
+                (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg)
+              ⇒ Proxy alg 
+              →  Channel dom (SKPrfType alg, Opt_randType alg) 
+              →  DataStream dom () () (ByteType)
+              →  Channel dom (BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) * ByteSize) )
+_PRFᵐˢᵍFThrough alg inputC inputD  
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
+    , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
+    , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg + N alg) ByteSize)
+    , Rewrite ← using @(ModTimes (N alg + N alg) ByteSize)
+        -- = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD))))
+        = ((transferToC) ( mapStart (const ()) ( mapEnd (const ()) (serializePrepend transfer inputD))))
+        
+        where
+            transfer = fmap go inputC
+            makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg -- N alg * ByteSize == 16*8 = 128 while SHA 256 == 256
+            makeOutput output 
+              | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+              , Rewrite ← using @(DivTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+              , Rewrite ← using @(ModTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+              , Rewrite ← using @(CancelMultiple (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
+              = takeI @(N alg) @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize - N alg) (unconcatBitVector# @(Div (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) @(ByteSize) output)       
+            go ∷ (KnownSLH_DSAParameters alg) 
+              ⇒ (SKPrfType alg, Opt_randType alg) 
+              → BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) * ByteSize)
+            go (skPrf, opt_rand)
+                | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                = concatBitVector# (skPrf ‖ unconcatBitVector# @((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize) - N alg) @ByteSize 0x0 ‖ opt_rand)
+
+_PRFᵐˢᵍFthr ∷ ∀ alg dom . (KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg, KnownDomain dom, HiddenClockResetEnable dom) 
+                  ⇒ Channel dom (SKPrfType alg, Opt_randType alg) 
+                  → DataStream dom () () (ByteType)
+                  →  Channel dom (BitVector ((Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) * ByteSize) )
+_PRFᵐˢᵍFthr 
+  | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+  = _PRFᵐˢᵍFThrough  @(SHAVersionSLH_DSA alg) @(SecurityLevelSLH_DSA alg) @alg  alg

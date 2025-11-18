@@ -58,6 +58,12 @@ def calculateResult(strFunction, input1, version):
             opt_rand = input1[version.n:version.n + version.n]
             msg = input1[version.n + version.n:]
             return input1[:len(version.PRFmsg(sk_prf, opt_rand, msg))]
+        case "PRFmsgFthr":
+            sk_prf = input1[:version.n]
+            sk_prf = sk_prf + b'\x00' * (64 - version.n )
+            opt_rand = input1[version.n:version.n + version.n]
+            msg = input1[version.n + version.n:]
+            return sk_prf + opt_rand #+ msg
         case "Hmsg":
             sk_prf = input1[0]
             opt_rand = input1[1]

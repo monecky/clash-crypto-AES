@@ -324,8 +324,8 @@ serializePrepend inputC inputD
             | idxC /= 1 = Middle (buffC !! 0)
             | idxC == 1 = Middle (buffC !! 0) --NoData -- Middle 0xff
           goFrame _ _ _ False True 
-            | endD, idxD /= 0      = Middle (buffD !! (satPred SatBound idxD))
-            | endD, idxD == 0      = End () (buffD !! (satPred SatBound idxD))
+            | endD, idxD /= 1      = Middle 0x44 -- (buffD !! (satPred SatBound idxD))
+            | endD, idxD == 1      = End () 0x55 --(buffD !! (satPred SatBound idxD))
             | otherwise = End () (buffD !! (satPred SatBound idxD))
           goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
           goFrame _ _ (Start _ y) _ _ = Middle 0xe6
