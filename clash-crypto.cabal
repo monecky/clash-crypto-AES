@@ -178,6 +178,7 @@ test-suite simulation
     -- HMAC
     , process >= 1.6.19.0
     , base16-bytestring >= 1.0.2.0
+    , ghc-lib-parser >= 9.12.2.20250421
     --
     , crypton >= 1.0.4
     ---

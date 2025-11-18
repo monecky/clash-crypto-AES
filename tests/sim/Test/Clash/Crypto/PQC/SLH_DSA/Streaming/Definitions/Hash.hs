@@ -57,7 +57,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import System.Process (readProcess)
-
+import GHC.Utils.Misc (fstOf3, sndOf3,thdOf3)
 type TestLen = 128 -- Should be bigger or equal to 2
 tastyTests :: TestTree
 tastyTests =
@@ -172,23 +172,31 @@ tastyTests =
 
 
 type HashComponent a b dom =
- HiddenClockResetEnable dom =>
+ (HiddenClockResetEnable dom
+  , Mod (BitSize a) ByteSize ~ 0
+  , Mod (BitSize b) ByteSize ~ 0
+  , (Div (BitSize a) ByteSize) * ByteSize ~ (BitSize a)
+  , (Div (BitSize b) ByteSize) * ByteSize ~ (BitSize b)) =>
  Channel dom (a) ->
  Channel dom (b)
 
-hashProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b) ⇒ String → String → KnownDomain System => HashComponent a b System -> Property
+hashProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b
+ , Mod (BitSize a) ByteSize ~ 0
+  , Mod (BitSize b) ByteSize ~ 0
+  , (Div (BitSize a) ByteSize) * ByteSize ~ (BitSize a)
+  , (Div (BitSize b) ByteSize) * ByteSize ~ (BitSize b)
+  ) ⇒ String → String → KnownDomain System => HashComponent a b System -> Property
 hashProperty name version hashComp = property $ do
   f <- forAll $ genDefinedBitVector 
   let f' = compute $ unpack f
   liftIO $
         appendFile "hash_test_results.csv"
           (List.intercalate "," [name, version, show (pack f), show (pack f')] <> "\n")
-  input1 <- channelToByteString (fstOf3C f)
-  input2 <- channelToByteString (sndOf3C f)
-  input3 <- channelToByteString (thdOf3C f)
-  python <- liftIO $ hashRefImplPython name version input1 input2 input3
+  let input1 = bv2ByteString @a (unpack f)
+
+  python <- liftIO $ hashRefImplPython name version input1
   -- Just to satisfy the test environment.
-  pack f' === python
+  bv2ByteString (pack f') === python
  where
   moduloError =
     error "Since the modulo of the field is prime, the inverse always exists."
@@ -205,109 +213,6 @@ hashProperty name version hashComp = property $ do
     $ fromList
     $ Keep : Keep : Release : List.repeat Keep
 
-hmacProperty ::  KnownDomain System => String → (HiddenClockResetEnable System =>  
- Channel System (BitVector (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA SLH_DSA_SHA2_128s)), MType TestLen) ->
- Channel System (Digest (SHAVersionPRFᵐˢᵍSLH_DSA SLH_DSA_SHA2_128s)) ) -> Property
-hmacProperty name hashComp = property $ do
-  f <- forAll $ genDefinedBitVector 
-  let f' = compute $ unpack f
-  liftIO $
-        appendFile "hash_test_results.csv"
-          (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
-  -- Just to satisfy the test environment.
-  pack f' === pack f'
- where
-  moduloError =
-    error "Since the modulo of the field is prime, the inverse always exists."
-  compute input
-    = fromMaybe (error "The returned list was empty")
-    $ getFirst
-    $ foldMap First
-    $ sampleN @System 10000000
-    $ withClockResetEnable @System clockGen resetGen enableGen
-    $ newsfeed
-    $ hashComp
-    $ channel
-    $ fmap (input, )
-    $ fromList
-    $ Keep : Keep : Release : List.repeat Keep
-
-transferToCEqualProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, a~b) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
-transferToCEqualProperty name hashComp = property $ do
-  f <- forAll $ genDefinedBitVector 
-  let f' = compute $ unpack f
-  -- liftIO $
-  --       appendFile "hash_test_results.csv"
-  --         (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
-  -- Just to satisfy the test environment.
-  pack f' === f
- where
-  moduloError =
-    error "Since the modulo of the field is prime, the inverse always exists."
-  compute input
-    = fromMaybe (error "The returned list was empty")
-    $ getFirst
-    $ foldMap First
-    $ sampleN @System 10000000
-    $ withClockResetEnable @System clockGen resetGen enableGen
-    $ newsfeed
-    $ hashComp
-    $ channel
-    $ fmap (input, )
-    $ fromList
-    $ Keep : Keep : Release : List.repeat Keep
-transferToCNotEqualProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, BitSize b ≤ BitSize a, BitSize a ~ (BitSize b + (BitSize a - BitSize b))) ⇒ String →  KnownDomain System => HashComponent a b System -> Property
-transferToCNotEqualProperty name hashComp = property $ do
-  f <- forAll $ genDefinedBitVector 
-  let f' = compute $ unpack f
-  -- liftIO $
-  --       appendFile "hash_test_results.csv"
-  --         (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
-  -- Just to satisfy the test environment.
-  (pack f') === ((v2bv . takeI @(BitSize b) . bv2v) f)
- where
-  moduloError =
-    error "Since the modulo of the field is prime, the inverse always exists."
-  compute input
-    = fromMaybe (error "The returned list was empty")
-    $ getFirst
-    $ foldMap First
-    $ sampleN @System 10000000
-    $ withClockResetEnable @System clockGen resetGen enableGen
-    $ newsfeed
-    $ hashComp
-    $ channel
-    $ fmap (input, )
-    $ fromList
-    $ Keep : Keep : Release : List.repeat Keep
-transferToDNotEqualProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b, BitSize b ≤ BitSize a, BitSize a ~ (BitSize b + (BitSize a - BitSize b))) 
-  ⇒ String 
-  →  KnownDomain System 
-  => HashComponent a b System 
-  -> Property
-transferToDNotEqualProperty name hashComp = property $ do
-  f <- forAll $ genDefinedBitVector 
-  let f' = compute $ unpack f
-  -- liftIO $
-  --       appendFile "hash_test_results.csv"
-  --         (List.intercalate "," [name, show (pack f), show (pack f')] <> "\n")
-  -- Just to satisfy the test environment.
-  (pack f') === ((v2bv . dropI @(BitSize a - BitSize b) . bv2v) f)
- where
-  moduloError =
-    error "Since the modulo of the field is prime, the inverse always exists."
-  compute input
-    = fromMaybe (error "The returned list was empty")
-    $ getFirst
-    $ foldMap First
-    $ sampleN @System 10000000
-    $ withClockResetEnable @System clockGen resetGen enableGen
-    $ newsfeed
-    $ hashComp
-    $ channel
-    $ fmap (input, )
-    $ fromList
-    $ Keep : Keep : Release : List.repeat Keep
 ----------
 -- Generalized methodes
 --
@@ -414,6 +319,9 @@ transferToD = mealy  ((~~>) @a @n)
 -- Python reference
 --
 -----------------------------------------
+bv2ByteString ∷ ∀ a . (BitPack a, BitSize a ~ (Div (BitSize a) ByteSize) * ByteSize)
+  ⇒ a → ByteString
+bv2ByteString a = BS.pack $ toList $ unpack <$> (unconcatBitVector# (pack a))
 -- Convert ByteString to hex for safe CLI passing
 bsToHex :: ByteString -> String
 bsToHex = BC.unpack . B16.encode
@@ -424,8 +332,8 @@ hexToBs s =
     Right bs -> bs
     Left err -> error ("hexToBs: invalid hex input: " <> err)
 hashRefImplPython ::
-  String → String -> ByteString → ByteString → ByteString -> IO ByteString
-hashRefImplPython name version input1 input2 input3 =
+  String → String -> ByteString -> IO ByteString
+hashRefImplPython name version input1 =
       let digestName = name
       in do
           outputHex <- readProcess
@@ -434,8 +342,6 @@ hashRefImplPython name version input1 input2 input3 =
               , name
               , version
               , bsToHex input1
-              , bsToHex input2
-              , bsToHex input3
               ]
               ""
           pure (hexToBs (List.init outputHex))
