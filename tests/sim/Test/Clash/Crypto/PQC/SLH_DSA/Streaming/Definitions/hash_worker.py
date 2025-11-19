@@ -63,13 +63,15 @@ def calculateResult(strFunction, input1, version):
             sk_prf = sk_prf + b'\x00' * (64 - version.n )
             opt_rand = input1[version.n:version.n + version.n]
             msg = input1[version.n + version.n:]
-            return sk_prf + opt_rand #+ msg
+            return sk_prf + opt_rand + msg
         case "Hmsg":
-            sk_prf = input1[0]
-            opt_rand = input1[1]
-            msg = input1[2]
-            refResult = version.Hmsg(sk_prf, opt_rand, msg)
-            return version.Hmsg
+            r = input1[:version.n]
+            pk_seed = input1[version.n:2*version.n]
+            pk_root = input1[2*version.n:3* version.n]
+            msg = input1[3*version.n:]
+            if version == sha2_128f:
+                return version.Hmsg(r, pk_seed, pk_root, msg)[:version.m] # As it should be according to the documentation of NIST FIPS 205.
+            return version.Hmsg(r, pk_seed, pk_root, msg)
         case "PRF":
             pkSeed = input1[:version.n]
             sk_seed = input1[version.n:version.n + version.n]

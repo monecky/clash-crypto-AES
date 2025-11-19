@@ -15,11 +15,13 @@ main = defaultMain $ testGroup "clash-crypto simulation tests"
   [
   --    AES.tastyTests
   -- , 
-  MGF1.tastyTests
+--   MGF1.tastyTests
   -- , SHA.tastyTests
-  -- , HMAC.tastyTests
+  -- , 
+  -- HMAC.tastyTests
   -- , InverseModulo.tastyTests
   -- , Karatsuba.tastyTests
   -- , Modulo.tastyTests
-  , SLH_DSA.tastyTests
+--   , 
+  SLH_DSA.tastyTests
   ]

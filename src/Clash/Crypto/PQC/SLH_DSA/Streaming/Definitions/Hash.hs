@@ -63,7 +63,7 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
         -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
         , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
         , Rewrite ← using @(ModTimes (N alg + N alg) ByteSize)
-            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → natToNum @(N alg) ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD)))) 
+            = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → maxBound ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD)))) 
             where
                 transfer = fmap go inputC
                 makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg -- N alg * ByteSize == 16*8 = 128 while SHA 256 == 256
@@ -241,7 +241,7 @@ serializePrepend inputC inputD
       , 0 ∷ Index ((BitSize a `Div` ByteSize) + 1)
       , False
       , repeat neval ∷ Vec (BitSize a `Div` ByteSize) (ByteType)
-      , 0 ∷ Index ((BitSize a `Div` ByteSize) + 1)
+      , 0 ∷ Index ((BitSize a `Div` ByteSize) + 2)
       , False
       , False
       -- , NoData ∷ Frame () (Index n) (BitVector n)
@@ -252,7 +252,7 @@ serializePrepend inputC inputD
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Bool -- Sending stored Channel
         , Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- data stream buffer
-        , Index ((BitSize a1 `Div` ByteSize) + 1) -- data stream pointer
+        , Index ((BitSize a1 `Div` ByteSize) + 2) -- data stream pointer
         , Bool -- Sending stored DataStream
         , Bool -- End combi
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
@@ -263,7 +263,7 @@ serializePrepend inputC inputD
         , Index ((BitSize a1 `Div` ByteSize) + 1) -- channel pointer
         , Bool -- Sending stored Channel
         , Vec (BitSize a1 `Div` ByteSize) (BitVector ByteSize) -- data stream buffer
-        , Index ((BitSize a1 `Div` ByteSize) + 1) -- data stream pointer
+        , Index ((BitSize a1 `Div` ByteSize) + 2) -- data stream pointer
         , Bool -- Sending stored DataStream
         , Bool -- End combi
         -- , Frame () (Index ByteSize) (BitVector ByteSize)
@@ -300,7 +300,7 @@ serializePrepend inputC inputD
           goBuffC Nothing _ _ _ _= (repeat 0x0 ∷ Vec (BitSize a1 `Div` ByteSize) (ByteType))
           goBuffC _ _ _ _ _ = buffC
           goIdxD ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool → Bool
-                   → Index ((BitSize a1 `Div` ByteSize) + 1)
+                   → Index ((BitSize a1 `Div` ByteSize) + 2)
           goIdxD _ _ (Start _ _) _ _   = satSucc SatBound minBound
           goIdxD _ _ NoData _    False = idxD
           goIdxD _ _ Idle   _    False = idxD
@@ -324,15 +324,18 @@ serializePrepend inputC inputD
             | idxC /= 1 = Middle (buffC !! 0)
             | idxC == 1 = Middle (buffC !! 0) --NoData -- Middle 0xff
           goFrame _ _ _ False True 
-            | endD, idxD /= 1      = Middle 0x44 -- (buffD !! (satPred SatBound idxD))
-            | endD, idxD == 1      = End () 0x55 --(buffD !! (satPred SatBound idxD))
-            | otherwise = End () (buffD !! (satPred SatBound idxD))
-          goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
-          goFrame _ _ (Start _ y) _ _ = Middle 0xe6
-          goFrame _ _ (Middle y)  _ _ = Middle 0xe7
-          goFrame (Just x) True (End () y) _ _  = End () 0xe8
-          goFrame _ _  Idle _ _                = Idle
-          goFrame _ _ NoData _ _    = NoData
+            | endD, idxD > 1      = Middle (buffD !! (satPred SatBound idxD))
+            | endD, idxD == 1      = End () (buffD !! (satPred SatBound idxD))
+            -- | endD, idxD == 0      = End () (buffD !! (satPred SatBound idxD))
+            | idxD >= 1            = Middle (buffD !! (satPred SatBound idxD))
+            -- | idxD == 1            = Idle --End () (buffD !! (satPred SatBound idxD))
+            | otherwise = Idle -- End () 0xff --TODO: Here is AN problem End () (buffD !! (satPred SatBound idxD))
+          -- goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
+          -- goFrame _ _ (Start _ y) _ _ = Middle 0xe6
+          -- goFrame _ _ (Middle y)  _ _ = Middle 0xe7
+          -- goFrame (Just x) True (End () y) _ _  = End () 0xe8
+          -- goFrame _ _  Idle _ _                = Idle
+          -- goFrame _ _ NoData _ _    = NoData
           goFrame _ _ _ _ _ = NoData
 
           goBusyC ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool
@@ -347,8 +350,9 @@ serializePrepend inputC inputD
           goBusyD ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool
               → Bool
           goBusyD _ _ _ True 
-            | idxD /= 0 = True
-            | idxD == 0 = False
+            | idxD /= 1 = True
+            | endD, idxD == 1 = False
+            | otherwise = True
           goBusyD _ _ (Start _ _) _= True
           goBusyD _ _ _ _= busyD
           goEndD ∷  Maybe a1 → Bool → Frame () () (ByteType) → Bool → Bool
@@ -364,6 +368,7 @@ transferToC = channel . mealy (~~>)
     (repeat 0x0 ∷ Vec (BitSize a `Div` n) (BitVector n)
     , 0 ∷ Index ((BitSize a `Div` n) + 1) 
     , Clear
+    , True
     )
     where
       (~~>) ∷ ∀ a1 n1 . (BitPack a1, KnownNat n1, BitSize a1 `Mod` n1 ~ 0, 1 ≤ n1) 
@@ -371,16 +376,20 @@ transferToC = channel . mealy (~~>)
                   Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
                   , Index ((BitSize a1 `Div` n1) + 1) -- Counter
                   , ProviderAction
+                  , Bool -- prevent send end twice
                   ) 
               → (Frame () () (BitVector n1)) 
               → ( -- Next state
                   (Vec (BitSize a1 `Div` n1) (BitVector n1) -- PK and addrnd buffer
                   , Index ((BitSize a1 `Div` n1) + 1) -- Counter
                   ,ProviderAction
+                  , Bool
                   )
                   -- Output
                 , (a1, ProviderAction))
-      (~~>) state@(vObject, counter, prevProviderAction) frame = ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction), ((unpacked (goBuff frame counter)), (goProviderAction frame counter prevProviderAction)))
+      (~~>) state@(vObject, counter, prevProviderAction, isEndSend) frame = 
+        ((goBuff frame counter, goIdx frame counter, goProviderAction frame counter prevProviderAction, goisEndSend frame),
+         ((unpacked (goBuff frame counter)), (goProviderAction frame counter prevProviderAction)))
         where 
           goBuff ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Vec (BitSize a1 `Div` n1) (BitVector n1)
           goBuff (Start _ x) idx = vObject <<+ x
@@ -397,15 +406,25 @@ transferToC = channel . mealy (~~>)
           goIdx (End _ _) idx       = satPred SatBound idx
           goIdx _ idx       = idx
           goProviderAction ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → ProviderAction → ProviderAction
-          goProviderAction (Start _ x) _ _ = Clear
+          goProviderAction (Start _ x) _ _ = Keep
           goProviderAction (Middle x) idx prev
             | idx == 2 = Release
             | idx == 1 = Keep
             | idx == 0 = Keep
             | otherwise = prev
-          goProviderAction (End _ x) _  _= Release
-          goProviderAction Idle _ _ = Clear
-          goProviderAction NoData _ _ = Clear
+          goProviderAction (End _ x) _  _
+            | isEndSend = Keep
+            | otherwise = Release
+          goProviderAction Idle _ _ = Keep
+          goProviderAction NoData _ _ = Keep
+          -- Goal to ensure to focus on 1 action at the same time
+          goisEndSend ∷ Frame s e (BitVector n1) → Bool 
+          goisEndSend (Middle x)
+            | counter == 2 = True
+            | otherwise = isEndSend
+          goisEndSend (End _ x) = True
+          goisEndSend (Start _ x) = False
+          goisEndSend _ = isEndSend
       unpacked ∷ ∀ a n . (BitPack a, KnownNat n, 1 ≤ n, Mod (BitSize a) n ~ 0) ⇒ Vec (BitSize a `Div` n) (BitVector n) → a
       unpacked 
         | Rewrite ← using @(DivTimes (BitSize a) n)
