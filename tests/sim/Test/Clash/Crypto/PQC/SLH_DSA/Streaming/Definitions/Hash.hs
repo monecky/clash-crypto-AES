@@ -75,6 +75,27 @@ tastyTests =
           ]
     , localOption (HedgehogTestLimit (Just 100)) $
         testGroup
+          "Hash.F"
+          [ 
+          testProperty   "Hash F SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, M¹Type SLH_DSA_SHA2_128s) @(FOutType SLH_DSA_SHA2_128s) "F" "SLH_DSA_SHA2_128s" _FStream
+          , testProperty "Hash F SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, M¹Type SLH_DSA_SHA2_128f) @(FOutType SLH_DSA_SHA2_128f) "F" "SLH_DSA_SHA2_128f" _FStream
+          ]
+    , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "Hash.Tl"
+          [ 
+          testProperty   "Hash Tl SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, MˡType TestLen SLH_DSA_SHA2_128s) @(TˡOutType SLH_DSA_SHA2_128s) "Tl" "SLH_DSA_SHA2_128s" _TˡStream
+          , testProperty "Hash Tl SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, MˡType TestLen SLH_DSA_SHA2_128f) @(TˡOutType SLH_DSA_SHA2_128f) "Tl" "SLH_DSA_SHA2_128f" _TˡStream
+          ]
+    , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "Hash.PRF"
+          [ 
+          testProperty   "Hash PRF SLH_DSA_SHA2_128s" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(PRFOutType SLH_DSA_SHA2_128s) "PRF" "SLH_DSA_SHA2_128s" _PRFStream
+          , testProperty "Hash PRF SLH_DSA_SHA2_128f" $ hashProperty @(PKSeedType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(PRFOutType SLH_DSA_SHA2_128f) "PRF" "SLH_DSA_SHA2_128f" _PRFStream
+          ]
+    , localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
           "Hash.PRFᵐˢᵍ"
           [ 
           testProperty   "Hash PRFᵐˢᵍ SLH_DSA_SHA2_128s" $ hashProperty @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) @(PRFᵐˢᵍOutType SLH_DSA_SHA2_128s) "PRFmsg" "SLH_DSA_SHA2_128s" (\x → _PRFᵐˢᵍStream @SLH_DSA_SHA2_128s (transferToC (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen) x))) (transferToD @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s) @ByteSize (mapEnd (\y → ()) (serializeHash @ByteSize @(SKPrfType SLH_DSA_SHA2_128s, Opt_randType SLH_DSA_SHA2_128s, MType TestLen)x))))
