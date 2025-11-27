@@ -45,7 +45,7 @@ def check_equal(arr, name):
         print(f"All durations of {name} are equal")
     else:
         print(f"The durations of {name} differ")
-print("")
+print("The .csv is created by exporting the table of data obtained from the Logic 2, and the test is run with `cabal run -- hitlt -p AES`")
 check_equal(AES128, "AES128")
 check_equal(AES192, "AES192")
 check_equal(AES256, "AES256")
