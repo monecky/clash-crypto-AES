@@ -25,6 +25,10 @@ source test/bin/activate
 ```bash
 pip3 install slh-dsa
 ``` 
+5. **Install the Python library `pandas`:** This is for the constant cycle test
+```bash
+pip3 install pandas
+``` 
 6. **Using this Python environment inside a Nix shell:**
     1. First, enter the Nix environment:`nix develop`
 
