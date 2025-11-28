@@ -1,41 +1,72 @@
 import pandas as pd
 import os
-
+# The nessary file paths.
 file_path = "output_times.txt"
-try:
-    os.path.exists(file_path)
-except:
-    print("Run the program in its dedicated folder, or ensure file_path includes the correct path from your current working directory.")
-# Remove the file if it exists
+csv_path = "digital.csv"
+
+# Remove output file if it exists
 if os.path.exists(file_path):
     os.remove(file_path)
     print(f"{file_path} has been removed.")
 else:
     print(f"{file_path} does not exist. It will be created and used accordingly")
-# How many tests per AES algorithm
+
+# Read CSV with datetime column parsed
+df = pd.read_csv(csv_path, parse_dates=["start_time"])
+
+
+start_next = df["start_time"].shift(-1)
+cond = (
+    (df["name"] == "Async Serial [1]") &
+    (df["name"].shift(-1) == "Async Serial")
+)
+
+delta = start_next[cond] - df.loc[cond, "start_time"]
+time_differences = (
+    ((delta / pd.Timedelta(microseconds=0.001))/1000) 
+    .dropna()                             
+    .astype(float)
+    .tolist()
+)
+
+# -------------------------------------------------------------
+# WRITE OUTPUT
+# -------------------------------------------------------------
+with open(file_path, "w") as f:
+    for us in time_differences:
+        f.write(f"{us:.3f}\n")
+
+# -------------------------------------------------------------
+# READ BACK OUTPUT
+# -------------------------------------------------------------
+with open(file_path, "r") as f:
+    time_differences = [float(line.strip()) for line in f if line.strip()]
+
+# -------------------------------------------------------------
+# SPLIT INTO AES TEST GROUPS
+# -------------------------------------------------------------
 number_tests = 100
-df = pd.read_csv("digital.csv")
-time_differences = []
-for index, row in df.iterrows():
-    for next_index, next_row in df.iterrows():
-        if index + 1 == next_index:
-            if row["name"] == "Async Serial [1]":
-                if next_row["name"] == "Async Serial":
-                    delta_us = (next_row['start_time'] - row['start_time']).total_seconds() * 1e6
-                    time_differences.append(delta_us)
-                    with open(file_path, "a") as f:
-                        f.write(f"{delta_us:.3f} µs\n")
 AES128 = time_differences[0:number_tests]
 AES192 = time_differences[number_tests:2*number_tests]
 AES256 = time_differences[2*number_tests:3*number_tests]
+
+# -------------------------------------------------------------
+# CHECK FUNCTION
+# -------------------------------------------------------------
 def check_equal(arr, name):
-    #  First case covers the standard cycle, the other one covers rounding errors regards floating points.
-    if len(set(arr)) == 1 or (len(set(arr)) == 2 and set(arr)[0] in {set(arr)[1] -1,set(arr)[1]+1}) :
-        print(f"All durations of {name} are equal")
-    else:
-        print(f"The durations of {name} differ")
-print("The .csv is created by exporting the table of data obtained from the Logic 2, and the test is run with `cabal run -- hitlt -p AES`")
+    diff = max(arr) - min(arr)
+    if diff <= 1:
+        print(f"All durations of {name} are equal, with delta of 1 µs")
+        print(f"The exact difference is {diff:.3f} µs")
+        return
+
+    print(f"The durations of {name} differ with {diff:.3f} µs")
+
+print("The .csv is created by exporting the table of data obtained from the logic anlyser and the software Logic 2 and the test is run with `cabal run -- hitlt -p AES`")
+
+# -------------------------------------------------------------
+# RUN CHECKS
+# -------------------------------------------------------------
 check_equal(AES128, "AES128")
 check_equal(AES192, "AES192")
 check_equal(AES256, "AES256")
-
