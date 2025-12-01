@@ -45,26 +45,32 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address
 import Clash.Signal.Extra(apWhen)
 -- Algorithm 14
 fors_skGen ∷  ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) 
-     → Channel dom (IdxType alg) -- idx
+    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg, IdxType alg)
      → Channel dom (NBlockType alg)
-fors_skGen input idx
+fors_skGen input
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-        = _PRFStream (liftA2 go input idx)
+        = _PRFStream (fmap go input)
         where 
-            go (s,p,a) i = (s,p, skADRS²)
+            go (s,p,a,i) = (s,p, skADRS²)
                 where 
                     skADRS  = setTypeAndClear a FORS_PRF
                     skADRS¹ = setKeyPairAddress skADRS (getKeyPairAddress a)
                     skADRS² = setTreeIndex skADRS¹ i
 -- Algorithm 15
 fors_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg) 
-     → Channel dom (IdxType alg) -- i 
-     → Channel dom (IdxType alg) -- z
+    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg
+        , IdxType alg -- i 
+        , IdxType alg -- z
+        )
      → Channel dom (NodeType alg)
-fors_node input i z =  mux  (fmap (== 0x00) z) ifthen ifelse
+fors_node input⁰ =  mux  (fmap (== 0x00) z) ifthen ifelse
     where
+        i ∷ Channel dom (IdxType alg)
+        i = fmap (\(s,p,a,x,y) → x) input⁰
+        z ∷ Channel dom (IdxType alg)
+        z = fmap (\(s,p,a,x,y) → y) input⁰
+        input ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg)
+        input = fmap (\(s,p,a,x,y) → (s,p,a)) input⁰
         ifthen ∷ Channel dom (NodeType alg)
         ifthen 
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -76,10 +82,10 @@ fors_node input i z =  mux  (fmap (== 0x00) z) ifthen ifelse
                 where
                     -- line 7
                     lnode ∷ Channel dom (NodeType alg)
-                    lnode =  fors_node input ((2*) <$> i) (fmap (\x → x - 1) z)
+                    lnode =  fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input ((2*) <$> i) (fmap (\x → x - 1) z))
                     -- line 8
                     rnode ∷ Channel dom (NodeType alg)
-                    rnode = fors_node input (fmap (\x → 2 * x + 1) i) (fmap (\x → x - 1) z)
+                    rnode = fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input (fmap (\x → 2 * x + 1) i) (fmap (\x → x - 1) z))
                     adrs¹ ∷ Channel dom (ADRSType alg)
                     adrs¹ 
                         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -121,7 +127,12 @@ fors_sign input
         sig ∷ (Channel dom (IdxType alg), Channel dom (IdxType alg)) → Channel dom (PrivateKeyValueTreeType alg)
         sig (idx, i) 
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = fors_skGen (fmap (\(_,s,t,v) → (s,t,v)) input) (liftA2 (\x y→ shiftL y (natToNum @(A alg)) + x) idx i)
+            = fors_skGen (liftA2 (\(_,s,t,v) i → (s,t,v,i)) input makeIdx)
+                where
+                    makeIdx ∷ Channel dom (IdxType alg)
+                    makeIdx 
+                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                        = (liftA2 (\x y→ shiftL y (natToNum @(A alg)) + x) idx i)
         auth ∷ (Channel dom (IdxType alg), Channel dom (IdxType alg)) → Channel dom (AUTHTreeType alg)
         auth (idx, i) 
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -146,7 +157,7 @@ fors_sign input
                 function⁰ ∷ Channel dom (IdxType alg) → Channel dom (IdxType alg) → Channel dom (NBlockType alg)
                 function⁰ i⁰ j⁰ 
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                    = fors_node  (fmap (\(_,s,t,v) → (s,t,v)) input)  i⁰ j⁰
+                    = fors_node (liftA3 (\(_,s,t,v) x y → (s,t,v,x,y)) input  i⁰ j⁰)
         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg)
                 ⇒ PrivateKeyValueTreeType alg → AUTHTreeType alg → ElemForsType alg
         object x y 
