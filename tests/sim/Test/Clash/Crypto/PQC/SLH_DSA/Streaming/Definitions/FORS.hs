@@ -72,8 +72,8 @@ tastyTests =
       localOption (HedgehogTestLimit (Just 100)) $
         testGroup
           "Fors.fors_skGen"
-          [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ forsProperty @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_skGen" "SLH_DSA_SHA2_128s" fors_skGen
-          , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" fors_skGen
+          [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_skGen" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) fors_skGen
+          , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) fors_skGen
           ]
     -- , localOption (HedgehogTestLimit (Just 100)) $
     --     testGroup
@@ -115,15 +115,24 @@ type ForsComponent a b dom =
  Channel dom (a) ->
  Channel dom (b)
 
-forsProperty :: ∀ a b. (BitPack a, BitPack b, NFDataX b
+
+forsProperty :: ∀ (alg ∷ SLH_DSA) a b. (
+  BitPack a, BitPack b, NFDataX b
  , Mod (BitSize a) ByteSize ~ 0
   , Mod (BitSize b) ByteSize ~ 0
   , (Div (BitSize a) ByteSize) * ByteSize ~ (BitSize a)
   , (Div (BitSize b) ByteSize) * ByteSize ~ (BitSize b)
-  ) ⇒ String → String → KnownDomain System => ForsComponent a b System -> Property
-forsProperty name version forsComp = property $ do
-  f <- forAll $ genDefinedBitVector 
-  let f' = compute $ unpack f
+  ,  KnownSLH_DSAParameters alg
+  ) ⇒ String → String → KnownDomain System => Integer → ForsComponent a b System -> Property
+forsProperty name version placeAdrs forsComp 
+   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+   = property $ do
+
+  f <- forAll $ genDefinedBitVector -- General input
+  fAdrs ← forAll $ genDefinedBitVector-- Only an address
+  let fAdrs' = genAdrs @alg fAdrs
+  let f' = v2bv @Integer @(BitSize a) @(BitSize (ADRSType alg)) @0 (scatter (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs'))
+  let f'' = compute $ unpack f'
   liftIO $
         appendFile "Fors_test_results.csv"
           (List.intercalate "," [name, version, show (pack f), show (pack f')] <> "\n")
@@ -131,7 +140,7 @@ forsProperty name version forsComp = property $ do
 
   python <- liftIO $ forsRefImplPython name version input1
   -- Just to satisfy the test environment.
-  bv2ByteString (pack f') === python
+  bv2ByteString (pack f'') === python
  where
   moduloError =
     error "Since the modulo of the field is prime, the inverse always exists."
