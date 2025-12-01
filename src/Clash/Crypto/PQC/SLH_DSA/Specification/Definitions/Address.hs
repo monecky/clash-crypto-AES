@@ -92,10 +92,15 @@ setTreeIndex = setHashAddress
 -- Getters
 ------------------------------
 getKeyPairAddress ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg)⇒ ADRSType alg → BitVector (KeyPairAddressSize alg * ByteSize) 
-getKeyPairAddress ADRSType{keyPairAddress = keyPairAddress} = toInt keyPairAddress
+getKeyPairAddress ADRSType{keyPairAddress = keyPairAddress} = pack keyPairAddress
 
 getTreeIndex ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg)⇒ ADRSType alg → BitVector (HashAddressTreeIndexSize alg * ByteSize) 
-getTreeIndex ADRSType{hashAddressTreeIndexType = hashAddressTreeIndexType} = toInt hashAddressTreeIndexType
+getTreeIndex ADRSType{hashAddressTreeIndexType = hashAddressTreeIndexType} = pack hashAddressTreeIndexType
+
+getTypeAsBv ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg)⇒ ADRSType alg → BitVector 4
+getTypeAsBv ADRSType{typeAddress = typeAddress} 
+       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg  
+       =  v2bv (dropI (bv2v (pack typeAddress)))
 
 getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg → Vec (ADRSTypeVectorSize alg) ByteType
 getADRSVector ADRSType{

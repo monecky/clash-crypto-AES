@@ -146,6 +146,34 @@ forsProperty name version forsComp = property $ do
     $ fmap (input, )
     $ fromList
     $ Keep : Keep : Release : List.repeat Keep
+
+
+-----------------------------------------
+-- Generate a valid random address
+--
+-----------------------------------------
+-- genAdrs ∷ ∀ (alg ∷ SLH_DSA) . KnownSLH_DSAParameters alg ⇒ BitVector (BitSize (ADRSType alg)) → BitVector (BitSize (ADRSType alg))
+-- genAdrs genadrs
+--     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--     = getADRSBitVector
+--       where
+--         genadrs⁰ ∷ ADRSType alg
+--         genadrs⁰ = unpack genadrs
+--         genadrs¹ ∷ ADRSType 
+--         adrs⁰ = getInitADRS
+
+-- genInputBlock ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
+-- genInputBlock 
+--     | AESFacts _ ← knownAES @alg =
+--     BS.pack <$> Gen.list (Range.singleton (snatToNum (SNat @(Spec.Nb alg * Spec.WordSize alg)))) Gen.enumBounded
+-- genKeyFor :: ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
+-- genKeyFor   
+--   | AESFacts _ ← knownAES @alg = do
+--   BS.pack <$> Gen.list (Range.singleton (natToNum @( Spec.WordSize alg  * Spec.Nk alg ))) Gen.enumBounded
+
+
+
+
 -----------------------------------------
 -- Python reference
 --
