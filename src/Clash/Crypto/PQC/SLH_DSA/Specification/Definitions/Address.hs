@@ -62,7 +62,7 @@ setTypeAndClear adrs FORS_PRF
       = _setTypeAndClear adrs (0x6 ∷ BitVector (TypeSize alg * ByteSize))
 setTypeAndClear adrs _         
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
-      = _setTypeAndClear adrs (0x7 ∷ BitVector (TypeSize alg * ByteSize))
+      = _setTypeAndClear adrs (0x0 ∷ BitVector (TypeSize alg * ByteSize))
 _setTypeAndClear ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg → BitVector (TypeSize alg * ByteSize) → ADRSType alg
 _setTypeAndClear adrs l 
       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
@@ -96,11 +96,6 @@ getKeyPairAddress ADRSType{keyPairAddress = keyPairAddress} = pack keyPairAddres
 
 getTreeIndex ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg)⇒ ADRSType alg → BitVector (HashAddressTreeIndexSize alg * ByteSize) 
 getTreeIndex ADRSType{hashAddressTreeIndexType = hashAddressTreeIndexType} = pack hashAddressTreeIndexType
-
-getTypeAsBv ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg)⇒ ADRSType alg → BitVector 4
-getTypeAsBv ADRSType{typeAddress = typeAddress} 
-       | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg  
-       =  v2bv (dropI (bv2v (pack typeAddress)))
 
 getADRSVector ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ ADRSType alg → Vec (ADRSTypeVectorSize alg) ByteType
 getADRSVector ADRSType{
