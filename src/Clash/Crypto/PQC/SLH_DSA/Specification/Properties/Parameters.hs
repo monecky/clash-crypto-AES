@@ -119,7 +119,7 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , KnownNat (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) 
         -- Adrs
         , KnownNat k⁰
-        , k⁰  + 4 ~ TypeSize alg * 8
+        , k⁰  + 4 ~ TypeSize alg * ByteSize
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg
