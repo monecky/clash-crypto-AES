@@ -35,7 +35,8 @@ import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Basics
 import Clash.Signal.Channel
 import Data.Monoid (First(..))
 import Data.Maybe (fromMaybe)
-import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Fors
+import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS
+import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
 import  Clash.Crypto.PQC.SLH_DSA.Streaming.Types
 import Clash.Signal.DataStream
 import Clash.Signal.Channel
@@ -91,8 +92,8 @@ tastyTests =
         testGroup
           "Fors.PRF"
           [ 
-          testProperty   "Fors PRF SLH_DSA_SHA2_128s" $ dorsProperty @(PKSeedType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(PRFOutType SLH_DSA_SHA2_128s) "PRF" "SLH_DSA_SHA2_128s" _PRFStream
-          , testProperty "Fors PRF SLH_DSA_SHA2_128f" $ dorsProperty @(PKSeedType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(PRFOutType SLH_DSA_SHA2_128f) "PRF" "SLH_DSA_SHA2_128f" _PRFStream
+          testProperty   "Fors PRF SLH_DSA_SHA2_128s" $ forsProperty @(PKSeedType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(PRFOutType SLH_DSA_SHA2_128s) "PRF" "SLH_DSA_SHA2_128s" _PRFStream
+          , testProperty "Fors PRF SLH_DSA_SHA2_128f" $ forsProperty @(PKSeedType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(PRFOutType SLH_DSA_SHA2_128f) "PRF" "SLH_DSA_SHA2_128f" _PRFStream
           ]
     , localOption (HedgehogTestLimit (Just 100)) $
         testGroup
