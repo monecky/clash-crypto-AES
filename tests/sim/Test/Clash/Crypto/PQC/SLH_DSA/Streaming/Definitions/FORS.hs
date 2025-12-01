@@ -63,9 +63,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import System.Process (readProcess)
 import GHC.Utils.Misc (fstOf3, sndOf3,thdOf3)
-import Data.Typeable (Typeable)
-type TestLenA = 20 -- Should be bigger or equal to 2
-type TestLenB = 16 -- Should be bigger or equal to 2
+type TestLen = 16 -- Should be bigger or equal to 2
 tastyTests :: TestTree
 tastyTests =
   testGroup
@@ -82,8 +80,8 @@ tastyTests =
       localOption (HedgehogTestLimit (Just 100)) $
         testGroup
           "Fors.fors_skGen"
-          [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ reproducer  @AA @(BitVector (Dum1 AA)) @(BitVector (Dum2 AA)) (natToNum @(BitSize (BitVector (Dum AA))))
-          , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ reproducer  @BB @(BitVector (Dum1 BB)) @(BitVector (Dum2 BB)) (natToNum @(BitSize (BitVector (Dum BB))))
+          [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ reproducer  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s)))
+          , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ reproducer  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f)))
           ]
     -- , localOption (HedgehogTestLimit (Just 100)) $
     --     testGroup
@@ -125,96 +123,59 @@ type ForsComponent a b dom =
  Channel dom (a) ->
  Channel dom (b)
 
-type DUMMY ∷ Type
-data DUMMY = 
-    AA
-  | BB 
-  deriving 
-    ( Generic
-    , NFDataX
-    , BitPack
-    , Eq
-    , Ord
-    , Show
-    , Enum
-    , Bounded
-    , Typeable
-    )
-type Dum ∷ DUMMY → Nat
-type family Dum (alg ∷ DUMMY) where
-  Dum AA = 16
-  Dum BB = 124143
-type Dum1 ∷ DUMMY → Nat
-type family Dum1 (alg ∷ DUMMY) where
-  Dum1 AA = 12
-  Dum1 BB = 12
-type Dum2 ∷ DUMMY → Nat
-type family Dum2 (alg ∷ DUMMY) where
-  Dum2 AA = 16 
-  Dum2 BB = 124
-data DUMMYFacts (alg ∷ DUMMY) where
-    DUMMYFacts ∷
-        ( KnownNat (Dum alg)
-        , KnownNat (Dum1 alg)
-        , KnownNat (Dum2 alg)
- 
-        ) ⇒
-        Proxy alg →
-        DUMMYFacts alg
-class    KnownDUMMY alg    where knownDUMMY ∷ DUMMYFacts alg
-instance KnownDUMMY AA      where knownDUMMY = DUMMYFacts Proxy
-instance KnownDUMMY BB      where knownDUMMY = DUMMYFacts Proxy
-reproducer ∷  ∀ (alg ∷ DUMMY) a b. (
+
+reproducer ∷  ∀ (alg ∷ SLH_DSA) a b. (
   BitPack a, BitPack b, NFDataX b
-  ,  KnownDUMMY alg
+  ,  KnownSLH_DSAParameters alg
   ) ⇒ Integer → Property
 reproducer placeAdrs
-   | DUMMYFacts alg ← knownDUMMY @alg
+   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
    = property $ do
+
   f <- forAll $ genDefinedBitVector -- General input
-  fAdrs ← forAll $ genDefinedBitVector -- Only an address
-  let f' = v2bv (scatter @Integer @(BitSize a) @(BitSize (b)) @Bit @(0 ∷ Nat) (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs))
+  fAdrs ← forAll $ genDefinedBitVector-- Only an address
+  let f' = v2bv (scatter @Integer @(BitSize a) @(BitSize (b)) @0 (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs))
   f === f
--- forsProperty ∷  ∀ (alg ∷ SLH_DSA) a b. (
---   BitPack a, BitPack b, NFDataX b
---  , Mod (BitSize a) ByteSize ~ 0
---   , Mod (BitSize b) ByteSize ~ 0
---   , (Div (BitSize a) ByteSize) * ByteSize ~ (BitSize a)
---   , (Div (BitSize b) ByteSize) * ByteSize ~ (BitSize b)
---   ,  KnownSLH_DSAParameters alg
---   ) ⇒ String → String → KnownDomain System => Integer → ForsComponent a b System -> Property
--- forsProperty name version placeAdrs forsComp 
---    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
---    = property $ do
+forsProperty ∷  ∀ (alg ∷ SLH_DSA) a b. (
+  BitPack a, BitPack b, NFDataX b
+ , Mod (BitSize a) ByteSize ~ 0
+  , Mod (BitSize b) ByteSize ~ 0
+  , (Div (BitSize a) ByteSize) * ByteSize ~ (BitSize a)
+  , (Div (BitSize b) ByteSize) * ByteSize ~ (BitSize b)
+  ,  KnownSLH_DSAParameters alg
+  ) ⇒ String → String → KnownDomain System => Integer → ForsComponent a b System -> Property
+forsProperty name version placeAdrs forsComp 
+   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+   = property $ do
 
---   f <- forAll $ genDefinedBitVector -- General input
---   fAdrs ← forAll $ genDefinedBitVector-- Only an address
---   let fAdrs' = genAdrs @alg fAdrs
---   let f' = v2bv (scatter @Integer @(BitSize a) @(BitSize (ADRSType alg)) @0 (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs'))
---   let f' = compute $ unpack f
---   liftIO $
---         appendFile "Fors_test_results.csv"
---           (List.intercalate "," [name, version, show (pack f), show (pack f')] <> "\n")
---   let input1 = bv2ByteString @a (unpack f)
+  f <- forAll $ genDefinedBitVector -- General input
+  -- fAdrs ← forAll $ genDefinedBitVector-- Only an address
+  -- let fAdrs' = genAdrs @alg fAdrs
+  -- let f' = v2bv (scatter @Integer @(BitSize a) @(BitSize (ADRSType alg)) @0 (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs'))
+  let f' = compute $ unpack f
+  liftIO $
+        appendFile "Fors_test_results.csv"
+          (List.intercalate "," [name, version, show (pack f), show (pack f')] <> "\n")
+  let input1 = bv2ByteString @a (unpack f)
 
---   python <- liftIO $ forsRefImplPython name version input1
---   -- Just to satisfy the test environment.
---   bv2ByteString (pack f') === python
---  where
---   moduloError =
---     error "Since the modulo of the field is prime, the inverse always exists."
---   compute input
---     = fromMaybe (error "The returned list was empty")
---     $ getFirst
---     $ foldMap First
---     $ sampleN @System 10000000
---     $ withClockResetEnable @System clockGen resetGen enableGen
---     $ newsfeed
---     $ forsComp
---     $ channel
---     $ fmap (input, )
---     $ fromList
---     $ Keep : Keep : Release : List.repeat Keep
+  python <- liftIO $ forsRefImplPython name version input1
+  -- Just to satisfy the test environment.
+  bv2ByteString (pack f') === python
+ where
+  moduloError =
+    error "Since the modulo of the field is prime, the inverse always exists."
+  compute input
+    = fromMaybe (error "The returned list was empty")
+    $ getFirst
+    $ foldMap First
+    $ sampleN @System 10000000
+    $ withClockResetEnable @System clockGen resetGen enableGen
+    $ newsfeed
+    $ forsComp
+    $ channel
+    $ fmap (input, )
+    $ fromList
+    $ Keep : Keep : Release : List.repeat Keep
 
 
 -----------------------------------------
