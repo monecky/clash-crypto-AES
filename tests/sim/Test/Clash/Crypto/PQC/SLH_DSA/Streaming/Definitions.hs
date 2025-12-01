@@ -21,9 +21,11 @@ import Test.Tasty.Hedgehog
 
 import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash as Hash
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Fors as Fors
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm"
-  [Hash.tastyTests, testProperty "Dummy" $ property $ do
-        a ← forAll $ genDefinedBitVector @2
-        a === a] 
+  [
+    Hash.tastyTests,
+    Fors.tastyTests
+   ] 
 

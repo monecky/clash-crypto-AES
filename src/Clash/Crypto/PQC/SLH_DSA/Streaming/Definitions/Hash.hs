@@ -51,7 +51,6 @@ import Data.Constraint.Nat.Extra
 import Language.Haskell.Unicode (type (≤))
 
 instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne (alg ∷ SLH_DSA) where 
-  -- TODO make a DataStream as input because algorithm 19
     _PRFᵐˢᵍStreaming ∷ ∀ sha security alg dom . 
                     (KnownDomain dom, HiddenClockResetEnable dom, KnownSLH_DSAParameters alg)
                   ⇒ Proxy alg 
@@ -60,13 +59,12 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                   →  Channel dom (PRFᵐˢᵍOutType alg)
     _PRFᵐˢᵍStreaming alg inputC inputD  
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-        -- , SHAFacts {} ← knownSHA @(SHAVersionPRFᵐˢᵍSLH_DSA alg)
         , Rewrite ← using @(ModTimes (Div (BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize + N alg) ByteSize)
         , Rewrite ← using @(ModTimes (N alg + N alg) ByteSize)
             = fmap makeOutput (HMAC.hmac @(SHAVersionPRFᵐˢᵍSLH_DSA alg) ( mapStart (\y → maxBound ∷ Index ((BlockSize (SHAVersionPRFᵐˢᵍSLH_DSA alg) `Div` ByteSize) + 1)) ( mapEnd (const ()) (serializePrepend transfer inputD)))) 
             where
                 transfer = fmap go inputC
-                makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg -- N alg * ByteSize == 16*8 = 128 while SHA 256 == 256
+                makeOutput ∷ Digest (SHAVersionPRFᵐˢᵍSLH_DSA alg) → PRFᵐˢᵍOutType alg
                 makeOutput output 
                   | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                   , Rewrite ← using @(DivTimes (MessageDigestSize (SHAVersionPRFᵐˢᵍSLH_DSA alg)) ByteSize)
@@ -131,7 +129,6 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = toInt @(64 + ADRSTypeVectorSize alg + N alg) @ByteSize @0 
                     (pkSeed ‖ toByte @(64 - N alg) @ByteSize @(ByteSize * (64 - N alg)) @0 0x0 ‖ getADRSVector adrs ‖ skSeed)
-    -- TODO make a Datastream as input, since the variable ℓ, not neded this only used a fixed size twice differently.
     _TˡStreaming     ∷ ∀ sha security alg ℓ dom . (KnownDomain dom, HiddenClockResetEnable dom, KnownNat ℓ, KnownSLH_DSAParameters alg) 
                   ⇒ Channel dom (PKSeedType alg, ADRSType alg, MˡType ℓ alg) → Channel dom (TˡOutType alg)
     _TˡStreaming    input
@@ -181,11 +178,6 @@ instance (KnownSLH_DSAParameters alg) ⇒ SLH_DSA_hashStream SHATwo SecurityOne 
                 = concatBitVector# (pkSeed ‖ unconcatBitVector# @(64 - N alg) @ByteSize 0x0 ‖ getADRSVector adrs ‖ m1)
 
 
-
-
-
--- TODO a function that convert a Channel (BitVector ℓ) to DataStream  dom (Index n) (BitVector n)
--- Inspiration can be taken of a mealy machine and hmac serialisation is taken.
 serializeHash ∷ ∀ (n ∷ Nat)  a (dom ∷ Domain) . (KnownDomain dom, HiddenClockResetEnable dom) ⇒ 
     ( BitPack a, KnownNat (BitSize a), KnownNat n
   , 1 ≤ n, 1 ≤ BitSize a, BitSize a `Mod` n ~ 0) ⇒ 
@@ -244,7 +236,6 @@ serializePrepend inputC inputD
       , 0 ∷ Index ((BitSize a `Div` ByteSize) + 2)
       , False
       , False
-      -- , NoData ∷ Frame () (Index n) (BitVector n)
       ) (liftA3 (,,) (content inputC) (hasUpdates inputC) (inputD))
  where
   (~~>) ∷ ∀ a1 . (BitPack a1, BitSize a1 `Mod` ByteSize ~ 0, 1 ≤ ByteSize, 1 ≤ BitSize a1) 
@@ -255,7 +246,6 @@ serializePrepend inputC inputD
         , Index ((BitSize a1 `Div` ByteSize) + 2) -- data stream pointer
         , Bool -- Sending stored DataStream
         , Bool -- End combi
-        -- , Frame () (Index ByteSize) (BitVector ByteSize)
         ) 
     → (Maybe a1, Bool, Frame () () (ByteType)) 
     → (
@@ -266,7 +256,6 @@ serializePrepend inputC inputD
         , Index ((BitSize a1 `Div` ByteSize) + 2) -- data stream pointer
         , Bool -- Sending stored DataStream
         , Bool -- End combi
-        -- , Frame () (Index ByteSize) (BitVector ByteSize)
         )
       , Frame () () (ByteType))
   (~~>) state@(buffC, idxC, busyC, buffD, idxD, busyD, endD) input@(maybeC, updataC, prependFrame) 
@@ -322,20 +311,12 @@ serializePrepend inputC inputD
           goFrame _ _ _ True _ 
             | idxC == maxBound = Start () (buffC !! 0)
             | idxC /= 1 = Middle (buffC !! 0)
-            | idxC == 1 = Middle (buffC !! 0) --NoData -- Middle 0xff
+            | idxC == 1 = Middle (buffC !! 0) 
           goFrame _ _ _ False True 
             | endD, idxD > 1      = Middle (buffD !! (satPred SatBound idxD))
             | endD, idxD == 1      = End () (buffD !! (satPred SatBound idxD))
-            -- | endD, idxD == 0      = End () (buffD !! (satPred SatBound idxD))
             | idxD >= 1            = Middle (buffD !! (satPred SatBound idxD))
-            -- | idxD == 1            = Idle --End () (buffD !! (satPred SatBound idxD))
-            | otherwise = Idle -- End () 0xff --TODO: Here is AN problem End () (buffD !! (satPred SatBound idxD))
-          -- goFrame (Just x) False (Start _ y) True _ = Middle 0xf8
-          -- goFrame _ _ (Start _ y) _ _ = Middle 0xe6
-          -- goFrame _ _ (Middle y)  _ _ = Middle 0xe7
-          -- goFrame (Just x) True (End () y) _ _  = End () 0xe8
-          -- goFrame _ _  Idle _ _                = Idle
-          -- goFrame _ _ NoData _ _    = NoData
+            | otherwise = Idle
           goFrame _ _ _ _ _ = NoData
 
           goBusyC ∷ Maybe a1 → Bool → Frame () () (ByteType) → Bool
@@ -398,7 +379,7 @@ transferToC = channel . mealy (~~>)
             | otherwise = vObject
           goBuff (End _ x) idx
             | idx == 2 = vObject <<+ x
-            | otherwise = vObject -- vObject <<+ x -- In case an End frame was send earlier
+            | otherwise = vObject 
           goBuff _ _ = vObject
           goIdx ∷ Frame s e (BitVector n1) → Index ((BitSize a1 `Div` n1) + 1) → Index ((BitSize a1 `Div` n1) + 1)
           goIdx (Start _ _) idx = maxBound
