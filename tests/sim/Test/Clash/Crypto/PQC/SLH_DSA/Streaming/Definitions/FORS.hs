@@ -135,6 +135,8 @@ reproducer placeAdrs
   f <- forAll $ genDefinedBitVector -- General input
   fAdrs ← forAll $ genDefinedBitVector-- Only an address
   let f' = v2bv (scatter @Integer @(BitSize a) @(BitSize (b)) @0 (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs))
+  -- BUG panic!
+  -- solution: let f' = v2bv (scatter @Integer @(BitSize a) @(BitSize (b)) @Bit @0 (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs))
   f === f
 forsProperty ∷  ∀ (alg ∷ SLH_DSA) a b. (
   BitPack a, BitPack b, NFDataX b
