@@ -150,6 +150,7 @@ test-suite simulation
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Fors
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.RandomAddress
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm
     Test.Clash.Crypto.PQC.SLH_DSA
     Test.Clash.Crypto.Cipher.AES.GoldenReference
