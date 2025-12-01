@@ -1,11 +1,11 @@
 {-|
-Module      : Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Fors
+Module      : Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS
 Copyright   : Copyright © 2025 QBayLogic B.V.
 Maintainer  : QBayLogic B.V.
 Stability   : experimental
 Portability : POSIX
 
-Test suite for 'Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Fors'
+Test suite for 'Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS'
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -13,7 +13,7 @@ Test suite for 'Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Fors'
 
 {-# LANGUAGE MagicHash #-}
 
-module Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Fors (tastyTests) where
+module Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS (tastyTests) where
 
 import Clash.Prelude
 import Hedgehog
