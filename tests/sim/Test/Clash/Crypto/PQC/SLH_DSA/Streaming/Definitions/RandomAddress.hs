@@ -174,7 +174,103 @@ genAdrs genadrs
                     , chainAddressTreeHeight   = chainAddressTreeHeight⁰  
                     , hashAddressTreeIndexType = hashAddressTreeIndexType⁰
                   }
+genAdrsType ∷ ∀ (alg ∷ SLH_DSA) . KnownSLH_DSAParameters alg ⇒ BitVector (BitSize (ADRSType alg)) → ADRSTypeType → BitVector (BitSize (ADRSType alg))
+genAdrsType genadrs gentype
+    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+    = getADRSBitVector genadrs²
+      where
+        genadrs⁰ ∷ ADRSType alg
+        genadrs⁰ 
+          | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+          = unpack genadrs
+        -- Get the correct type
+        gentype ∷ ADRSTypeType
+        gentype = gentype
+        -- Clear all unnessary fields and set type.
+        genadrs¹ ∷ ADRSType alg
+        genadrs¹ 
+          | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+          = setTypeAndClear genadrs⁰ gentype
+        -- Set back nessary fields and set type.
+        genadrs² ∷ ADRSType alg 
+        genadrs²
+              | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+              = genadrs³ genadrs¹ genadrs⁰ gentype
+          where
+            genadrs³ ∷ ADRSType alg → ADRSType alg → ADRSTypeType → ADRSType alg 
+            genadrs³ adrs¹ ADRSType{                  
+            keyPairAddress           = keyPairAddress⁰           
+            , chainAddressTreeHeight   = chainAddressTreeHeight⁰   
+            , hashAddressTreeIndexType = hashAddressTreeIndexType⁰ }  WOTS_HASH       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {
+                      keyPairAddress           = keyPairAddress⁰           
+                    , chainAddressTreeHeight   = chainAddressTreeHeight⁰  
+                    , hashAddressTreeIndexType = hashAddressTreeIndexType⁰
+                  }
+            genadrs³ adrs¹ ADRSType{                  
+            keyPairAddress           = keyPairAddress⁰           
+             }  WOTS_PK       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {
+                      keyPairAddress           = keyPairAddress⁰           
+                  }
 
+            genadrs³ adrs¹ ADRSType{                  
+              chainAddressTreeHeight   = chainAddressTreeHeight⁰   
+            , hashAddressTreeIndexType = hashAddressTreeIndexType⁰ } TREE       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {          
+                      chainAddressTreeHeight   = chainAddressTreeHeight⁰  
+                    , hashAddressTreeIndexType = hashAddressTreeIndexType⁰
+                  }
+            genadrs³ adrs¹ ADRSType{                  
+            keyPairAddress           = keyPairAddress⁰           
+            , chainAddressTreeHeight   = chainAddressTreeHeight⁰   
+            , hashAddressTreeIndexType = hashAddressTreeIndexType⁰ } FORS_TREE       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {
+                      keyPairAddress           = keyPairAddress⁰           
+                    , chainAddressTreeHeight   = chainAddressTreeHeight⁰  
+                    , hashAddressTreeIndexType = hashAddressTreeIndexType⁰
+                  }
+            genadrs³ adrs¹ ADRSType{                  
+            keyPairAddress           = keyPairAddress⁰           
+             }  FORS_ROOTS       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {
+                      keyPairAddress           = keyPairAddress⁰           
+                  }
+            genadrs³ adrs¹ ADRSType{                  
+            keyPairAddress           = keyPairAddress⁰           
+            , chainAddressTreeHeight   = chainAddressTreeHeight⁰   
+            , hashAddressTreeIndexType = hashAddressTreeIndexType⁰ }  WOTS_PRF       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {
+                      keyPairAddress           = keyPairAddress⁰           
+                    , chainAddressTreeHeight   = chainAddressTreeHeight⁰  
+                    , hashAddressTreeIndexType = hashAddressTreeIndexType⁰
+                  }
+            genadrs³ adrs¹ ADRSType{                  
+            keyPairAddress           = keyPairAddress⁰           
+            , chainAddressTreeHeight   = chainAddressTreeHeight⁰   
+            , hashAddressTreeIndexType = hashAddressTreeIndexType⁰ } FORS_PRF       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {
+                      keyPairAddress           = keyPairAddress⁰           
+                    , chainAddressTreeHeight   = chainAddressTreeHeight⁰  
+                    , hashAddressTreeIndexType = hashAddressTreeIndexType⁰
+                  }
+            genadrs³ adrs¹ ADRSType{                  
+            keyPairAddress           = keyPairAddress⁰           
+            , chainAddressTreeHeight   = chainAddressTreeHeight⁰   
+            , hashAddressTreeIndexType = hashAddressTreeIndexType⁰ } _       
+                  | SLH_DSAParametersFacts{} <- knownSLH_DSAParameters @alg 
+                  = adrs¹ {
+                      keyPairAddress           = keyPairAddress⁰           
+                    , chainAddressTreeHeight   = chainAddressTreeHeight⁰  
+                    , hashAddressTreeIndexType = hashAddressTreeIndexType⁰
+                  }
 ------
 -- Address methode for testing purposes
 --
