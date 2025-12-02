@@ -9,6 +9,7 @@ from generic import *
 from math import ceil
 from slhdsa.lowlevel.addresses import * # Import all address
 from slhdsa.lowlevel.fors import FORS
+from slhdsa.lowlevel._utils import compact_address
 def main():
     if len(sys.argv) != 4:
         print("Usage: fors_worker.py <function> <slh-dsaVersion> <input>", file=sys.stderr)
@@ -22,7 +23,7 @@ def main():
     
 def obtainAddressObject(adresBytes: [bytes]):
     if len(adresBytes) == 32:
-        adrslayer         =  adresBytes[3]
+        adrslayer         =  int.from_bytes(adresBytes[0:3] , "big")
         adrstree          =  int.from_bytes(adresBytes[4:15] , "big")
         adrstype          =  int.from_bytes(adresBytes[16:19], "big")
         adrskeypair       =  int.from_bytes(adresBytes[20:23], "big")
@@ -87,6 +88,15 @@ def calculateResult(strFunction, input1, version):
             address = obtainAddressObject(input1[2*version.n:2*version.n+sizeAdrs])
             idx     = int.from_bytes(input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs], "big")
             return FORS(version).generate_secretkey(sk_seed, pk_seed, address, idx)
+        case "fors_skGen_adrs":
+            sk_seed = input1[:version.n]
+            pk_seed = input1[version.n:version.n + version.n]
+            address = obtainAddressObject(input1[2*version.n:2*version.n+sizeAdrs])
+            idx     = int.from_bytes(input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs], "big")
+            sk_address = address.with_type(FORSPrfAddress)
+            sk_address.keypair = address.keypair
+            sk_address.index = idx
+            return  compact_address(sk_address.to_bytes())
         case "fors_node":
             sk_seed = input1[:version.n]
             pk_seed = input1[version.n:2*version.n]

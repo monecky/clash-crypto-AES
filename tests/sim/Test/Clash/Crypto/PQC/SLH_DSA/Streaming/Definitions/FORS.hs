@@ -71,10 +71,19 @@ tastyTests =
     [ 
       localOption (HedgehogTestLimit (Just 100)) $
         testGroup
+          "Fors.fors_skGen_adrs"
+          [ testProperty "Fors fors_skGen_adrs SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(ADRSType SLH_DSA_SHA2_128s) "fors_skGen_adrs" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) fors_skGen_adrs
+          , testProperty "Fors fors_skGen_adrs SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(ADRSType SLH_DSA_SHA2_128f) "fors_skGen_adrs" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) fors_skGen_adrs
+          ]
+      ,
+      localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
           "Fors.fors_skGen"
           [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_skGen" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) fors_skGen
           , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) fors_skGen
           ]
+      
+
 
       -- , 
       -- localOption (HedgehogTestLimit (Just 100)) $
@@ -193,3 +202,16 @@ forsRefImplPython name version input1 =
               ]
               ""
           pure (hexToBs (List.init outputHex))
+------ Test Address
+fors_skGen_adrs ∷  ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg, IdxType alg)
+     → Channel dom (ADRSType alg)
+fors_skGen_adrs input
+        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+        = fmap (\(x,y,z) → z) (fmap go input)
+        where 
+            go (s,p,a,i) = (s,p, skADRS²)
+                where 
+                    skADRS  = setTypeAndClear a FORS_PRF
+                    skADRS¹ = setKeyPairAddress skADRS (getKeyPairAddress a)
+                    skADRS² = setTreeIndex skADRS¹ i
