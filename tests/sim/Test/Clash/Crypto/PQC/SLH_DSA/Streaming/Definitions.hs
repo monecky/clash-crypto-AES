@@ -25,7 +25,7 @@ import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS as FOR
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm"
   [
-    Hash.tastyTests,
-    FORS.tastyTests
+    FORS.tastyTests,
+    Hash.tastyTests
    ] 
 
