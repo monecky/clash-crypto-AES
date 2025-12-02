@@ -138,10 +138,10 @@ forsProperty name version placeAdrs forsComp
 
   f <- forAll $ genDefinedBitVector -- General input
   fAdrs ← forAll $ genDefinedBitVector-- Only an address
-  let fAdrs' = genAdrs @alg fAdrs
+  let fAdrs' = genAdrsType @alg fAdrs FORS_TREE
   let f' = v2bv (scatter @Integer @(BitSize a) @(BitSize (ADRSType alg)) @Bit @0 (bv2v f) (iterateI (+1) placeAdrs) (bv2v fAdrs'))
   let f'' = compute $ unpack f'
-  let input1 = bv2ByteString @a (unpack f)
+  let input1 = bv2ByteString @a (unpack f')
 
   python <- liftIO $ forsRefImplPython name version input1
   -- Just to satisfy the test environment.

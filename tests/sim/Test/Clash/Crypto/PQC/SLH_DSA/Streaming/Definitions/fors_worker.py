@@ -6,6 +6,9 @@ from slhdsa.lowlevel.parameters import sha2_128s, sha2_128f, sha2_192s, sha2_192
 from slhdsa.lowlevel._utils import trunc
 from hashlib import sha256
 from generic import *
+from math import ceil
+from slhdsa.lowlevel.addresses import * # Import all address
+from slhdsa.lowlevel.fors import FORS
 def main():
     if len(sys.argv) != 4:
         print("Usage: fors_worker.py <function> <slh-dsaVersion> <input>", file=sys.stderr)
@@ -17,56 +20,93 @@ def main():
     result = calculateResult(function, input1, shaObject)
     print(binascii.hexlify(result).decode())
     
- 
+def obtainAddressObject(adresBytes: [bytes]):
+    if len(adresBytes) == 32:
+        adrslayer         =  adresBytes[3]
+        adrstree          =  int.from_bytes(adresBytes[4:15] , "big")
+        adrstype          =  int.from_bytes(adresBytes[16:19], "big")
+        adrskeypair       =  int.from_bytes(adresBytes[20:23], "big")
+        adrschainheight   =  int.from_bytes(adresBytes[24:27], "big")
+        adrshashindex     =  int.from_bytes(adresBytes[28:31], "big")
+    elif len(adresBytes) == 22:
+        adrslayer         =  adresBytes[0]
+        adrstree          =  int.from_bytes(adresBytes[1:8]  , "big")
+        adrstype          =  adresBytes[9]
+        adrskeypair       =  int.from_bytes(adresBytes[10:13] , "big")
+        adrschainheight   =  int.from_bytes(adresBytes[14:17], "big")
+        adrshashindex     =  int.from_bytes(adresBytes[18:21], "big")
+    else:
+        raise Exception("Wrong size of address") 
+    adrs = Address(0,0)
+    match(adrstype):
+        case 0:
+            adrs = WOTSHashAddress(adrslayer, adrstree)
+            adrs.keypair = adrskeypair
+            adrs.chain   = adrschainheight
+            adrs.hash    = adrshashindex
+        case 1:
+            adrs = WOTSPKAddress(adrslayer, adrstree)
+            adrs.keypair = adrskeypair
+        case 2:
+            adrs = TreeAddress(adrslayer, adrstree)
+            adrs.height  = adrschainheight
+            adrs.index   = adrshashindex
+        case 3:
+            adrs = FORSTreeAddress(adrslayer, adrstree)
+            adrs.keypair  = adrskeypair
+            adrs.height   = adrschainheight
+            adrs.index    = adrshashindex
+        case 4:
+            adrs = FORSRootsAddress(adrslayer, adrstree)
+            adrs.keypair = adrskeypair
+        case 5:
+            adrs = WOTSPrfAddress(adrslayer, adrstree)
+            adrs.keypair = adrskeypair
+            adrs.chain   = adrschainheight
+            adrs.hash    = adrshashindex
+        case 6:
+            adrs = FORSPrfAddress(adrslayer, adrstree)
+            adrs.keypair = adrskeypair
+            adrs.height  = adrschainheight
+            adrs.index    = adrshashindex
+        case _:
+            raise Exception("Invalid address" + str(adrstype))
+    return adrs
 
 def calculateResult(strFunction, input1, version):
+    sizeAdrs = 32
+    intergerSize = 32
+    mdLen = version.k * (version.a + 1) * version.n
+    sigForsLen = ceil((version.a * version.k) / 8)
+    if version in [sha2_128f, sha2_128s, sha2_192f, sha2_192s, sha2_256f, sha2_256s]:
+        sizeAdrs = 22
     match (strFunction):
-        case "PRFmsg":
-            sk_prf = input1[:version.n]
-            opt_rand = input1[version.n:version.n + version.n]
-            msg = input1[version.n + version.n:]
-            return version.PRFmsg(sk_prf, opt_rand, msg)
-        case "PRFmsgthr":
-            sk_prf = input1[:version.n]
-            opt_rand = input1[version.n:version.n + version.n]
-            msg = input1[version.n + version.n:]
-            return input1[:len(version.PRFmsg(sk_prf, opt_rand, msg))]
-        case "PRFmsgFthr":
-            sk_prf = input1[:version.n]
-            sk_prf = sk_prf + b'\x00' * (64 - version.n )
-            opt_rand = input1[version.n:version.n + version.n]
-            msg = input1[version.n + version.n:]
-            return sk_prf + opt_rand + msg
-        case "Hmsg":
-            r = input1[:version.n]
+        case "fors_skGen":
+            sk_seed = input1[:version.n]
+            pk_seed = input1[version.n:version.n + version.n]
+            address = obtainAddressObject(input1[2*version.n:2*version.n+sizeAdrs])
+            idx     = int.from_bytes(input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs], "big")
+            return FORS(version).generate_secretkey(sk_seed, pk_seed, address, idx)
+        case "fors_node":
+            sk_seed = input1[:version.n]
             pk_seed = input1[version.n:2*version.n]
-            pk_root = input1[2*version.n:3* version.n]
-            msg = input1[3*version.n:]
-            if version == sha2_128f:
-                return version.Hmsg(r, pk_seed, pk_root, msg)[:version.m] # As it should be according to the documentation of NIST FIPS 205.
-            return version.Hmsg(r, pk_seed, pk_root, msg)
-        case "PRF":
-            pkSeed = input1[:version.n]
-            sk_seed = input1[version.n:version.n + version.n]
-            cmp_adrs = input1[version.n + version.n:]
-            return trunc(sha256(pkSeed + b"\x00" * (64 - version.n) + cmp_adrs + sk_seed).digest(), version.n)
-        case "Tl":
-            pkSeed = input1[:version.n]
-            cmp_adrs = input1[version.n:version.n + 22]
-            m = input1[version.n + 22:]
-            return trunc(sha256(pkSeed + b"\x00" * (64 - version.n) + cmp_adrs + m).digest(), version.n)
-        case "H":
-            pkSeed = input1[:version.n]
-            cmp_adrs = input1[version.n:version.n + 22]
-            m = input1[version.n + 22:]
-            return trunc(sha256(pkSeed + b"\x00" * (64 - version.n) + cmp_adrs + m).digest(), version.n)
-        case "F":
-            pkSeed = input1[:version.n]
-            cmp_adrs = input1[version.n:version.n + 22]
-            m = input1[version.n + 22:]
-            return trunc(sha256(pkSeed + b"\x00" * (64 - version.n) + cmp_adrs + m).digest(), version.n)
+            address = obtainAddressObject(input1[2*version.n:2*version.n+sizeAdrs])
+            cur     = input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs]
+            dep     = input1[intergerSize+2*version.n+sizeAdrs:2*intergerSize+2*version.n+sizeAdrs]
+            return FORS(version).node(sk_seed, pk_seed, address, idx)
+        case "fors_sign":
+            md      = input1[:md]
+            sk_seed = input1[md:md + version.n]
+            pk_seed = input1[md + version.n:md + 2*version.n]
+            address = obtainAddressObject(input1[md + 2*version.n:md + 2*version.n+sizeAdrs])
+            return FORS(version).sign(sk_seed, pk_seed, address, idx)
+        case "fors_pkFromSig":
+            fors_sign = input1[:sigForsLen]
+            md        = input1[sigForsLen:sigForsLen+mdLen]
+            pk_seed   = input1[sigForsLen+mdLen:sigForsLen+mdLen+version.n]
+            adrs      = obtainAddressObject(input1[sigForsLen+mdLen+version.n:sigForsLen+mdLen+version.n+sizeAdrs])
+            return FORS(version).publickey_from_sign(sk_seed, pk_seed, address, idx)
         case _:
-            print("No match for the function", file=sys.stderr)
-            return "Not found"
+            raise Exception("Function not found") 
 if __name__ == "__main__":
     main()

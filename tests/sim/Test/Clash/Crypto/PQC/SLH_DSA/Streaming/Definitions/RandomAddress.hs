@@ -23,7 +23,7 @@ Test suite for 'Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.RandomAddress'
 
 {-# LANGUAGE MagicHash #-}
 
-module Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.RandomAddress (genAdrs) where
+module Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.RandomAddress (genAdrs, genAdrsType) where
 
 import Clash.Prelude
 import Hedgehog
@@ -183,9 +183,6 @@ genAdrsType genadrs gentype
         genadrs⁰ 
           | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
           = unpack genadrs
-        -- Get the correct type
-        gentype ∷ ADRSTypeType
-        gentype = gentype
         -- Clear all unnessary fields and set type.
         genadrs¹ ∷ ADRSType alg
         genadrs¹ 
