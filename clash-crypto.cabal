@@ -83,6 +83,8 @@ library
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS
     Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH
+    Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Ht
+    Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.XMSS
     Clash.Crypto.PQC.SLH_DSA.Streaming.Types
     Clash.Crypto.PQC.SLH_DSA.Streaming.Types.Hash
     Clash.Crypto.PQC.SLH_DSA.General.General
@@ -151,6 +153,9 @@ test-suite simulation
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.RandomAddress
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.XMSS
+    Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Ht
     Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm
     Test.Clash.Crypto.PQC.SLH_DSA
     Test.Clash.Crypto.Cipher.AES.GoldenReference

@@ -5,17 +5,8 @@ Maintainer  : QBayLogic B.V.
 Stability   : experimental
 Portability : POSIX
 
-Methodes regards random address, to use valid address to test with, to match the python version.
--}
-
-{-|
-Module      : Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.RandomAddress
-Copyright   : Copyright © 2025 QBayLogic B.V.
-Maintainer  : QBayLogic B.V.
-Stability   : experimental
-Portability : POSIX
-
 Test suite for 'Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.RandomAddress'
+Methodes regards random address, to use valid address to test with, to match the python version.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}

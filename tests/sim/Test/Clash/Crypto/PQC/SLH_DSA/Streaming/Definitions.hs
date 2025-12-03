@@ -20,12 +20,14 @@ import Test.Tasty
 import Test.Tasty.Hedgehog
 
 import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
-import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash as Hash
-import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS as FORS
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash     as Hash
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS     as FORS
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus as WOTS
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm"
   [
+    Hash.tastyTests,
     FORS.tastyTests,
-    Hash.tastyTests
+    WOTS.tastyTests
    ] 
 

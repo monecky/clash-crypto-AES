@@ -33,6 +33,8 @@ import Data.Proxy (Proxy(..))
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Address 
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus 
+import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.XMSS 
+import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Ht 
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address 
 import Clash.Signal.Extra(apWhen)
 import Clash.Signal.DataStream
