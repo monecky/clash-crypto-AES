@@ -86,17 +86,15 @@ tastyTests =
       localOption (HedgehogTestLimit (Just 100)) $
         testGroup
           "Fors.fors_sign"
-          [ testProperty "Fors fors_sign SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(MDType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s) "fors_sign" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (MDType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_sign
-          -- Condition of the testProperty is not met because it is not a multiple of 8
-          -- , testProperty "Fors fors_sign SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(MDType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f) "fors_sign" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (MDType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_sign
+          [ testProperty "Fors fors_sign SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(MDByteType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s) "fors_sign" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (MDByteType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_sign
+          , testProperty "Fors fors_sign SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(MDByteType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f) "fors_sign" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (MDByteType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_sign
           ]
       ,
       localOption (HedgehogTestLimit (Just 100)) $
         testGroup
           "Fors.fors_pkFromSig"
-          [ testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_pkFromSig" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_pkFromSig
-          -- Condition of the testProperty is not met because it is not a multiple of 8
-          -- , testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_pkFromSig" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_pkFromSig
+          [ testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDByteType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_pkFromSig" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDByteType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_pkFromSig
+          , testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDByteType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_pkFromSig" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDByteType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_pkFromSig
           ]
 
 
