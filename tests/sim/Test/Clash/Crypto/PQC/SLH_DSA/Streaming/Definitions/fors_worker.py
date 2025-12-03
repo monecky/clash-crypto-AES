@@ -23,11 +23,11 @@ def main():
     
 def obtainAddressObject(adresBytes: [bytes]):
     if len(adresBytes) == 32:
-        adrslayer         =  int.from_bytes(adresBytes[0:3] , "big")
-        adrstree          =  int.from_bytes(adresBytes[4:15] , "big")
-        adrstype          =  int.from_bytes(adresBytes[16:19], "big")
-        adrskeypair       =  int.from_bytes(adresBytes[20:23], "big")
-        adrschainheight   =  int.from_bytes(adresBytes[24:27], "big")
+        adrslayer         =  int.from_bytes(adresBytes[0:4] , "big")
+        adrstree          =  int.from_bytes(adresBytes[4:16] , "big")
+        adrstype          =  int.from_bytes(adresBytes[16:20], "big")
+        adrskeypair       =  int.from_bytes(adresBytes[20:24], "big")
+        adrschainheight   =  int.from_bytes(adresBytes[24:28], "big")
         adrshashindex     =  int.from_bytes(adresBytes[28:31], "big")
     elif len(adresBytes) == 22:
         adrslayer         =  adresBytes[0]
@@ -93,9 +93,8 @@ def calculateResult(strFunction, input1, version):
             pk_seed = input1[version.n:version.n + version.n]
             address = obtainAddressObject(input1[2*version.n:2*version.n+sizeAdrs])
             idx     = int.from_bytes(input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs], "big")
-            return compact_address(address.to_bytes())
             sk_address = address.with_type(FORSPrfAddress)
-            # sk_address.keypair = 7 # address.keypair
+            sk_address.keypair = address.keypair
             # sk_address.index = idx
             return  compact_address(sk_address.to_bytes())
         case "fors_node":
