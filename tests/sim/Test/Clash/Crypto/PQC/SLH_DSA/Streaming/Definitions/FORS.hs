@@ -6,6 +6,7 @@ Stability   : experimental
 Portability : POSIX
 
 Test suite for 'Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS'
+this match with the algorithms section 8 of the FIPS 205 document
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
