@@ -322,19 +322,24 @@ xmss_sign input idx
 
 -- -- Algorithm 11
 xmss_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (SIGˣᵐˢˢType alg, NBlockType alg, PKSeedType alg, ADRSType alg) 
-     → Channel dom (IdxType alg) -- idx
+    ⇒ Channel dom (SIGˣᵐˢˢType alg, NBlockType alg, PKSeedType alg, ADRSType alg
+     , IdxType alg -- idx
+     )
      → Channel dom (NodeType alg)
-xmss_pkFromSig input idx
+xmss_pkFromSig input 
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
     = node¹
     where
+        idx ∷ Channel dom (IdxType alg)
+        idx = fthOf5C input
         adrs ∷ Channel dom (ADRSType alg)
-        adrs = frtOf4C input
+        adrs = frtOf5C input
         sigˣᵐˢˢ ∷  Channel dom (SIGˣᵐˢˢType alg)
-        sigˣᵐˢˢ = fstOf4C input
-        m = sndOf4C input
-        pkSeed = thdOf4C input
+        sigˣᵐˢˢ = fstOf5C input
+        m ∷ Channel dom (NBlockType alg)
+        m = sndOf5C input
+        pkSeed ∷ Channel dom (NBlockType alg)
+        pkSeed = thdOf5C input
         -- line 1-2
         adrs¹² ∷ Channel dom (ADRSType alg)
         adrs¹² = setKeyPairAddressC (setTypeAndClearC adrs WOTS_HASH) idx
@@ -407,11 +412,11 @@ ht_sign input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
             skSeed = sndOf3C input
             sigᵗᵐᵖ = xmss_sign (liftA2 (\(m,s,p) a → (m,s,p,a)) input adrs) idxˡᵉᵃᶠ
             sigʰᵗ = sigᵗᵐᵖ
-            root = xmss_pkFromSig (liftA3 (\sig (m,s,p) a → (sig,m,p,a)) sigʰᵗ input adrs) idxˡᵉᵃᶠ
+            root = xmss_pkFromSig ((\sig (m,s,p) a x → (sig,m,p,a,x)) <$> sigʰᵗ <*> input <*> adrs <*> idxˡᵉᵃᶠ)
             -- line 6 - 16
             forloop ∷ Vec (D alg) (Channel dom (NodeType alg, IdxType alg, SIGˣᵐˢˢType alg) )
             forloop 
-                | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                 = scanl function (zip3C root idxᵗʳᵉᵉ sigʰᵗ) (iterateI @(D alg - 1) (fmap (+1)) (fmap (const 0x001) idxᵗʳᵉᵉ))
             function ∷ Channel dom (NodeType alg, IdxType alg, SIGˣᵐˢˢType alg) 
                     → Channel dom (IdxType alg) 
@@ -449,7 +454,7 @@ ht_sign input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
                             ifthen ∷ Channel dom (NBlockType alg)
                             ifthen 
                                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                =  xmss_pkFromSig ((\sig (m,s,p) a r → (sig,r,p,a)) <$> sigᵗᵐᵖ⁰ <*> input <*> adrs <*> root⁰) idxLeaf
+                                =  xmss_pkFromSig ((\sig (m,s,p) a r x → (sig,r,p,a, x)) <$> sigᵗᵐᵖ⁰ <*> input <*> adrs <*> root⁰ <*> idxLeaf)
                             ifelse ∷ Channel dom (NBlockType alg)
                             ifelse 
                                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -487,7 +492,7 @@ ht_verify input
             node⁰ ∷ Channel dom (NBlockType alg)
             node⁰ 
                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                = xmss_pkFromSig (zip4C sig⁰ m pkSeed adrs) idxˡᵉᵃᶠ
+                = xmss_pkFromSig (zip5C sig⁰ m pkSeed adrs idxˡᵉᵃᶠ)
             forloop ∷ Channel dom (NodeType alg, IdxType alg)
             forloop 
                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -516,7 +521,7 @@ ht_verify input
                     node² ∷ Channel dom (NBlockType alg)
                     node² 
                         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                        = xmss_pkFromSig (zip4C ( (!!) <$> sig <*> j) node¹ pkSeed adrs) idxLeaf
+                        = xmss_pkFromSig (zip5C ( (!!) <$> sig <*> j) node¹ pkSeed adrs idxLeaf)
                     
 
 ----------------------------------------
