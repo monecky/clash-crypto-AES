@@ -6,7 +6,7 @@ Stability   : experimental
 Portability : POSIX
 
 Basic FORS definitions covering the fundamentals of FIPS 205.
-Thus algorithm 14-17 are implemented.
+Thus algorithm 14-17 are implemented from section 8 of the FIPS 205 document.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE MagicHash #-}
