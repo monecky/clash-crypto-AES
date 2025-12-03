@@ -422,6 +422,7 @@ deriving anyclass instance (KnownNat (N alg), KnownNat (A alg)) ⇒ Ord     (Ele
 type SIGᶠᵒʳˢType (alg ∷ SLH_DSA) = Vec (K alg) (ElemForsType alg)-- 0 .. k- 1
 type MD (alg ∷ SLH_DSA) = K alg * A alg
 type MDType (alg ∷ SLH_DSA) = (BitVector (MD alg))
+type MDByteType (alg ∷ SLH_DSA) = BitVector ((CeilXDivY (MD alg) ByteSize) * ByteSize)
 --------------------------------------------------------
 -- Security levels for different implementation of the
 -- functions described in chapter 11 and section 4.1

@@ -87,6 +87,7 @@ module Clash.Crypto.PQC.SLH_DSA.Specification.Types (
   -- FORS
   , MD
   , MDType
+  , MDByteType
   , SIGᶠᵒʳˢType
   , PrivateKeyValueTreeType
   , AUTHTreeType

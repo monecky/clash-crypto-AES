@@ -9,7 +9,6 @@ Basic FORS definitions covering the fundamentals of FIPS 205.
 Thus algorithm 14-17 are implemented.
 -}
 {-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MagicHash #-}
 {-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
 {-# OPTIONS_GHC -fno-max-relevant-binds #-}
@@ -97,7 +96,7 @@ fors_node input⁰ =  mux  (fmap (== 0x00) z) ifthen ifelse
 
 -- Algorithm 16
 fors_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (MDType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
+    ⇒ Channel dom (MDByteType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
      → Channel dom (SIGᶠᵒʳˢType alg)
 fors_sign input
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -105,8 +104,8 @@ fors_sign input
     where 
         indices ∷ Channel dom (Vec (K alg) (BitVector (A alg)))
         indices 
-            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = fmap unconcatBitVector# (fstOf4C input)
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = fmap unconcatBitVector# (fmap (v2bv . takeI @(MD alg) @((CeilXDivY (MD alg) ByteSize) * ByteSize - MD alg) . bv2v) (fstOf4C input))
         indicesi ∷ Vec (K alg) (Channel dom (IdxType alg), Channel dom (IdxType alg))
         indicesi 
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -166,7 +165,7 @@ fors_sign input
 
 -- Algorithm 17
 fors_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (SIGᶠᵒʳˢType alg, MDType alg, PKSeedType alg, ADRSType alg) 
+    ⇒ Channel dom (SIGᶠᵒʳˢType alg, MDByteType alg, PKSeedType alg, ADRSType alg) 
      → Channel dom (NBlockType alg)
 fors_pkFromSig input
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
@@ -181,8 +180,8 @@ fors_pkFromSig input
         -- Line 1
         indices ∷ Channel dom (Vec (K alg) (BitVector (A alg)))
         indices 
-            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = fmap unconcatBitVector# (sndOf4C input)
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = fmap unconcatBitVector# (fmap (v2bv . takeI @(MD alg) @((CeilXDivY (MD alg) ByteSize) * ByteSize - MD alg). bv2v) (sndOf4C input))
         -- Line 21- 23
         forspkADRS ∷ Channel dom (ADRSType alg)
         forspkADRS = setKeyPairAddressC forspkADRS⁰ (getKeyPairAddressC adrs)

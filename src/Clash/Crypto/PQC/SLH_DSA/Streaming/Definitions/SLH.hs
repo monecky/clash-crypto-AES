@@ -112,7 +112,7 @@ slh_sign_internal inputC inputD
               go ∷ PrivateKey alg → SKPrfType alg
               go PrivateKey {skPrivate = SK {skPrf = x}} = x 
       -- Code line 5 - 10
-      digest ∷ Channel dom (MDType alg, IdxType alg, IdxType alg)
+      digest ∷ Channel dom (MDByteType alg, IdxType alg, IdxType alg)
       digest = fmap go⁰ digv
         where
           digv ∷ Channel dom (Vec (M alg * ByteSize) Bit)
@@ -125,10 +125,10 @@ slh_sign_internal inputC inputD
             = (_HᵐˢᵍStream @alg (zip3C r pkSeed pkRoot) inputD)
 
 
-          go⁰ ∷ Vec (M alg * ByteSize) Bit → (MDType alg, IdxType alg, IdxType alg)
+          go⁰ ∷ Vec (M alg * ByteSize) Bit → (MDByteType alg, IdxType alg, IdxType alg)
           go⁰ d 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = (v2bv (select d0 d1 (SNat @(K alg * A alg)) d),getIdxTree,  getIdxLeaf)
+            = (resize (v2bv (select d0 d1 (SNat @(K alg * A alg)) d)),getIdxTree,  getIdxLeaf)
               where
                 afterMD ∷ (KnownNat n, (CeilXDivY (K alg * A alg) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ Vec (M alg * ByteSize) Bit
                 afterMD 
@@ -209,7 +209,7 @@ slh_verify_internal inputC inputD = ht_verify (zip4C pkᶠᵒʳˢ sigʰᵗ pkSee
           go ∷ SIGType alg → SIGᴴᵀType alg
           go SIGType {sigʰᵗ = x} = x
        -- Code line 8 - 13
-      digest ∷ Channel dom (MDType alg, IdxType alg, IdxType alg)
+      digest ∷ Channel dom (MDByteType alg, IdxType alg, IdxType alg)
       digest = fmap go⁰ digv
         where
           digv ∷ Channel dom (Vec (M alg * ByteSize) Bit)
@@ -222,10 +222,10 @@ slh_verify_internal inputC inputD = ht_verify (zip4C pkᶠᵒʳˢ sigʰᵗ pkSee
             = (_HᵐˢᵍStream @alg (zip3C r pkSeed pkRoot) inputD)
 
 
-          go⁰ ∷ Vec (M alg * ByteSize) Bit → (MDType alg, IdxType alg, IdxType alg)
+          go⁰ ∷ Vec (M alg * ByteSize) Bit → (MDByteType alg, IdxType alg, IdxType alg)
           go⁰ d 
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = (v2bv (select d0 d1 (SNat @(K alg * A alg)) d),getIdxTree,  getIdxLeaf)
+            = (resize $ v2bv (select d0 d1 (SNat @(K alg * A alg)) d),getIdxTree,  getIdxLeaf)
               where
                 afterMD ∷ (KnownNat n, (CeilXDivY (K alg * A alg) ByteSize) + n ~ (M alg  * ByteSize)) ⇒ Vec (M alg * ByteSize) Bit
                 afterMD 

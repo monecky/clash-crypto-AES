@@ -101,9 +101,9 @@ def calculateResult(strFunction, input1, version):
             sk_seed = input1[:version.n]
             pk_seed = input1[version.n:2*version.n]
             address = obtainAddressObject(input1[2*version.n:2*version.n+sizeAdrs])
-            cur     = input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs]
-            dep     = input1[intergerSize+2*version.n+sizeAdrs:2*intergerSize+2*version.n+sizeAdrs]
-            return FORS(version).node(sk_seed, pk_seed, address, idx)
+            cur     = int.from_bytes(input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs], "big")
+            dep     = int.from_bytes(input1[intergerSize+2*version.n+sizeAdrs:2*intergerSize+2*version.n+sizeAdrs], "big")
+            return FORS(version).node(sk_seed, cur, dep, pk_seed, address)
         case "fors_sign":
             md      = input1[:md]
             sk_seed = input1[md:md + version.n]
