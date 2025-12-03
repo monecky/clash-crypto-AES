@@ -71,33 +71,33 @@ tastyTests =
   testGroup
     "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTS"
     [ 
-      localOption (HedgehogTestLimit (Just 100)) $
-        testGroup
-          "Fors.fors_skGen"
-          [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_skGen" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_skGen
-          , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_skGen
-          ]
-      ,
-      localOption (HedgehogTestLimit (Just 100)) $
-        testGroup
-          "Fors.fors_node"
-          [ testProperty "Fors fors_node SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_node" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_node
-          , testProperty "Fors fors_node SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_node" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_node
-          ]
-      ,
-      localOption (HedgehogTestLimit (Just 100)) $
-        testGroup
-          "Fors.fors_sign"
-          [ testProperty "Fors fors_sign SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(MDByteType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s) "fors_sign" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (MDByteType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_sign
-          , testProperty "Fors fors_sign SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(MDByteType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f) "fors_sign" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (MDByteType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_sign
-          ]
-      ,
-      localOption (HedgehogTestLimit (Just 100)) $
-        testGroup
-          "Fors.fors_pkFromSig"
-          [ testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDByteType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_pkFromSig" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDByteType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_pkFromSig
-          , testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDByteType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_pkFromSig" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDByteType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_pkFromSig
-          ]
+      -- localOption (HedgehogTestLimit (Just 100)) $
+      --   testGroup
+      --     "Fors.fors_skGen"
+      --     [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_skGen" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_skGen
+      --     , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_skGen
+      --     ]
+      -- ,
+      -- localOption (HedgehogTestLimit (Just 100)) $
+      --   testGroup
+      --     "Fors.fors_node"
+      --     [ testProperty "Fors fors_node SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_node" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_node
+      --     , testProperty "Fors fors_node SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_node" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_node
+      --     ]
+      -- ,
+      -- localOption (HedgehogTestLimit (Just 100)) $
+      --   testGroup
+      --     "Fors.fors_sign"
+      --     [ testProperty "Fors fors_sign SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(MDByteType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s) "fors_sign" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (MDByteType SLH_DSA_SHA2_128s, SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_sign
+      --     , testProperty "Fors fors_sign SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(MDByteType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f) "fors_sign" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (MDByteType SLH_DSA_SHA2_128f, SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_sign
+      --     ]
+      -- ,
+      -- localOption (HedgehogTestLimit (Just 100)) $
+      --   testGroup
+      --     "Fors.fors_pkFromSig"
+      --     [ testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDByteType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_pkFromSig" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128s, MDByteType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_pkFromSig
+      --     , testProperty "Fors fors_pkFromSig SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDByteType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_pkFromSig" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SIGᶠᵒʳˢType SLH_DSA_SHA2_128f, MDByteType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_pkFromSig
+      --     ]
 
 
     ]
@@ -175,7 +175,7 @@ forsRefImplPython name version input1 =
       in do
           outputHex <- readProcess
               "python3"
-              [ "tests/sim/Test/Clash/Crypto/PQC/SLH_DSA/Streaming/Definitions/fors_worker.py"
+              [ "tests/sim/Test/Clash/Crypto/PQC/SLH_DSA/Streaming/Definitions/wots_worker.py"
               , name
               , version
               , bsToHex input1

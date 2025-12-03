@@ -23,11 +23,17 @@ import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Hash     as Hash
 import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS     as FORS
 import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.WOTSplus as WOTS
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.SLH      as SLH
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Ht       as HT
+import qualified Test.Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.XMSS     as XMSS
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.PQC.SLH_DSA.Streaming.Algorithm"
   [
     Hash.tastyTests,
     FORS.tastyTests,
-    WOTS.tastyTests
+    WOTS.tastyTests,
+    XMSS.tastyTests,
+    HT.tastyTests,
+    SLH.tastyTests
    ] 
 
