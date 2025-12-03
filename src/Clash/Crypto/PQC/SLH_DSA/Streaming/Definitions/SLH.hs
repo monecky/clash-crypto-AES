@@ -65,7 +65,7 @@ slh_keygen_internal input
         pkRoot ∷ Channel dom (PKRootType alg)
         pkRoot 
           | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-          = xmss_node (fmap (\(sks,skp,pks) → (sks,pks, adrs)) input) (fmap (\x → 0x0 ∷ IdxType alg) input) (fmap (\x → (natToNum @(H' alg)) ∷ IdxType alg) input)
+          = xmss_node (liftA3 (\(sks,skp,pks) i s → (sks,pks, adrs, i, s)) input (fmap (\x → 0x0 ∷ IdxType alg) input) (fmap (\x → (natToNum @(H' alg)) ∷ IdxType alg) input))
 -- Algorithm 19
 slh_sign_internal ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (PrivateKey alg, Opt_randType alg)  
