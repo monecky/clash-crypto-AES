@@ -95,7 +95,7 @@ def calculateResult(strFunction, input1, version):
             idx     = int.from_bytes(input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs], "big")
             sk_address = address.with_type(FORSPrfAddress)
             sk_address.keypair = address.keypair
-            # sk_address.index = idx
+            sk_address.index = idx
             return  compact_address(sk_address.to_bytes())
         case "fors_node":
             sk_seed = input1[:version.n]

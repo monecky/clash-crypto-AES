@@ -51,7 +51,7 @@ fors_skGen input
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         = _PRFStream (fmap go input)
         where 
-            go (s,p,a,i) = (s,p, skADRS²)
+            go (s,p,a,i) = (p,s,skADRS²)
                 where 
                     skADRS  = setTypeAndClear a FORS_PRF
                     skADRS¹ = setKeyPairAddress skADRS (getKeyPairAddress a)

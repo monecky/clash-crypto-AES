@@ -210,8 +210,8 @@ fors_skGen_adrs input
         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
         = fmap (\(x,y,z) → z) (fmap go input)
         where 
-            go (s,p,a,i) = (s,p,skADRS)
+            go (s,p,a,i) = (s,p,skADRS²)
                 where 
                     skADRS  = setTypeAndClear a FORS_PRF
                     skADRS¹ = setKeyPairAddress skADRS (getKeyPairAddress a) -- TODO here appears bug
-                    -- skADRS² = setTreeIndex skADRS¹ i
+                    skADRS² = setTreeIndex skADRS¹ i
