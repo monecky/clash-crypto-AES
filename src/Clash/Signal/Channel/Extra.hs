@@ -28,6 +28,13 @@ module Clash.Signal.Channel.Extra
   , frtOf5C
   , fthOf5C
   , zip5C  
+  , fstOf6C
+  , sndOf6C
+  , thdOf6C
+  , frtOf6C
+  , fthOf6C
+  , sthOf6C
+  , zip6C 
   ) where
 import Clash.Signal.Channel
 import Clash.Prelude
@@ -71,5 +78,20 @@ fthOf5C ∷ Channel dom (a,b,c,d,e) → Channel dom e
 fthOf5C = fmap (\ (_, _, _, _, e) -> e)
 zip5C   ∷ Channel dom a → Channel dom b → Channel dom c → Channel dom d → Channel dom e → Channel dom (a,b,c,d,e)
 zip5C   a b c d e = (,,,,) <$> a <*> b <*> c <*> d <*> e
+
+fstOf6C ∷ Channel dom (a,b,c,d,e,f) → Channel dom a
+fstOf6C = fmap (\ (a, _, _, _, _, _) -> a)
+sndOf6C ∷ Channel dom (a,b,c,d,e,f) → Channel dom b
+sndOf6C = fmap (\ (_, b, _, _, _, _) -> b)
+thdOf6C ∷ Channel dom (a,b,c, d, e,f) → Channel dom c
+thdOf6C = fmap (\ (_, _, c, _, _, _) -> c)
+frtOf6C ∷ Channel dom (a,b,c,d,e,f) → Channel dom d
+frtOf6C = fmap (\ (_, _, _, d, _, _) -> d)
+fthOf6C ∷ Channel dom (a,b,c,d,e,f) → Channel dom e
+fthOf6C = fmap (\ (_, _, _, _, e,_) -> e)
+sthOf6C ∷ Channel dom (a,b,c,d,e,f) → Channel dom f
+sthOf6C = fmap (\ (_, _, _, _, _, f) -> f)
+zip6C   ∷ Channel dom a → Channel dom b → Channel dom c → Channel dom d → Channel dom e → Channel dom f → Channel dom (a,b,c,d,e,f)
+zip6C   a b c d e f = (,,,,,) <$> a <*> b <*> c <*> d <*> e <*> f
 
 
