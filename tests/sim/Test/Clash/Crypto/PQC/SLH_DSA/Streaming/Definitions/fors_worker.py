@@ -31,11 +31,11 @@ def obtainAddressObject(adresBytes: [bytes]):
         adrshashindex     =  int.from_bytes(adresBytes[28:31], "big")
     elif len(adresBytes) == 22:
         adrslayer         =  adresBytes[0]
-        adrstree          =  int.from_bytes(adresBytes[1:8]  , "big")
+        adrstree          =  int.from_bytes(adresBytes[1:9]  , "big")
         adrstype          =  adresBytes[9]
-        adrskeypair       =  int.from_bytes(adresBytes[10:13] , "big")
-        adrschainheight   =  int.from_bytes(adresBytes[14:17], "big")
-        adrshashindex     =  int.from_bytes(adresBytes[18:21], "big")
+        adrskeypair       =  int.from_bytes(adresBytes[10:14] , "big")
+        adrschainheight   =  int.from_bytes(adresBytes[14:18], "big")
+        adrshashindex     =  int.from_bytes(adresBytes[18:22], "big")
     else:
         raise Exception("Wrong size of address") 
     adrs = Address(0,0)
@@ -93,9 +93,10 @@ def calculateResult(strFunction, input1, version):
             pk_seed = input1[version.n:version.n + version.n]
             address = obtainAddressObject(input1[2*version.n:2*version.n+sizeAdrs])
             idx     = int.from_bytes(input1[2*version.n+sizeAdrs:intergerSize+2*version.n+sizeAdrs], "big")
+            return compact_address(address.to_bytes())
             sk_address = address.with_type(FORSPrfAddress)
-            sk_address.keypair = address.keypair
-            sk_address.index = idx
+            # sk_address.keypair = 7 # address.keypair
+            # sk_address.index = idx
             return  compact_address(sk_address.to_bytes())
         case "fors_node":
             sk_seed = input1[:version.n]
