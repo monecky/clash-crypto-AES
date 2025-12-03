@@ -174,7 +174,7 @@ slh_verify_internal ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClo
     → DataStream dom () () (ByteType) 
     -- ^ Message of arbritrary length
      → Channel dom (Bool)
-slh_verify_internal inputC inputD = ht_verify (zip4C pkᶠᵒʳˢ sigʰᵗ pkSeed pkRoot)  (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-})
+slh_verify_internal inputC inputD = ht_verify (zip6C pkᶠᵒʳˢ sigʰᵗ pkSeed pkRoot  (sndOf3C digest{-idx tree-}) (thdOf3C digest{-idx leaf-}))
   where
       adrs ∷ Channel dom (ADRSType alg)
       adrs = fmap (const getInitADRS) inputC
