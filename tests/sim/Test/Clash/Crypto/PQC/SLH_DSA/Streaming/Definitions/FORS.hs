@@ -132,7 +132,6 @@ forsProperty name version placeAdrs typeType forsComp
         appendFile "test_speed.csv"
           (List.intercalate "," [name, show (pack f'')] <> "\n")
   python <- liftIO $ forsRefImplPython name version input1
-  -- Just to satisfy the test environment.
   bv2ByteString (pack f'') === python
  where
   moduloError =
@@ -181,16 +180,3 @@ forsRefImplPython name version input1 =
               ]
               ""
           pure (hexToBs (List.init outputHex))
------- Test Address
-fors_skGen_adrs ∷  ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg, IdxType alg)
-     → Channel dom (ADRSType alg)
-fors_skGen_adrs input
-        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-        = fmap (\(x,y,z) → z) (fmap go input)
-        where 
-            go (s,p,a,i) = (s,p,skADRS²)
-                where 
-                    skADRS  = setTypeAndClear a FORS_PRF
-                    skADRS¹ = setKeyPairAddress skADRS (getKeyPairAddress a) -- TODO here appears bug
-                    skADRS² = setTreeIndex skADRS¹ i
