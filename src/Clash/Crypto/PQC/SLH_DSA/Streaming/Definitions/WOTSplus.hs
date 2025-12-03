@@ -295,13 +295,15 @@ xmss_node input i z =  mux  (fmap (== 0x00) z) ifthen ifelse
                 adrs¹ = liftA3 (\s t v → setTreeIndex (setTreeHeight s t) v) (setTypeAndClearC adrs TREE) z i
 -- Algorithm 10
 xmss_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
-     → Channel dom (IdxType alg) -- idx
+    ⇒ Channel dom (NBlockType alg, SKSeedType alg, PKSeedType alg, ADRSType alg,
+        IdxType alg) -- idx
      → Channel dom (SIGˣᵐˢˢType alg)
-xmss_sign input idx 
+xmss_sign input 
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
     = liftA2 object sig_ots auth
     where 
+        idx ∷ Channel dom (IdxType alg)
+        idx = fthOf5C input
         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg)
                 ⇒ SIGʷᵒᵗˢPlusType alg → AUTHType alg → SIGˣᵐˢˢType alg
         object x y 
@@ -314,11 +316,11 @@ xmss_sign input idx
             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
             = concatMapC (map (uncurry (xmss_node input⁰)) (iterateI @(H' alg) (\(x, y) → (k x, fmap (1+) y)) (idx, fmap (\x → 0x0 ∷ IdxType alg) idx)))
             where
-                input⁰ = fmap (\(_,s,p,a) → (s,p,a)) input
+                input⁰ = fmap (\(_,s,p,a,_) → (s,p,a)) input
         sig_ots ∷ Channel dom (SIGʷᵒᵗˢPlusType alg)
         sig_ots = wots_sign input⁰
             where
-                input⁰ = liftA2 (\(m,s,p,a) x → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) x)) input idx
+                input⁰ = fmap (\(m,s,p,a,x) → (m,s,p, setKeyPairAddress (setTypeAndClear a WOTS_HASH) x)) input
 
 -- -- Algorithm 11
 xmss_pkFromSig ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
@@ -410,7 +412,7 @@ ht_sign input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
             pkSeed = thdOf3C input
             skSeed ∷ Channel dom (SKSeedType alg)
             skSeed = sndOf3C input
-            sigᵗᵐᵖ = xmss_sign (liftA2 (\(m,s,p) a → (m,s,p,a)) input adrs) idxˡᵉᵃᶠ
+            sigᵗᵐᵖ = xmss_sign (liftA3 (\(m,s,p) a x → (m,s,p,a,x)) input adrs idxˡᵉᵃᶠ)
             sigʰᵗ = sigᵗᵐᵖ
             root = xmss_pkFromSig ((\sig (m,s,p) a x → (sig,m,p,a,x)) <$> sigʰᵗ <*> input <*> adrs <*> idxˡᵉᵃᶠ)
             -- line 6 - 16
@@ -440,7 +442,7 @@ ht_sign input idxᵗʳᵉᵉ idxˡᵉᵃᶠ
                     idxLeaf 
                         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                         = fmap (\x → shiftL (shiftR x (natToNum @(H' alg))) (natToNum @(H' alg))) idxᵗʳᵉᵉ⁰
-                    sigᵗᵐᵖ⁰ = xmss_sign (zip4C root⁰ skSeed pkSeed adrs) idxLeaf
+                    sigᵗᵐᵖ⁰ = xmss_sign (zip5C root⁰ skSeed pkSeed adrs idxLeaf)
                     -- sigʰᵗ¹ = (‖) <$> sigʰᵗ⁰ <*> sigᵗᵐᵖ⁰
                     root¹ ∷ Channel dom (NBlockType alg)
                     root¹ 
