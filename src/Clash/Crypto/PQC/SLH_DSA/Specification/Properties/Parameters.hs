@@ -122,6 +122,8 @@ data SLH_DSAParametersFacts (alg ∷ SLH_DSA) where
         , k⁰  + 4 ~ TypeSize alg * ByteSize
         -- FORS
         , MD alg ≤ (CeilXDivY (MD alg) ByteSize) * ByteSize
+        , 1 ≤ K alg * (2 ^ A alg)
+        , 1 ≤ A alg
         ) ⇒
         Proxy alg →
         SLH_DSAParametersFacts alg

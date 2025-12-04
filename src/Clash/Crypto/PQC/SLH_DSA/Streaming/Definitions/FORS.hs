@@ -58,8 +58,8 @@ fors_skGen input
 -- Algorithm 15
 fors_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg
-        , IdxType alg -- i 
-        , IdxType alg -- z
+        , IdxType alg -- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾
+        , IdxType alg -- z ≤ a
         )
      → Channel dom (NodeType alg)
 fors_node input⁰ =  mux  (fmap (== 0x00) z) ifthen ifelse
@@ -93,7 +93,94 @@ fors_node input⁰ =  mux  (fmap (== 0x00) z) ifthen ifelse
                     node 
                         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
                         = _HStream ((\(_,p,_) a l r →  (p,a, l ‖ r)) <$> input <*> adrs¹ <*> lnode <*> rnode)
-
+type ForsNodeState alg  =
+ (Vec (A alg) (NodeType alg),
+  Index (K alg * (2 ^(A alg))), -- i current calculation
+  Index (A alg), -- z current calculation
+  Index (K alg * (2 ^(A alg))), -- i to find
+  Index (A alg) -- z to find
+ )
+data ForsNodeMode (alg ∷ SLH_DSA) 
+  = KeyStart | KeyProsXOR (Index 3) (Index (Nr alg + 1)) | KeyProsLastW (Index 4) (Index (Nr alg + 1))  | KeyFin | KeyEnd
+-- Algorithm 15
+fors_nodeOpt ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg
+        , IdxType alg -- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾ current
+        , IdxType alg -- z ≤ a depth
+        )
+     → Channel dom (NodeType alg)
+fors_nodeOpt input⁰ 
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+    = mealy (~~>)
+    where
+        i ∷ Channel dom (IdxType alg)
+        i = fmap (\(s,p,a,x,y) → x) input⁰
+        z ∷ Channel dom (IdxType alg)
+        z = fmap (\(s,p,a,x,y) → y) input⁰
+        input ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg)
+        input = fmap (\(s,p,a,x,y) → (s,p,a)) input⁰
+        pkSeed ∷ Channel dom (PKSeedType alg)
+        pkSeed = fmap (\(s,p,a,x,y) → p) input⁰
+        adrs ∷ Channel dom (ADRSType alg)
+        adrs = fmap (\(s,p,a,x,y) → a) input⁰
+        put ∷ (SKSeedType alg, PKSeedType alg, ADRSType alg
+            , IdxType alg -- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾
+            , IdxType alg -- z ≤ a
+            ) → ForsNodeState alg
+        put input 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = (unconcatI  (unconcatBitVector# 0x0), minBound , maxBound, bitCoerce (resize i), bitCoerce (resize z))
+            where
+                i ∷ IdxType alg
+                i = (\(s,p,a,x,y) → x) input
+                z ∷ IdxType alg
+                z = (\(s,p,a,x,y) → y) input
+        get ∷ (SKSeedType alg, PKSeedType alg, ADRSType alg, IdxType alg {- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾-} , IdxType alg {- z ≤ a-}) → ForsNodeState alg → NodeType alg
+        get inputᵍ state@(buff,_,_,_,_) 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = buff !! (0 ∷ Index 1)
+        compute ∷  (SKSeedType alg, PKSeedType alg, ADRSType alg, IdxType alg {- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾-} , IdxType alg {- z ≤ a-}) → ForsNodeState alg → CompMode (ForsNodeState alg)
+        compute inputᵍ@(s,p,a,i,z) state@(buff,_,_,_,_) = (state, False)
+        hInstance ∷ Channel dom (IdxType alg) -- i
+                → Channel dom (IdxType alg) -- z
+                → Channel dom (NodeType alg) -- l
+                → Channel dom (NodeType alg) -- r
+                → Channel dom (NodeType alg)
+        hInstance i¹ z¹ lnode¹ rnode¹
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = _HStream ((\p a l r →  (p,a, l ‖ r)) pkSeed  adrs¹ lnode¹ rnode¹)
+            where
+                adrs¹ ∷ Channel dom (ADRSType alg)
+                adrs¹ 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = liftA3 (\a v w → setTreeIndex (setTreeHeight a (v ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w) adrs i¹ z¹
+        fInstance ∷ ADRSType alg → NodeType alg →  NodeType alg → NodeType alg
+        fInstance input¹ adrs¹ lnode¹ rnode¹
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            =_FStream ((\(s,t,v) w → (t, adrs¹, w, s)) input¹ i)
+        ifthen ∷ Channel dom (NodeType alg)
+        ifthen 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = _FStream (liftA2 (\(s,t,v) w → (t, setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w, s)) input i)
+        ifelse ∷ Channel dom (NodeType alg)
+        ifelse
+            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+            = node
+                where
+                    -- line 7
+                    lnode ∷ Channel dom (NodeType alg)
+                    lnode =  fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input ((2*) <$> i) (fmap (\x → x - 1) z))
+                    -- line 8
+                    rnode ∷ Channel dom (NodeType alg)
+                    rnode = fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input (fmap (\x → 2 * x + 1) i) (fmap (\x → x - 1) z))
+                    adrs¹ ∷ Channel dom (ADRSType alg)
+                    adrs¹ 
+                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                        = liftA2 (\(s,t,v) w → setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w) input i
+                    node ∷ Channel dom (NodeType alg)
+                    node 
+                        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+                        = _HStream ((\(_,p,_) a l r →  (p,a, l ‖ r)) <$> input <*> adrs¹ <*> lnode <*> rnode)
 -- Algorithm 16
 fors_sign ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (MDByteType alg, SKSeedType alg, PKSeedType alg, ADRSType alg) 
