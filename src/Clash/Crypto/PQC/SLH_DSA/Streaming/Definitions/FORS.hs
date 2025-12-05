@@ -19,6 +19,7 @@ module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS (
     fors_skGen 
     -- Algorithm 15
     , fors_node
+    , fors_node_opt
     -- Algorithm 16
     , fors_sign
     -- Algorithm 17
@@ -118,13 +119,13 @@ type ForsNodeMealInput alg = ((Maybe (IdxType alg{-i-}), Bool),
 type ForsNodeMealOutput alg = ((IdxType alg{-i-}, IdxType alg{-z-},NodeType alg{-lNode-}, NodeType alg{-rNode-}, NodeType alg{-Result-}, Bool), ProviderAction)
 
 -- Algorithm 15
-fors_nodeOpt ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+fors_node_opt ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg
         , IdxType alg -- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾ current
         , IdxType alg -- z ≤ a depth
         )
      → Channel dom (NodeType alg)
-fors_nodeOpt input⁰ 
+fors_node_opt input⁰ 
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
     = go cResult cReady
     where
@@ -163,14 +164,14 @@ fors_nodeOpt input⁰
                         0x0 ∷ IdxType alg{-Current z-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                        x ∷ NodeType alg {-Result-}, False),Keep))
+                        x ∷ NodeType alg {-Result-}, False),Release))
                 (~~>) state@(_,_,_,_,_,_,_,x) input@(_, _, _, _)  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = (state, ((0x0 ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                        x ∷ NodeType alg {-Result-}, False),Keep))
+                        x ∷ NodeType alg {-Result-}, False),Release))
                 -- (~~>) state@(_,_,_,_,_,_,_,_) input@(_, _, _, _)  = (state, (Nothing, Clear))
         cI = fstOf6C controller
         cZ = sndOf6C controller
@@ -190,7 +191,7 @@ fors_nodeOpt input⁰
                         → (Maybe ((NodeType alg), Bool), Bool)
                         → ((NodeType alg), (NodeType alg, ProviderAction))
                 (~~>) state@(_) input@((Just (x, True)), True) = (x, (x, Release))
-                (~~>) state@(x) input@(_, _) = (state, (x, Keep))    
+                (~~>) state@(x) input@(_, _) = (state, (x, Release))    
         hInstance ∷ Channel dom (NodeType alg)
         hInstance
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
