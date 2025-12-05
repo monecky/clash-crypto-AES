@@ -171,7 +171,7 @@ fors_node_opt input⁰
                         0x0 ∷ IdxType alg{-Current z-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                        x ∷ NodeType alg {-Result-}, False),Release))
+                        x ∷ NodeType alg {-Result-}, False),Keep))
                 -- (~~>) state@(_,_,_,_,_,_,_,_) input@(_, _, _, _)  = (state, (Nothing, Clear))
         cI = fstOf6C controller
         cZ = sndOf6C controller
