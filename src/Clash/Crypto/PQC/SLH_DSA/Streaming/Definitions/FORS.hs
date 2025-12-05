@@ -259,7 +259,8 @@ fors_node_opt input⁰
                 0x0 ∷ IdxType alg{-To calculate z-}, 
                 False ∷ Bool{-Computation going on-},
                 unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-},
-                ((0x0 ∷ IdxType alg{-Current i-},
+                -- Next output
+                     ((0x0 ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
@@ -282,27 +283,43 @@ fors_node_opt input⁰
                         = (updateState fBool fData state, nextOutput)
                             where
                                 updateState ∷ Bool → Maybe (NodeType alg{-h-}) →ForsNodeMealState alg → ForsNodeMealState alg
-                                updateState True fhdata state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput)
+                                updateState True (Just fhdata) state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput)
                                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                 = (                getHCurI fhdata ∷ IdxType alg{-Current i-},
-                                                    getHCurZ fhdata ∷ IdxType alg{-Current z-},
+                                 = (                getHCurI ∷ IdxType alg{-Current i-},
+                                                    getHCurZ ∷ IdxType alg{-Current z-},
                                                     unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
                                                     False ∷ Bool{-Result is ready-},
                                                     scali ∷ IdxType alg{-To calculate i-},
                                                     scalz ∷ IdxType alg{-To calculate z-}, 
                                                     True ∷ Bool{-Computation going on-},
-                                                    unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-}, nextOutput) 
-                                updateState False fhdata state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput) = state
-                                getHCurI ∷ Maybe (NodeType alg{-h-}) → IdxType alg
-                                getHCurI ~(Just _) 
+                                                    unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-}, updateNextOutput fhdata nextOutput)
+                                    where
+                                        updateNextOutput ∷ (NodeType alg{-h-}) → ForsNodeMealOutput alg → ForsNodeMealOutput alg
+                                        updateNextOutput fhdata⁰ output@((ci, cz,ln,rn, r, b), a) 
+                                              | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                              = ((0x0 ∷ IdxType alg{-Current i-},
+                                                                    0x0 ∷ IdxType alg{-Current z-},
+                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                                                                    fhdata⁰  ∷ NodeType alg {-Result-}, True),Release)
+                                updateState False _ state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput) = (sci,scz,sbuf,sready,scali,scalz, True,x,updateNextOutput nextOutput)
+                                    where
+                                        updateNextOutput ∷ ForsNodeMealOutput alg → ForsNodeMealOutput alg
+                                        updateNextOutput output@((ci, cz,ln,rn, r, b), a) 
+                                              | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                              = ((0x0 ∷ IdxType alg{-Current i-},
+                                                                    0x0 ∷ IdxType alg{-Current z-},
+                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                                                                    r  ∷ NodeType alg {-Result-}, False),Keep)
+                                getHCurI ∷ IdxType alg
+                                getHCurI
                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  sci - 1  -- This checks if i is still in range of the lower layer.
                                     | otherwise = (scali + 1) ^ (scalz - 1) -- Go a layer up
-                                getHCurI _              = sci
-                                getHCurZ ∷ Maybe (NodeType alg{-h-}) → IdxType alg
-                                getHCurZ ~(Just _) 
+                                getHCurZ ∷ IdxType alg
+                                getHCurZ
                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  0x0  -- This checks if i is still in range of the lower layer.
                                     | otherwise = 0x1 -- Go a layer up
-                                getHCurZ _              = 0x0
                                 getBoolResult ∷ Maybe (NodeType alg{-h/f-}) → Bool
                                 getBoolResult ~(Just _) 
                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  True 
