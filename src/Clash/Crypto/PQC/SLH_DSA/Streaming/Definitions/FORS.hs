@@ -7,6 +7,8 @@ Portability : POSIX
 
 Basic FORS definitions covering the fundamentals of FIPS 205.
 Thus algorithm 14-17 are implemented from section 8 of the FIPS 205 document.
+
+Makes use of (^) in fors_node but this can be narrowed down
 -}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE MagicHash #-}
@@ -18,7 +20,7 @@ module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS (
      -- Algorithm 14
     fors_skGen 
     -- Algorithm 15
-    , fors_node
+    -- , fors_node
     , fors_node_opt
     -- Algorithm 16
     , fors_sign
@@ -27,7 +29,7 @@ module Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS (
 
 ) where
 
-import Clash.Prelude
+import Clash.Prelude hiding ((^))
 import Clash.Sized.Internal.BitVector
 import Language.Haskell.Unicode (type (≤))
 import Clash.Crypto.PQC.SLH_DSA.General.General
@@ -57,46 +59,150 @@ fors_skGen input
                     skADRS¹ = setKeyPairAddress skADRS (getKeyPairAddress a)
                     skADRS² = setTreeIndex skADRS¹ i
 -- Algorithm 15
-fors_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
-    ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg
-        , IdxType alg -- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾
-        , IdxType alg -- z ≤ a
-        )
-     → Channel dom (NodeType alg)
-fors_node input⁰ =  mux  (fmap (== 0x00) z) ifthen ifelse
-    where
-        i ∷ Channel dom (IdxType alg)
-        i = fmap (\(s,p,a,x,y) → x) input⁰
-        z ∷ Channel dom (IdxType alg)
-        z = fmap (\(s,p,a,x,y) → y) input⁰
-        input ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg)
-        input = fmap (\(s,p,a,x,y) → (s,p,a)) input⁰
-        ifthen ∷ Channel dom (NodeType alg)
-        ifthen 
-            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-            = _FStream (liftA3 (\(s,t,v) w sk → (t, setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w, sk)) input i skSeed)
-            where 
-                skSeed ∷ Channel dom (SKPrfType alg)
-                skSeed = fors_skGen (liftA2 (\(s,t,v) w → (s,t,v,w)) input i)
-        ifelse ∷ Channel dom (NodeType alg)
-        ifelse
-            | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = node
-                where
-                    -- line 7
-                    lnode ∷ Channel dom (NodeType alg)
-                    lnode =  fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input ((2*) <$> i) (fmap (\x → x - 1) z))
-                    -- line 8
-                    rnode ∷ Channel dom (NodeType alg)
-                    rnode = fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input (fmap (\x → 2 * x + 1) i) (fmap (\x → x - 1) z))
-                    adrs¹ ∷ Channel dom (ADRSType alg)
-                    adrs¹ 
-                        | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                        = liftA2 (\(s,t,v) w → setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w) input i
-                    node ∷ Channel dom (NodeType alg)
-                    node 
-                        | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-                        = _HStream ((\(_,p,_) a l r →  (p,a, l ‖ r)) <$> input <*> adrs¹ <*> lnode <*> rnode)
+-- fors_node ∷ ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
+--     ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg
+--         , IdxType alg -- i < k ⋅ 2⁽ᵃ⁻ᶻ⁾
+--         , IdxType alg -- z ≤ a
+--         )
+--      → Channel dom (NodeType alg)
+-- fors_node input⁰ 
+--     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--     = mux  (fmap (== 0x00) z) ifthen (fmap (\x → unconcatBitVector# 0x12346789) input⁰)
+--     where
+--         i ∷ Channel dom (IdxType alg)
+--         i = fmap (\(s,p,a,x,y) → x) input⁰
+--         z ∷ Channel dom (IdxType alg)
+--         z = fmap (\(s,p,a,x,y) → 0x0) input⁰
+--         input ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg)
+--         input = fmap (\(s,p,a,x,y) → (s,p,a)) input⁰
+--         ifthen ∷ Channel dom (NodeType alg)
+--         ifthen 
+--             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--             = _FStream (liftA3 (\(s,t,v) w sk → (t, setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w, sk)) input i skSeed)
+--             where 
+--                 skSeed ∷ Channel dom (SKPrfType alg)
+--                 skSeed = fors_skGen (liftA2 (\(s,t,v) w → (s,t,v,w)) input i)
+--         ifelse ∷ Channel dom (NodeType alg)
+--         ifelse
+--             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+--             = node
+--                 where
+--                     -- line 7
+--                     lnode ∷ Channel dom (NodeType alg)
+--                     lnode =  fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input ((2*) <$> i) (fmap (\x → satPred minBound x) z))
+--                     -- line 8
+--                     rnode ∷ Channel dom (NodeType alg)
+--                     rnode = fors_node (liftA3 (\(s,p,a) x y → (s,p,a,x,y)) input (fmap (\x → 2 * x + 1) i) (fmap (\x → satPred minBound x) z))
+--                     adrs¹ ∷ Channel dom (ADRSType alg)
+--                     adrs¹ 
+--                         | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+--                         = liftA2 (\(s,t,v) w → setTreeIndex (setTreeHeight v (0x0 ∷ BitVector (ChainAddressTreeHeightSize alg * ByteSize))) w) input i
+--                     node ∷ Channel dom (NodeType alg)
+--                     node 
+--                         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+--                         = _HStream ((\(_,p,_) a l r →  (p,a, l ‖ r)) <$> input <*> adrs¹ <*> lnode <*> rnode)
+-- fors_node
+--   :: forall alg dom.
+--      ( KnownDomain dom
+--      , HiddenClockResetEnable dom
+--      , KnownSLH_DSAParameters alg
+--      , SLH_DSA_hashStreamFact alg
+--      )
+--   => Channel dom
+--         ( SKSeedType alg
+--         , PKSeedType alg
+--         , ADRSType alg
+--         , IdxType alg  -- i
+--         , IdxType alg  -- z
+--         )
+--   -> Channel dom (NodeType alg)
+-- fors_node input0
+--   | SLH_DSAParametersFacts {} <- knownSLH_DSAParameters @alg
+--   = mux (z .==. pure 0) leafNode internalNode
+--   where
+--     ----------------------------------------------------------------------------
+--     -- Unpack input
+--     ----------------------------------------------------------------------------
+--     skSeed  = fmap (\(s,_,_,_,_) -> s) input0
+--     pkSeed  = fmap (\(_,p,_,_,_) -> p) input0
+--     adrs    = fmap (\(_,_,a,_,_) -> a) input0
+--     i       = fmap (\(_,_,_,x,_) -> x) input0
+--     z       = fmap (\(_,_,_,_,y) -> y) input0
+
+--     ----------------------------------------------------------------------------
+--     -- Addresses for leaf and internal nodes
+--     ----------------------------------------------------------------------------
+--     baseAdrs =
+--       liftA2
+--         (\a idx -> setTreeIndex (setTreeHeight a 0) idx)
+--         adrs
+--         i
+
+--     ----------------------------------------------------------------------------
+--     -- Leaf node via F-stream
+--     ----------------------------------------------------------------------------
+--     leafNode :: Channel dom (NodeType alg)
+--     leafNode =
+--       let msg = liftA3 (\_ _ _ -> ()) skSeed pkSeed adrs
+--           m1  = skSeedForLeaf  -- m¹-type input from fors_skGen
+--       in  _FStream (liftA3 (\p a m -> (p,a,m)) pkSeed baseAdrs m1)
+
+--     skSeedForLeaf :: Channel dom (M¹Type alg)  -- Vec (N alg) Byte
+--     skSeedForLeaf =
+--       fors_skGen (liftA2 (\(s,p,a) idx -> (s,p,a,idx))
+--                          (liftA3 (,,) skSeed pkSeed adrs)
+--                          i)
+
+--     ----------------------------------------------------------------------------
+--     -- Internal node via H-stream
+--     ----------------------------------------------------------------------------
+--     leftIdx  = fmap (`shiftL` 1) i
+--     rightIdx = liftA2 (\x _ -> x `shiftL` 1 + 1) i i
+
+--     childZ   = fmap (subtract 1) z
+
+--     -- Left child leaf (non-recursive)
+--     leftLeafSeed =
+--       fors_skGen (liftA2 (\(s,p,a) idx -> (s,p,a,idx))
+--                          (liftA3 (,,) skSeed pkSeed adrs)
+--                          leftIdx)
+
+--     leftLeafNode =
+--       _FStream
+--         (liftA3 (\p a m -> (p,a,m))
+--                 pkSeed
+--                 (liftA2
+--                     (\a idx -> setTreeIndex (setTreeHeight a 0) idx)
+--                     adrs
+--                     leftIdx)
+--                 leftLeafSeed)
+
+--     -- Right child leaf (non-recursive)
+--     rightLeafSeed =
+--       fors_skGen (liftA2 (\(s,p,a) idx -> (s,p,a,idx))
+--                          (liftA3 (,,) skSeed pkSeed adrs)
+--                          rightIdx)
+
+--     rightLeafNode =
+--       _FStream
+--         (liftA3 (\p a m -> (p,a,m))
+--                 pkSeed
+--                 (liftA2
+--                     (\a idx -> setTreeIndex (setTreeHeight a 0) idx)
+--                     adrs
+--                     rightIdx)
+--                 rightLeafSeed)
+
+--     -- Internal node hash = H( left ++ right )
+--     internalNode =
+--       let msg2 = liftA2 (++)
+--                         leftLeafNode
+--                         rightLeafNode
+--           adrsInt = baseAdrs
+--       in  _HStream (liftA3 (\p a m2 -> (p,a,m2)) pkSeed adrsInt msg2)
+-- | Non-recursive, fully unrolled FORS node generator.
+--   Implements Algorithm 15 without recursion or Mealy machines.
+
 type ForsNodeState alg  =
  (Vec (A alg) (NodeType alg),
   Index (K alg * (2 ^(A alg))), -- i current calculation
@@ -111,7 +217,8 @@ type ForsNodeMealState alg = (IdxType alg{-Current i-},
                               IdxType alg{-To calculate i-},
                               IdxType alg{-To calculate z-}, 
                               Bool{-Computation going on-},
-                              NodeType alg{-Previous output-})
+                              NodeType alg{-Previous output-},
+                              ForsNodeMealOutput alg{-Next output-} )
 type ForsNodeMealInput alg = ((Maybe (IdxType alg{-i-}), Bool),
                               (Maybe (IdxType alg{-z-}), Bool), 
                               (Maybe (NodeType alg{-h-}), Bool), 
@@ -151,21 +258,91 @@ fors_node_opt input⁰
                 0x0 ∷ IdxType alg{-To calculate i-},
                 0x0 ∷ IdxType alg{-To calculate z-}, 
                 False ∷ Bool{-Computation going on-},
-                unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-}
+                unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-},
+                ((0x0 ∷ IdxType alg{-Current i-},
+                        0x0 ∷ IdxType alg{-Current z-},
+                        unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                        unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                        unconcatBitVector# 0x0  ∷ NodeType alg {-Result-}, False),Keep)
             )
-            ((,,,) <$> channel2Signal i <*> channel2Signal z <*> channel2Signal hInstance <*> channel2Signal fInstance))
+            (bundle (channel2Signal i, channel2Signal z, channel2Signal hInstance, channel2Signal fInstance)))
             where
                 (~~>) ∷ (ForsNodeMealState alg
                     → ForsNodeMealInput alg
                     → (ForsNodeMealState alg, ForsNodeMealOutput alg))
-                (~~>) state@(_,_,_,_,_,_,False,x) input@((Just curI, True), (Just depZ, True),_,_)  
+                -- Perfom computation with different states and wait until result is known
+                (~~>) state@(sci,scz,sbuf,sready,scali,scalz,True,x, nextOutput) input@(_, _, hStream@(hData, hBool), fStream@(fData, fBool))  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                    = (state, ((0x0 ∷ IdxType alg{-Current i-},
+                     -- Check if we wait for fStream
+                    , scz == 0x0 -- z needs to be zero
+                        = (updateState hBool hData state, nextOutput)
+
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                     --Otherwise we wait for hStream
+                        = (updateState fBool fData state, nextOutput)
+                            where
+                                updateState ∷ Bool → Maybe (NodeType alg{-h-}) →ForsNodeMealState alg → ForsNodeMealState alg
+                                updateState True fhdata state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput)
+                                 | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                 = (                getHCurI fhdata ∷ IdxType alg{-Current i-},
+                                                    getHCurZ fhdata ∷ IdxType alg{-Current z-},
+                                                    unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
+                                                    False ∷ Bool{-Result is ready-},
+                                                    scali ∷ IdxType alg{-To calculate i-},
+                                                    scalz ∷ IdxType alg{-To calculate z-}, 
+                                                    True ∷ Bool{-Computation going on-},
+                                                    unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-}, nextOutput) 
+                                updateState False fhdata state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput) = state
+                                getHCurI ∷ Maybe (NodeType alg{-h-}) → IdxType alg
+                                getHCurI ~(Just _) 
+                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  sci - 1  -- This checks if i is still in range of the lower layer.
+                                    | otherwise = (scali + 1) ^ (scalz - 1) -- Go a layer up
+                                getHCurI _              = sci
+                                getHCurZ ∷ Maybe (NodeType alg{-h-}) → IdxType alg
+                                getHCurZ ~(Just _) 
+                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  0x0  -- This checks if i is still in range of the lower layer.
+                                    | otherwise = 0x1 -- Go a layer up
+                                getHCurZ _              = 0x0
+                                getBoolResult ∷ Maybe (NodeType alg{-h/f-}) → Bool
+                                getBoolResult ~(Just _) 
+                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  True 
+                                    | otherwise = True
+                                getBoolResult _              = False
+                                getNodeResult ∷ Maybe (NodeType alg{-h/f-}) → NodeType alg{-h/f-}
+                                getNodeResult ~(Just x)= x
+                                getNodeResult _              
+                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                    = unconcatBitVector# 0xaa
+                                getProvider ∷ (Maybe (NodeType alg{-h-}), Bool) → ProviderAction
+                                getProvider ~(Just _, True) 
+                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  Release 
+                                    | otherwise = Release
+                                getProvider ~(Just _, True) 
+                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  Release 
+                                    | otherwise = Release
+                                getProvider _              = Keep
+                -- Start computation
+                (~~>) state@(sci,scz,sbuf,sready,scali,scalz,False,x,nextOutput) input@((Just curI, True), (Just depZ, True),_,_)  
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = ((   -- Initial state
+                        getNewI ∷ IdxType alg{-Current i-},
+                        0x0 ∷ IdxType alg{-Current z-},
+                        unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
+                        False ∷ Bool{-Result is ready-},
+                        curI ∷ IdxType alg{-To calculate i-},
+                        depZ ∷ IdxType alg{-To calculate z-}, 
+                        True ∷ Bool{-Computation going on-},
+                        unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-}
+                        , nextOutput
+                    ), ((getNewI ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                         x ∷ NodeType alg {-Result-}, False),Release))
-                (~~>) state@(_,_,_,_,_,_,_,x) input@(_, _, _, _)  
+                    where 
+                        getNewI = (curI + 1) ^ (depZ)
+                -- No computation going on
+                (~~>) state@(_,_,_,_,_,_,_,x,_) input@(_, _, _, _)  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = (state, ((0x0 ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
@@ -190,12 +367,19 @@ fors_node_opt input⁰
                 (~~>) ∷ (NodeType alg)
                         → (Maybe ((NodeType alg), Bool), Bool)
                         → ((NodeType alg), (NodeType alg, ProviderAction))
-                (~~>) state@(_) input@((Just (x, True)), True) = (x, (x, Release))
-                (~~>) state@(x) input@(_, _) = (state, (x, Release))    
+                (~~>) state@(_) input@((Just (x, True)), True) 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = (x, (x, Release))
+                (~~>) state@(x) input@((Just (_, False)), True) 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = (x, ((unconcatBitVector# 0xff), Keep)) -- Testing purpose
+                (~~>) state@(x) input@(Nothing, True) 
+                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                    = (x, ((unconcatBitVector# 0xCCCCCC), Keep)) -- Testing purpose
+                (~~>) state@(x) input@(_, _) = (state, (x, Keep))    
         hInstance ∷ Channel dom (NodeType alg)
         hInstance
             | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
-            = _HStream ((\p a l r →  (p,a, l ‖ r)) <$> pkSeed <*> adrs¹ <*> cLNode <*> cRNode)
+            =  _HStream ((\p a l r →  (p,a, l ‖ r)) <$> pkSeed <*> adrs¹ <*> cLNode <*> cRNode)
             where
                 adrs¹ ∷ Channel dom (ADRSType alg)
                 adrs¹ 
@@ -271,7 +455,7 @@ fors_sign input
                 function⁰ ∷ Channel dom (IdxType alg) → Channel dom (IdxType alg) → Channel dom (NBlockType alg)
                 function⁰ i⁰ j⁰ 
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                    = fors_node (liftA3 (\(_,s,t,v) x y → (s,t,v,x,y)) input  i⁰ j⁰)
+                    = liftA3 (\(_,s,t,v) x y → s) input  i⁰ j⁰--fors_node (liftA3 (\(_,s,t,v) x y → (s,t,v,x,y)) input  i⁰ j⁰)
         object ∷  ( KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg)
                 ⇒ PrivateKeyValueTreeType alg → AUTHTreeType alg → ElemForsType alg
         object x y 
