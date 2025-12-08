@@ -45,6 +45,7 @@ import Data.Proxy (Proxy(..))
 import Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.Address 
 import Clash.Crypto.PQC.SLH_DSA.Specification.Definitions.Address 
 import Clash.Signal.Extra(apWhen)
+import GHC.Num
 -- Algorithm 14
 fors_skGen ∷  ∀ (alg ∷ SLH_DSA)  dom . (KnownDomain dom, HiddenClockResetEnable dom,  KnownSLH_DSAParameters alg, SLH_DSA_hashStreamFact alg) 
     ⇒ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg, IdxType alg)
@@ -213,6 +214,7 @@ type ForsNodeState alg  =
 type ForsNodeMealState alg = (IdxType alg{-Current i-},
                               IdxType alg{-Current z-},
                               Vec (A alg) (NodeType alg) {-Buffer-},
+                              Vec (A alg) Bit{-Tracker-},
                               Bool{-Result is ready-},
                               IdxType alg{-To calculate i-},
                               IdxType alg{-To calculate z-}, 
@@ -236,10 +238,18 @@ fors_node_opt input⁰
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
     = go cResult cReady
     where
+        -- Taking the modulo, an error can also be thrown.
         i ∷ Channel dom (IdxType alg)
-        i = fmap (\(s,p,a,x,y) → x) input⁰
+        i 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            -- May not be syntesiable because the integerToInt function..... Maybe K alg is enough in the use case og slh-dsa
+            = liftA2 (\(s,p,a,x,y) z⁰ → x `mod` ((shiftL) (natToNum @(K alg))  ((natToNum @(A alg)) - (integerToInt (toInteger z⁰))))) input⁰ z
+            -- Below equivalent code gives a zero division.
+            -- = liftA2 (\(s,p,a,x,y) z⁰ → x `mod` ((*) (natToNum @(K alg)) ((^) 2 (natToNum @(A alg) - z⁰)))) input⁰ z
         z ∷ Channel dom (IdxType alg)
-        z = fmap (\(s,p,a,x,y) → y) input⁰
+        z 
+            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+            = fmap (\(s,p,a,x,y) → 1  + (y `mod` (natToNum @(A alg)))) input⁰
         input ∷ Channel dom (SKSeedType alg, PKSeedType alg, ADRSType alg)
         input = fmap (\(s,p,a,x,y) → (s,p,a)) input⁰
         pkSeed ∷ Channel dom (PKSeedType alg)
@@ -254,6 +264,7 @@ fors_node_opt input⁰
                 0x0∷ IdxType alg{-Current i-},
                 0x0 ∷ IdxType alg{-Current z-},
                 unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
+                repeat low ∷ Vec (A alg) Bit{-Tracker-},
                 False ∷ Bool{-Result is ready-},
                 0x0 ∷ IdxType alg{-To calculate i-},
                 0x0 ∷ IdxType alg{-To calculate z-}, 
@@ -272,7 +283,7 @@ fors_node_opt input⁰
                     → ForsNodeMealInput alg
                     → (ForsNodeMealState alg, ForsNodeMealOutput alg))
                 -- Perfom computation with different states and wait until result is known
-                (~~>) state@(sci,scz,sbuf,sready,scali,scalz,True,x, nextOutput) input@(_, _, hStream@(hData, hBool), fStream@(fData, fBool))  
+                (~~>) state@(sci,scz,sbuf,strack,sready,scali,scalz,True,x, nextOutput) input@(_, _, hStream@(hData, hBool), fStream@(fData, fBool))  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                      -- Check if we wait for fStream
                     , scz == 0x0 -- z needs to be zero
@@ -283,11 +294,12 @@ fors_node_opt input⁰
                         = (updateState fBool fData state, nextOutput)
                             where
                                 updateState ∷ Bool → Maybe (NodeType alg{-h-}) →ForsNodeMealState alg → ForsNodeMealState alg
-                                updateState True (Just fhdata) state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput)
+                                updateState True (Just fhdata) state@(sci,scz,sbuf,strack,sready,scali,scalz,_,x,nextOutput)
                                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                 = (                getHCurI ∷ IdxType alg{-Current i-},
-                                                    getHCurZ ∷ IdxType alg{-Current z-},
+                                 = (                getNextI ∷ IdxType alg{-Current i-},
+                                                    getNextZ ∷ IdxType alg{-Current z-},
                                                     unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
+                                                    repeat low ∷ Vec (A alg) Bit{-Tracker-},
                                                     False ∷ Bool{-Result is ready-},
                                                     scali ∷ IdxType alg{-To calculate i-},
                                                     scalz ∷ IdxType alg{-To calculate z-}, 
@@ -302,7 +314,7 @@ fors_node_opt input⁰
                                                                     unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                                                                     unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                                                                     fhdata⁰  ∷ NodeType alg {-Result-}, True),Release)
-                                updateState False _ state@(sci,scz,sbuf,sready,scali,scalz,_,x,nextOutput) = (sci,scz,sbuf,sready,scali,scalz, True,x,updateNextOutput nextOutput)
+                                updateState False _ state@(sci,scz,sbuf,strack,sready,scali,scalz,_,x,nextOutput) = (sci,scz,sbuf,strack,sready,scali,scalz, True,x,updateNextOutput nextOutput)
                                     where
                                         updateNextOutput ∷ ForsNodeMealOutput alg → ForsNodeMealOutput alg
                                         updateNextOutput output@((ci, cz,ln,rn, r, b), a) 
@@ -312,39 +324,22 @@ fors_node_opt input⁰
                                                                     unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                                                                     unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                                                                     r  ∷ NodeType alg {-Result-}, False),Keep)
-                                getHCurI ∷ IdxType alg
-                                getHCurI
+                                getNextI ∷ IdxType alg
+                                getNextI
                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  sci - 1  -- This checks if i is still in range of the lower layer.
                                     | otherwise = (scali + 1) ^ (scalz - 1) -- Go a layer up
-                                getHCurZ ∷ IdxType alg
-                                getHCurZ
+                                getNextZ ∷ IdxType alg
+                                getNextZ
                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  0x0  -- This checks if i is still in range of the lower layer.
                                     | otherwise = 0x1 -- Go a layer up
-                                getBoolResult ∷ Maybe (NodeType alg{-h/f-}) → Bool
-                                getBoolResult ~(Just _) 
-                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  True 
-                                    | otherwise = True
-                                getBoolResult _              = False
-                                getNodeResult ∷ Maybe (NodeType alg{-h/f-}) → NodeType alg{-h/f-}
-                                getNodeResult ~(Just x)= x
-                                getNodeResult _              
-                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                    = unconcatBitVector# 0xaa
-                                getProvider ∷ (Maybe (NodeType alg{-h-}), Bool) → ProviderAction
-                                getProvider ~(Just _, True) 
-                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  Release 
-                                    | otherwise = Release
-                                getProvider ~(Just _, True) 
-                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  Release 
-                                    | otherwise = Release
-                                getProvider _              = Keep
                 -- Start computation
-                (~~>) state@(sci,scz,sbuf,sready,scali,scalz,False,x,nextOutput) input@((Just curI, True), (Just depZ, True),_,_)  
+                (~~>) state@(sci,scz,sbuf,strack,sready,scali,scalz,False,x,nextOutput) input@((Just curI, True), (Just depZ, True),_,_)  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = ((   -- Initial state
                         getNewI ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
                         unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
+                        repeat low ∷ Vec (A alg) Bit{-Tracker-},
                         False ∷ Bool{-Result is ready-},
                         curI ∷ IdxType alg{-To calculate i-},
                         depZ ∷ IdxType alg{-To calculate z-}, 
@@ -359,7 +354,7 @@ fors_node_opt input⁰
                     where 
                         getNewI = (curI + 1) ^ (depZ)
                 -- No computation going on
-                (~~>) state@(_,_,_,_,_,_,_,x,_) input@(_, _, _, _)  
+                (~~>) state@(_,_,_,_,_,_,_,_,x,_) input@(_, _, _, _)  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = (state, ((0x0 ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
@@ -386,12 +381,6 @@ fors_node_opt input⁰
                         → ((NodeType alg), (NodeType alg, ProviderAction))
                 (~~>) state@(_) input@((Just (x, True)), True) 
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = (x, (x, Release))
-                (~~>) state@(x) input@((Just (_, False)), True) 
-                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                    = (x, ((unconcatBitVector# 0xff), Keep)) -- Testing purpose
-                (~~>) state@(x) input@(Nothing, True) 
-                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                    = (x, ((unconcatBitVector# 0xCCCCCC), Keep)) -- Testing purpose
                 (~~>) state@(x) input@(_, _) = (state, (x, Keep))    
         hInstance ∷ Channel dom (NodeType alg)
         hInstance
