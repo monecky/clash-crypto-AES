@@ -213,8 +213,10 @@ type ForsNodeState alg  =
  )
 type ForsNodeMealState alg = (IdxType alg{-Current i-},
                               IdxType alg{-Current z-},
-                              Vec (A alg) (NodeType alg) {-Buffer-},
-                              Vec (A alg) Bit{-Tracker-},
+                              Vec (A alg) (NodeType alg) {-Left Buffer-},
+                              Vec (A alg) (NodeType alg) {-Right Buffer-},
+                              Vec (A alg) Bit{-Left tracker-},
+                              Vec (A alg) Bit{-Right tracker-},
                               Bool{-Result is ready-},
                               IdxType alg{-To calculate i-},
                               IdxType alg{-To calculate z-}, 
@@ -263,8 +265,10 @@ fors_node_opt input⁰
             (   -- Initial state
                 0x0∷ IdxType alg{-Current i-},
                 0x0 ∷ IdxType alg{-Current z-},
-                unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
-                repeat low ∷ Vec (A alg) Bit{-Tracker-},
+                unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Left Buffer-},
+                unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Right Buffer-},
+                repeat low ∷ Vec (A alg) Bit{-Left tracker-},
+                repeat low ∷ Vec (A alg) Bit{-Right tracker-},
                 False ∷ Bool{-Result is ready-},
                 0x0 ∷ IdxType alg{-To calculate i-},
                 0x0 ∷ IdxType alg{-To calculate z-}, 
@@ -283,7 +287,7 @@ fors_node_opt input⁰
                     → ForsNodeMealInput alg
                     → (ForsNodeMealState alg, ForsNodeMealOutput alg))
                 -- Perfom computation with different states and wait until result is known
-                (~~>) state@(sci,scz,sbuf,strack,sready,scali,scalz,True,x, nextOutput) input@(_, _, hStream@(hData, hBool), fStream@(fData, fBool))  
+                (~~>) state@(sci,scz,sLbuf,sRbuf,sLtrack,sRtrack,sready,scali,scalz,True,x, nextOutput) input@(_, _, hStream@(hData, hBool), fStream@(fData, fBool))  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                      -- Check if we wait for fStream
                     , scz == 0x0 -- z needs to be zero
@@ -294,12 +298,14 @@ fors_node_opt input⁰
                         = (updateState fBool fData state, nextOutput)
                             where
                                 updateState ∷ Bool → Maybe (NodeType alg{-h-}) →ForsNodeMealState alg → ForsNodeMealState alg
-                                updateState True (Just fhdata) state@(sci,scz,sbuf,strack,sready,scali,scalz,_,x,nextOutput)
+                                updateState True (Just fhdata) state@(sci,scz,sLbuf,sRbuf,sLtrack,sRtrack,sready,scali,scalz,_,x,nextOutput)
                                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                  = (                getNextI ∷ IdxType alg{-Current i-},
                                                     getNextZ ∷ IdxType alg{-Current z-},
-                                                    unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
-                                                    repeat low ∷ Vec (A alg) Bit{-Tracker-},
+                                                    unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Left Buffer-},
+                                                    unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Right Buffer-},
+                                                    repeat low ∷ Vec (A alg) Bit{-Left tracker-},
+                                                    repeat low ∷ Vec (A alg) Bit{-Right tracker-},
                                                     False ∷ Bool{-Result is ready-},
                                                     scali ∷ IdxType alg{-To calculate i-},
                                                     scalz ∷ IdxType alg{-To calculate z-}, 
@@ -314,8 +320,26 @@ fors_node_opt input⁰
                                                     unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                                                     unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                                                     fhdata⁰  ∷ NodeType alg {-Result-}, True),Release)
+                                        getNextI ∷ IdxType alg
+                                        getNextI
+                                            |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  sci - 1  -- This checks if i is still in range of the lower layer.
+                                            | otherwise = (scali + 1) ^ (scalz - 1) -- Go a layer up
+                                        getNextZ ∷ IdxType alg
+                                        getNextZ
+                                            -- z represent the depth we are in the tree.
+                                            -- There are 3 cases where we walk in the tree from the perspective of the depth.
+                                            -- - Staying at the same level to calculate the the next leaf/sub tree
+                                            --    - This happens when we are at z = 0 and the second bit is low.
+                                            -- - Going one up then we concat a part
+                                            --    - This happens when z ≠ 0, and two ones exists near each other in the tracker
+                                            --    - This happens when a set of leaves is calculate, this is when the last 2 bits are high.
+                                            -- - Going back to the next leave
+                                            --    - This happens when z ≠ 0 and the current match with the tracker is a low bit.
+                                            --    - Then z becomes zero.
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  0x0  
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, otherwise = 0x1
                                 -- Waiting for result, keeping output alive.
-                                updateState False _ state@(sci,scz,sbuf,strack,sready,scali,scalz,_,x,nextOutput) = (sci,scz,sbuf,strack,sready,scali,scalz, True,x,updateNextOutput nextOutput)
+                                updateState False _ state@(sci,scz,sLbuf,sRbuf,sLtrack,sRtrack,sready,scali,scalz,_,x,nextOutput) = (sci,scz,sLbuf,sRbuf,sLtrack,sRtrack,sready,scali,scalz, True,x,updateNextOutput nextOutput)
                                     where
                                         updateNextOutput ∷ ForsNodeMealOutput alg → ForsNodeMealOutput alg
                                         updateNextOutput output@((ci, cz,ln,rn, r, b), a) 
@@ -325,22 +349,17 @@ fors_node_opt input⁰
                                                     ln ∷ NodeType alg {-lNode-},
                                                     rn ∷ NodeType alg {-lNode-},
                                                     r  ∷ NodeType alg {-Result-}, False),Keep)
-                                getNextI ∷ IdxType alg
-                                getNextI
-                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  sci - 1  -- This checks if i is still in range of the lower layer.
-                                    | otherwise = (scali + 1) ^ (scalz - 1) -- Go a layer up
-                                getNextZ ∷ IdxType alg
-                                getNextZ
-                                    |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  0x0  -- This checks if i is still in range of the lower layer.
-                                    | otherwise = 0x1 -- Go a layer up
+
                 -- Start computation
-                (~~>) state@(sci,scz,sbuf,strack,sready,scali,scalz,False,x,nextOutput) input@((Just curI, True), (Just depZ, True),_,_)  
+                (~~>) state@(sci,scz,sLbuf,sRbuf,sLtrack,sRtrack,sready,scali,scalz,False,x,nextOutput) input@((Just curI, True), (Just depZ, True),_,_)  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = ((   -- Initial state
                         getNewI ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
-                        unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Buffer-},
-                        repeat low ∷ Vec (A alg) Bit{-Tracker-},
+                        unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Left Buffer-},
+                        unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Right Buffer-},
+                        (bv2v 0x1) ∷ Vec (A alg) Bit{- Left tracker-},
+                        (bv2v 0x0) ∷ Vec (A alg) Bit{- Right tracker-},
                         False ∷ Bool{-Result is ready-},
                         curI ∷ IdxType alg{-To calculate i-},
                         depZ ∷ IdxType alg{-To calculate z-}, 
@@ -355,7 +374,7 @@ fors_node_opt input⁰
                     where 
                         getNewI = (curI + 1) ^ (depZ)
                 -- No computation going on
-                (~~>) state@(_,_,_,_,_,_,_,_,x,_) input@(_, _, _, _)  
+                (~~>) state@(_,_,_,_,_,_,_,_,_,_,x,_) input@(_, _, _, _)  
                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                     = (state, ((0x0 ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
