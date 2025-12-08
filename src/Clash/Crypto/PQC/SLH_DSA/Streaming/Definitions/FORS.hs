@@ -271,7 +271,7 @@ fors_node_opt input⁰
                 False ∷ Bool{-Computation going on-},
                 unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-},
                 -- Next output
-                     ((0x0 ∷ IdxType alg{-Current i-},
+                      ((0x0 ∷ IdxType alg{-Current i-},
                         0x0 ∷ IdxType alg{-Current z-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
                         unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
@@ -309,21 +309,22 @@ fors_node_opt input⁰
                                         updateNextOutput ∷ (NodeType alg{-h-}) → ForsNodeMealOutput alg → ForsNodeMealOutput alg
                                         updateNextOutput fhdata⁰ output@((ci, cz,ln,rn, r, b), a) 
                                               | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                              = ((0x0 ∷ IdxType alg{-Current i-},
-                                                                    0x0 ∷ IdxType alg{-Current z-},
-                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                                                                    fhdata⁰  ∷ NodeType alg {-Result-}, True),Release)
+                                              =   ((0x0 ∷ IdxType alg{-Current i-},
+                                                    0x0 ∷ IdxType alg{-Current z-},
+                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
+                                                    fhdata⁰  ∷ NodeType alg {-Result-}, True),Release)
+                                -- Waiting for result, keeping output alive.
                                 updateState False _ state@(sci,scz,sbuf,strack,sready,scali,scalz,_,x,nextOutput) = (sci,scz,sbuf,strack,sready,scali,scalz, True,x,updateNextOutput nextOutput)
                                     where
                                         updateNextOutput ∷ ForsNodeMealOutput alg → ForsNodeMealOutput alg
                                         updateNextOutput output@((ci, cz,ln,rn, r, b), a) 
                                               | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                              = ((0x0 ∷ IdxType alg{-Current i-},
-                                                                    0x0 ∷ IdxType alg{-Current z-},
-                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                                                                    r  ∷ NodeType alg {-Result-}, False),Keep)
+                                              =   ((ci ∷ IdxType alg{-Current i-},
+                                                    cz ∷ IdxType alg{-Current z-},
+                                                    ln ∷ NodeType alg {-lNode-},
+                                                    rn ∷ NodeType alg {-lNode-},
+                                                    r  ∷ NodeType alg {-Result-}, False),Keep)
                                 getNextI ∷ IdxType alg
                                 getNextI
                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  sci - 1  -- This checks if i is still in range of the lower layer.
