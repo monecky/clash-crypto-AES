@@ -70,12 +70,27 @@ tastyTests =
   testGroup
     "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS"
     [ 
-      localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test verify state SLH-DSA" $ property $ do
+      localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test verify state for a tree with depth z = 3, for the fors node" $ property $ do
         -- left ← forAll $ genDefinedBitVector
         -- right ← forAll $ genDefinedBitVector 
         testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x1)) (bv2v (0x0)) (bv2v (0x1), bv2v (0x1))
-        -- testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x1)) (bv2v (0x1)) (bv2v (0x2), bv2v (0x0))
-        -- testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x2)) (bv2v (0x0)) (bv2v (0x3), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x1)) (bv2v (0x1)) (bv2v (0x2), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x2)) (bv2v (0x0)) (bv2v (0x3), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x3)) (bv2v (0x0)) (bv2v (0x3), bv2v (0x1))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x3)) (bv2v (0x1)) (bv2v (0x2), bv2v (0x2))
+
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x2)) (bv2v (0x2)) (bv2v (0x4), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x4)) (bv2v (0x0)) (bv2v (0x5), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x5)) (bv2v (0x0)) (bv2v (0x5), bv2v (0x1))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x5)) (bv2v (0x1)) (bv2v (0x6), bv2v (0x0))
+
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x6)) (bv2v (0x0)) (bv2v (0x7), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x7)) (bv2v (0x0)) (bv2v (0x7), bv2v (0x1))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x7)) (bv2v (0x1)) (bv2v (0x6), bv2v (0x2))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x7)) (bv2v (0x1)) (bv2v (0x6), bv2v (0x2))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x6)) (bv2v (0x2)) (bv2v (0x4), bv2v (0x4))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x800)) (bv2v (0x800)) (bv2v (0x0), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x0)) (bv2v (0x0)) (bv2v (0x0), bv2v (0x0))
       -- localOption (HedgehogTestLimit (Just 100)) $
       --   testGroup
       --     "fors_skGen"
@@ -170,8 +185,8 @@ forsProperty name version placeAdrs typeType forsComp
 
 getBuf ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ Vec (A alg) Bit →  Vec (A alg) Bit → (Vec (A alg) Bit, Vec (A alg) Bit)
 getBuf sLtrack sRtrack
-    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv sLtrack)  (shiftL deletedLayer 1)) /= 0x0 =   (bv2v ((v2bv sLtrack)), bv2v ((v2bv sRtrack) + (shiftL (deletedLayer) 1)))
-    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0                                                                                     =   (bv2v (shiftDeletedLayer), bv2v ((v2bv sRtrack) .&. complementDeletedLayer))  -- One in the right as a form of test but shouldn't be the case
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv sLtrack)  shiftDeletedLayer) /= 0x0 =  (bv2v ((v2bv sLtrack) .&. complementDeletedLayer), bv2v (shiftDeletedLayer .&. ((v2bv sRtrack) .|. complementDeletedLayer)))
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv sLtrack)  shiftDeletedLayer) == 0x0 =  (bv2v ((shiftDeletedLayer .|. ((v2bv sLtrack) .&. complementDeletedLayer))), bv2v ((v2bv sRtrack) .&. complementDeletedLayer))  -- One in the right as a form of test but shouldn't be the case
 
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv sLtrack) == 0x0, (v2bv sRtrack) == 0x0 = (bv2v 0x0, bv2v 0x0)
     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (sLtrack)) 0)  = (bv2v ((v2bv sLtrack + 1) ), bv2v ((v2bv sRtrack)))
@@ -186,7 +201,7 @@ getBuf sLtrack sRtrack
           = complement deletedLayer
         shiftDeletedLayer ∷ BitVector (A alg)
           | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-          = shiftL ((.&.) (v2bv sLtrack) (v2bv sRtrack)) 1
+          = shiftL deletedLayer 1
         
 getRBuf ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ Vec (A alg) Bit →  Vec (A alg) Bit → Vec (A alg) Bit
 getRBuf sLtrack sRtrack
