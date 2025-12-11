@@ -90,7 +90,7 @@ tastyTests =
         testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x7)) (bv2v (0x1)) (bv2v (0x6), bv2v (0x2))
         testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x6)) (bv2v (0x2)) (bv2v (0x4), bv2v (0x4))
         testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x800)) (bv2v (0x800)) (bv2v (0x0), bv2v (0x0))
-        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x0)) (bv2v (0x0)) (bv2v (0x0), bv2v (0x0))
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x0)) (bv2v (0x0)) (bv2v (0x0), bv2v (0x0)),
       -- localOption (HedgehogTestLimit (Just 100)) $
       --   testGroup
       --     "fors_skGen"
@@ -98,12 +98,14 @@ tastyTests =
       --     , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_skGen
       --     ]
       --     ,
-      -- localOption (HedgehogTestLimit (Just 100)) $
-      --   testGroup
-      --     "fors_node_opy"
-      --     [ testProperty "Fors fors_node SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_node" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_node_opt
-      --     , testProperty "Fors fors_node SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_node" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_node_opt
-      --     ]
+      localOption (HedgehogTestLimit (Just 100)) $
+        testGroup
+          "fors_node_opt"
+          [ 
+            -- testProperty "Fors fors_node SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_node" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_node_opt
+          -- , 
+          testProperty "Fors fors_node SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_node" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_node_opt
+          ]
       -- ,
       -- localOption (HedgehogTestLimit (Just 100)) $
       --   testGroup
@@ -174,7 +176,7 @@ forsProperty name version placeAdrs typeType forsComp
     = fromMaybe (error "The returned list was empty")
     $ getFirst
     $ foldMap First
-    $ sampleN @System 1000000
+    $ sampleN @System 10000000000000000000000000
     $ withClockResetEnable @System clockGen resetGen enableGen
     $ newsfeed
     $ forsComp
