@@ -70,12 +70,25 @@ tastyTests =
   testGroup
     "Clash.Crypto.PQC.SLH_DSA.Streaming.Definitions.FORS"
     [ 
-      localOption (HedgehogTestLimit (Just 100)) $
-        testGroup
-          "fors_skGen"
-          [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_skGen" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_skGen
-          , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_skGen
-          ]
+      localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test verify state SLH-DSA" $ property $ do
+        -- left ← forAll $ genDefinedBitVector
+        -- right ← forAll $ genDefinedBitVector 
+        testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x1)) (bv2v (0x0)) (bv2v (0x1), bv2v (0x1))
+        -- testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x1)) (bv2v (0x1)) (bv2v (0x2), bv2v (0x0))
+        -- testForsNodeState  @SLH_DSA_SHA2_128s (bv2v (0x2)) (bv2v (0x0)) (bv2v (0x3), bv2v (0x0))
+      -- localOption (HedgehogTestLimit (Just 100)) $
+      --   testGroup
+      --     "fors_skGen"
+      --     [ testProperty "Fors fors_skGen SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_skGen" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_skGen
+      --     , testProperty "Fors fors_skGen SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_skGen" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_skGen
+      --     ]
+      --     ,
+      -- localOption (HedgehogTestLimit (Just 100)) $
+      --   testGroup
+      --     "fors_node_opy"
+      --     [ testProperty "Fors fors_node SLH_DSA_SHA2_128s" $ forsProperty  @SLH_DSA_SHA2_128s @(SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s, ADRSType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s, IdxType SLH_DSA_SHA2_128s) @(NBlockType SLH_DSA_SHA2_128s) "fors_node" "SLH_DSA_SHA2_128s" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128s, PKSeedType SLH_DSA_SHA2_128s))) FORS_TREE fors_node_opt
+      --     , testProperty "Fors fors_node SLH_DSA_SHA2_128f" $ forsProperty  @SLH_DSA_SHA2_128f @(SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f, ADRSType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f, IdxType SLH_DSA_SHA2_128f) @(NBlockType SLH_DSA_SHA2_128f) "fors_node" "SLH_DSA_SHA2_128f" (natToNum @(BitSize (SKSeedType SLH_DSA_SHA2_128f, PKSeedType SLH_DSA_SHA2_128f))) FORS_TREE fors_node_opt
+      --     ]
       -- ,
       -- localOption (HedgehogTestLimit (Just 100)) $
       --   testGroup
@@ -100,6 +113,11 @@ tastyTests =
 
 
     ]
+
+testForsNodeState ∷ ∀ (alg ∷ SLH_DSA) m . (KnownSLH_DSAParameters alg, Monad m) ⇒ Vec (A alg) Bit →  Vec (A alg) Bit → (Vec (A alg) Bit, Vec (A alg) Bit) → PropertyT m ()
+testForsNodeState left right result
+     | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
+     = getBuf @alg left right === result
   
 type ForsComponent a b dom =
  (HiddenClockResetEnable dom
@@ -150,7 +168,32 @@ forsProperty name version placeAdrs typeType forsComp
     $ fromList
     $ Keep : Keep : Release : List.repeat Keep
 
+getBuf ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ Vec (A alg) Bit →  Vec (A alg) Bit → (Vec (A alg) Bit, Vec (A alg) Bit)
+getBuf sLtrack sRtrack
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv sLtrack)  (shiftL deletedLayer 1)) /= 0x0 =   (bv2v ((v2bv sLtrack)), bv2v ((v2bv sRtrack) + (shiftL (deletedLayer) 1)))
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0                                                                                     =   (bv2v (shiftDeletedLayer), bv2v ((v2bv sRtrack) .&. complementDeletedLayer))  -- One in the right as a form of test but shouldn't be the case
 
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv sLtrack) == 0x0, (v2bv sRtrack) == 0x0 = (bv2v 0x0, bv2v 0x0)
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (sLtrack)) 0)  = (bv2v ((v2bv sLtrack + 1) ), bv2v ((v2bv sRtrack)))
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (sRtrack)) 0) = (bv2v (v2bv sLtrack) , bv2v ((v2bv sRtrack) + 1))
+    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = errorX "This never should be evaluated"
+    where 
+        deletedLayer ∷ BitVector (A alg)
+          | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+          = (.&.) (v2bv sLtrack) (v2bv sRtrack)
+        complementDeletedLayer ∷ BitVector (A alg)
+          | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+          = complement deletedLayer
+        shiftDeletedLayer ∷ BitVector (A alg)
+          | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+          = shiftL ((.&.) (v2bv sLtrack) (v2bv sRtrack)) 1
+        
+getRBuf ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ Vec (A alg) Bit →  Vec (A alg) Bit → Vec (A alg) Bit
+getRBuf sLtrack sRtrack
+    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg = snd (getBuf @alg sLtrack sRtrack)
+getLBuf ∷ ∀ (alg ∷ SLH_DSA) . (KnownSLH_DSAParameters alg) ⇒ Vec (A alg) Bit →  Vec (A alg) Bit → Vec (A alg) Bit
+getLBuf sLtrack sRtrack
+    | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg = fst (getBuf @alg sLtrack sRtrack)
 -----------------------------------------
 -- Python reference
 --

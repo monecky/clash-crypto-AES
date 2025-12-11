@@ -102,107 +102,6 @@ fors_skGen input
 --                     node 
 --                         | SLH_DSAParametersFacts alg ← knownSLH_DSAParameters @alg
 --                         = _HStream ((\(_,p,_) a l r →  (p,a, l ‖ r)) <$> input <*> adrs¹ <*> lnode <*> rnode)
--- fors_node
---   :: forall alg dom.
---      ( KnownDomain dom
---      , HiddenClockResetEnable dom
---      , KnownSLH_DSAParameters alg
---      , SLH_DSA_hashStreamFact alg
---      )
---   => Channel dom
---         ( SKSeedType alg
---         , PKSeedType alg
---         , ADRSType alg
---         , IdxType alg  -- i
---         , IdxType alg  -- z
---         )
---   -> Channel dom (NodeType alg)
--- fors_node input0
---   | SLH_DSAParametersFacts {} <- knownSLH_DSAParameters @alg
---   = mux (z .==. pure 0) leafNode internalNode
---   where
---     ----------------------------------------------------------------------------
---     -- Unpack input
---     ----------------------------------------------------------------------------
---     skSeed  = fmap (\(s,_,_,_,_) -> s) input0
---     pkSeed  = fmap (\(_,p,_,_,_) -> p) input0
---     adrs    = fmap (\(_,_,a,_,_) -> a) input0
---     i       = fmap (\(_,_,_,x,_) -> x) input0
---     z       = fmap (\(_,_,_,_,y) -> y) input0
-
---     ----------------------------------------------------------------------------
---     -- Addresses for leaf and internal nodes
---     ----------------------------------------------------------------------------
---     baseAdrs =
---       liftA2
---         (\a idx -> setTreeIndex (setTreeHeight a 0) idx)
---         adrs
---         i
-
---     ----------------------------------------------------------------------------
---     -- Leaf node via F-stream
---     ----------------------------------------------------------------------------
---     leafNode :: Channel dom (NodeType alg)
---     leafNode =
---       let msg = liftA3 (\_ _ _ -> ()) skSeed pkSeed adrs
---           m1  = skSeedForLeaf  -- m¹-type input from fors_skGen
---       in  _FStream (liftA3 (\p a m -> (p,a,m)) pkSeed baseAdrs m1)
-
---     skSeedForLeaf :: Channel dom (M¹Type alg)  -- Vec (N alg) Byte
---     skSeedForLeaf =
---       fors_skGen (liftA2 (\(s,p,a) idx -> (s,p,a,idx))
---                          (liftA3 (,,) skSeed pkSeed adrs)
---                          i)
-
---     ----------------------------------------------------------------------------
---     -- Internal node via H-stream
---     ----------------------------------------------------------------------------
---     leftIdx  = fmap (`shiftL` 1) i
---     rightIdx = liftA2 (\x _ -> x `shiftL` 1 + 1) i i
-
---     childZ   = fmap (subtract 1) z
-
---     -- Left child leaf (non-recursive)
---     leftLeafSeed =
---       fors_skGen (liftA2 (\(s,p,a) idx -> (s,p,a,idx))
---                          (liftA3 (,,) skSeed pkSeed adrs)
---                          leftIdx)
-
---     leftLeafNode =
---       _FStream
---         (liftA3 (\p a m -> (p,a,m))
---                 pkSeed
---                 (liftA2
---                     (\a idx -> setTreeIndex (setTreeHeight a 0) idx)
---                     adrs
---                     leftIdx)
---                 leftLeafSeed)
-
---     -- Right child leaf (non-recursive)
---     rightLeafSeed =
---       fors_skGen (liftA2 (\(s,p,a) idx -> (s,p,a,idx))
---                          (liftA3 (,,) skSeed pkSeed adrs)
---                          rightIdx)
-
---     rightLeafNode =
---       _FStream
---         (liftA3 (\p a m -> (p,a,m))
---                 pkSeed
---                 (liftA2
---                     (\a idx -> setTreeIndex (setTreeHeight a 0) idx)
---                     adrs
---                     rightIdx)
---                 rightLeafSeed)
-
---     -- Internal node hash = H( left ++ right )
---     internalNode =
---       let msg2 = liftA2 (++)
---                         leftLeafNode
---                         rightLeafNode
---           adrsInt = baseAdrs
---       in  _HStream (liftA3 (\p a m2 -> (p,a,m2)) pkSeed adrsInt msg2)
--- | Non-recursive, fully unrolled FORS node generator.
---   Implements Algorithm 15 without recursion or Mealy machines.
 
 type ForsNodeState alg  =
  (Vec (A alg) (NodeType alg),
@@ -306,24 +205,40 @@ fors_node_opt input⁰
                                                     unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Right Buffer-},
                                                     repeat low ∷ Vec (A alg) Bit{-Left tracker-},
                                                     repeat low ∷ Vec (A alg) Bit{-Right tracker-},
-                                                    False ∷ Bool{-Result is ready-},
+                                                    getReady ∷ Bool{-Result is ready-},
                                                     scali ∷ IdxType alg{-To calculate i-},
                                                     scalz ∷ IdxType alg{-To calculate z-}, 
-                                                    True ∷ Bool{-Computation going on-},
+                                                    getCompute ∷ Bool{-Computation going on-},
                                                     unconcatBitVector# 0x0 ∷ NodeType alg{-Previous output-}, updateNextOutput fhdata nextOutput)
                                     where
                                         updateNextOutput ∷ (NodeType alg{-h-}) → ForsNodeMealOutput alg → ForsNodeMealOutput alg
                                         updateNextOutput fhdata⁰ output@((ci, cz,ln,rn, r, b), a) 
                                               | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
-                                              =   ((0x0 ∷ IdxType alg{-Current i-},
-                                                    0x0 ∷ IdxType alg{-Current z-},
-                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                                                    unconcatBitVector# 0x0 ∷ NodeType alg {-lNode-},
-                                                    fhdata⁰  ∷ NodeType alg {-Result-}, True),Release)
+                                              =   ((getNextI ∷ IdxType alg{-Current i-},
+                                                    getNextZ ∷ IdxType alg{-Current z-},
+                                                    sLbuf !! getNextZ ∷ NodeType alg {-lNode-},
+                                                    sRbuf !! getNextZ∷ NodeType alg {-lNode-},
+                                                    fhdata⁰  ∷ NodeType alg {-Result-}, getReady),Release)
+                                        getReady ∷ Bool
+                                        getReady
+                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv getRBuf) == 0x0, (v2bv getLBuf) == 0x0 = True
+                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = False
+                                        getCompute ∷ Bool
+                                        getCompute
+                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv getRBuf) == 0x0, (v2bv getLBuf) == 0x0 = False
+                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = True
                                         getNextI ∷ IdxType alg
                                         getNextI
-                                            |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  sci - 1  -- This checks if i is still in range of the lower layer.
-                                            | otherwise = (scali + 1) ^ (scalz - 1) -- Go a layer up
+                                            |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = factorI + number2Added
+                                            where
+                                                number2Added ∷ IdxType alg
+                                                number2Added 
+                                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                                     =  resize ((shiftR (v2bv getLBuf) (integerToInt (toInteger getNextZ))) + (shiftR (v2bv getRBuf) (integerToInt (toInteger getNextZ))))
+                                                factorI ∷ IdxType alg
+                                                factorI 
+                                                     |  SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                                     = scali * ((shiftL) (natToNum @2)  ( (integerToInt (toInteger getNextZ))))
                                         getNextZ ∷ IdxType alg
                                         getNextZ
                                             -- z represent the depth we are in the tree.
@@ -338,6 +253,20 @@ fors_node_opt input⁰
                                             --    - Then z becomes zero.
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  0x0  
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, otherwise = 0x1
+                                        getBuf ∷ (Vec (A alg) Bit, Vec (A alg) Bit)
+                                        getBuf
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, ((.&.) (v2bv sLtrack) (v2bv sRtrack)) /= 0x0,  ((.&.) (v2bv sLtrack)  (shiftL (((.&.) (v2bv sLtrack) (v2bv sRtrack))) 1)) /= 0x0 =  (bv2v ((v2bv sLtrack)), bv2v ((v2bv sRtrack) + (shiftL (((.&.) (v2bv sLtrack) (v2bv sRtrack))) 1)))
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, ((.&.) (v2bv sLtrack) (v2bv sRtrack)) /= 0x0                                                                                     =  (bv2v ((v2bv sLtrack) + (shiftL (((.&.) (v2bv sLtrack) (v2bv sRtrack))) 1)), bv2v ((v2bv sRtrack) + 1))  -- One in the right as a form of test but shouldn't be the case
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv sLtrack) == 0x0, (v2bv sRtrack) == 0x0 = (bv2v 0x0, bv2v 0x0)
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, testBit (last  @(A alg- 1) (sLtrack)) 0  = (bv2v ((v2bv sLtrack) + 1), bv2v ((v2bv sRtrack)))
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, testBit (last  @(A alg- 1) (sRtrack)) 0 = errorX "Trying to evaluate the right" --(bv2v ((v2bv sLtrack)), bv2v ((v2bv sRtrack) + 1))
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = errorX "This never should be evaluated"
+                                        getRBuf ∷ Vec (A alg) Bit
+                                        getRBuf
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = snd getBuf
+                                        getLBuf ∷ Vec (A alg) Bit
+                                        getLBuf
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = fst getBuf
                                 -- Waiting for result, keeping output alive.
                                 updateState False _ state@(sci,scz,sLbuf,sRbuf,sLtrack,sRtrack,sready,scali,scalz,_,x,nextOutput) = (sci,scz,sLbuf,sRbuf,sLtrack,sRtrack,sready,scali,scalz, True,x,updateNextOutput nextOutput)
                                     where
