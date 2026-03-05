@@ -210,8 +210,8 @@ fors_node_opt input⁰
                                  | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                  = (                getNextI ∷ IdxType alg{-Current i-},
                                                     getNextZ ∷ IdxType alg{-Current z-},
-                                                    unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Left Buffer-},
-                                                    unconcatI (unconcatBitVector# 0x0) ∷ Vec (A alg) (NodeType alg) {-Right Buffer-},
+                                                    getLBuf {-Left Buffer-},
+                                                    getRBuf {-Right Buffer-},
                                                     (spLtrack ∷ Vec (A alg) Bit{-Left tracker-},
                                                     spRtrack ∷ Vec (A alg) Bit{-Right tracker-}),
                                                     (getLTrack ∷ Vec (A alg) Bit{-Left tracker-},
@@ -227,12 +227,13 @@ fors_node_opt input⁰
                                               | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                               =   ((getNextI ∷ IdxType alg{-Current i-},
                                                     getNextZ ∷ IdxType alg{-Current z-},
-                                                    sLbuf !! getNextZ ∷ NodeType alg {-lNode-},
-                                                    sRbuf !! getNextZ ∷ NodeType alg {-lNode-},
+                                                    getLBuf !! getNextZ ∷ NodeType alg {-lNode-},
+                                                    getRBuf !! getNextZ ∷ NodeType alg {-lNode-},
                                                     fhdata⁰  ∷ NodeType alg {-Result-}, getReady),Release)
                                         getReady ∷ Bool
                                         getReady
-                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv getRTrack) == 0x00, (v2bv getLTrack) == 0x00 = True --
+                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv getRTrack) == 0x00, (v2bv getLTrack) == 0x00 = True
+                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, scalz == scz = True
                                              | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = False
                                         getCompute ∷ Bool
                                         getCompute
@@ -252,18 +253,22 @@ fors_node_opt input⁰
                                                      = scali * ((shiftL) (natToNum @2)  ( (integerToInt (toInteger getNextZ))))
                                         getNextZ ∷ IdxType alg
                                         getNextZ
-                                            -- z represent the depth we are in the tree.
-                                            -- There are 3 cases where we walk in the tree from the perspective of the depth.
-                                            -- - Staying at the same level to calculate the the next leaf/sub tree
-                                            --    - This happens when we are at z = 0 and the second bit is low.
-                                            -- - Going one up then we concat a part
-                                            --    - This happens when z ≠ 0, and two ones exists near each other in the tracker
-                                            --    - This happens when a set of leaves is calculate, this is when the last 2 bits are high.
-                                            -- - Going back to the next leave
-                                            --    - This happens when z ≠ 0 and the current match with the tracker is a low bit.
-                                            --    - Then z becomes zero.
-                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (scali - sci) > (2 ^ ((natToNum @(A alg)) - scz)) =  0x0  
-                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = 0x1
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv sLtrack)  shiftDeletedLayer) /= 0x0 = resize shiftDeletedLayer
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv sLtrack)  shiftDeletedLayer) == 0x0 = resize shiftDeletedLayer
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv sLtrack) == 0x0, (v2bv sRtrack) == 0x0 = scalz
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (sLtrack)) 0)  = 0x0
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (sRtrack)) 0) = 0x0
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = errorX "This never should be evaluated"
+                                            where 
+                                                deletedLayer ∷ BitVector (A alg)
+                                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                                    = (.&.) (v2bv sLtrack) (v2bv sRtrack)
+                                                complementDeletedLayer ∷ BitVector (A alg)
+                                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                                    = complement deletedLayer
+                                                shiftDeletedLayer ∷ BitVector (A alg)
+                                                    | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
+                                                    = shiftL deletedLayer 1
                                         getTrack ∷ (Vec (A alg) Bit, Vec (A alg) Bit)
                                         getTrack
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv sLtrack)  shiftDeletedLayer) /= 0x0 =  (bv2v ((v2bv sLtrack) .&. complementDeletedLayer), bv2v (shiftDeletedLayer .&. ((v2bv sRtrack) .|. complementDeletedLayer)))
@@ -289,14 +294,14 @@ fors_node_opt input⁰
                                         getRTrack ∷ Vec (A alg) Bit
                                         getRTrack
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = snd getTrack
-                                        getBuf ∷ (Vec (A alg) Bit, Vec (A alg) Bit)
+                                        getBuf ∷ (Vec (A alg) (NodeType alg), Vec (A alg) (NodeType alg))
                                         getBuf
-                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv spLtrack)  shiftDeletedLayer) /= 0x0 =  (bv2v ((v2bv sLtrack) .&. complementDeletedLayer), bv2v (shiftDeletedLayer .&. ((v2bv sRtrack) .|. complementDeletedLayer)))
-                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv spLtrack)  shiftDeletedLayer) == 0x0 =  (bv2v ((shiftDeletedLayer .|. ((v2bv sLtrack) .&. complementDeletedLayer))), bv2v ((v2bv sRtrack) .&. complementDeletedLayer))  -- One in the right as a form of test but shouldn't be the case
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv spLtrack)  shiftDeletedLayer) /= 0x0 = (sLbuf, replace shiftDeletedLayer fhdata sRbuf)
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, deletedLayer /= 0x0,  ((.&.) (v2bv spLtrack)  shiftDeletedLayer) == 0x0 = (replace shiftDeletedLayer fhdata sLbuf, sLbuf)
 
-                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv spLtrack) == 0x0, (v2bv spRtrack) == 0x0 = (bv2v 0x0, bv2v 0x0)
-                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (spLtrack)) 0)  = (bv2v ((v2bv sLtrack + 1) ), bv2v ((v2bv sRtrack)))
-                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (spRtrack)) 0) = (bv2v (v2bv sLtrack) , bv2v ((v2bv sRtrack) + 1))
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, (v2bv spLtrack) == 0x0, (v2bv spRtrack) == 0x0 = (unconcatI (unconcatBitVector# 0x0), unconcatI (unconcatBitVector# 0x0) )
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (spLtrack)) 0)  = (replace 0 fhdata sLbuf, sRbuf)
+                                            | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg, complement (testBit (last  @(A alg- 1) (spRtrack)) 0)  = (sLbuf, replace 0 fhdata sRbuf) 
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = errorX "This never should be evaluated"
                                             where 
                                                 deletedLayer ∷ BitVector (A alg)
@@ -308,10 +313,10 @@ fors_node_opt input⁰
                                                 shiftDeletedLayer ∷ BitVector (A alg)
                                                     | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg
                                                     = shiftL deletedLayer 1
-                                        getLBuf ∷ Vec (A alg) Bit
+                                        getLBuf ∷ Vec (A alg) (NodeType alg)
                                         getLBuf
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = fst getBuf
-                                        getRBuf ∷ Vec (A alg) Bit
+                                        getRBuf ∷ Vec (A alg) (NodeType alg)
                                         getRBuf
                                             | SLH_DSAParametersFacts {} ← knownSLH_DSAParameters @alg = snd getBuf
                                 -- Waiting for result, keeping output alive.
