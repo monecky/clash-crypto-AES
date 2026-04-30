@@ -29,5 +29,6 @@ import qualified Simulate.Clash.Crypto.Cipher.AES.Streaming as Stream
 
 tastyTests ∷ TestTree
 tastyTests = testGroup "Clash.Crypto.Cipher.AES"
-  [Spec.tastyTests
-  , Stream.tastyTests]
+  [ Spec.tastyTests
+  , Stream.tastyTests
+  ]

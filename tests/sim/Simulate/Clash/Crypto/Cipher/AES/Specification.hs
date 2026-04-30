@@ -44,52 +44,52 @@ import qualified Simulate.Clash.Crypto.Cipher.AES.Specification.Definitions as D
 import qualified Simulate.Clash.Crypto.Cipher.AES.Specification.Algorithm as Alg
 
 tastyTests ∷ TestTree
-tastyTests = testGroup "Clash.Crypto.Cipher.AES.Specification"
-  [Def.tastyTests,
-  Alg.tastyTests,
-  tastyTestsAESPure]
+tastyTests = testGroup "Specification"
+  [ Def.tastyTests
+  , Alg.tastyTests
+  , tastyTestsAESPure
+  ]
+
 tastyTestsAESPure ∷ TestTree
-tastyTestsAESPure = testGroup "Clash.Crypto.Cipher.AES.Specification"
-  [ localOption (HedgehogTestLimit (Just 10)) $
-      testGroup "Specification Sanity Checks against haskell crypton AES128"
-        [
-          testProperty "AES128" $
-            property $ do
+tastyTestsAESPure = testGroup "Sanity Checks against crypton"
+  [ localOption (HedgehogTestLimit (Just 10))
+  $ testGroup "AES128"
+        [ testProperty "AES128"
+        $ property $ do
               key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
               input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
-              testAESPure @Spec.AES128 key input,
-        testProperty "AES-128, specific key" $
-            property $ do
-              testAESPure @Spec.AES128 in1AES128 key1AES128
+              testAESPure @Spec.AES128 key input
+        , testProperty "AES-128, specific key"
+        $ property $ testAESPure @Spec.AES128 in1AES128 key1AES128
         ]
-        ,
-        testGroup "Specification Sanity Checks against haskell crypton AES192" $
-        [ testProperty ("AES-" <> algName) $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
-              aesPure key input
-        | (aesPure, algName) <-
-            [ (testAESPure @Spec.AES192, "192")
-            ]
+  , testGroup "AES192"
+  $ [ testProperty ("AES-" <> algName)
+    $ property $ do
+        key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
+        input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
+        aesPure key input
+    | (aesPure, algName) <-
+        [ (testAESPure @Spec.AES192, "192")
         ]
-        ,
-        testGroup "Specification Sanity Checks against haskell crypton AES256" $
-        [ testProperty ("AES-" <> algName) $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
-              aesPure key input
-        | (aesPure, algName) <-
-            [ (testAESPure @Spec.AES256, "256")
-            ]
+    ]
+  , testGroup "AES256"
+  $ [ testProperty ("AES-" <> algName)
+    $ property $ do
+        key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
+        input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
+        aesPure key input
+    | (aesPure, algName) <-
+        [ (testAESPure @Spec.AES256, "256")
         ]
+    ]
   ]
-genInputBlock ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
+
+genInputBlock ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg ⇒ Gen ByteString
 genInputBlock
-    | AESFacts _ ← knownAES @alg =
-    BS.pack <$> Gen.list (Range.singleton (snatToNum (SNat @(Spec.Nb alg * Spec.WordSize alg)))) Gen.enumBounded
-genKeyFor :: ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
+  | AESFacts _ ← knownAES @alg =
+  BS.pack <$> Gen.list (Range.singleton (snatToNum (SNat @(Spec.Nb alg * Spec.WordSize alg)))) Gen.enumBounded
+
+genKeyFor ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
 genKeyFor
   | AESFacts _ ← knownAES @alg = do
   BS.pack <$> Gen.list (Range.singleton (natToNum @( Spec.WordSize alg  * Spec.Nk alg ))) Gen.enumBounded
@@ -162,13 +162,13 @@ key1AES128 = [ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15,
 --             :> (:> :> :> :>Nil)
 --             :>Nil
 --             )
-key1AES192 ∷ ByteString
-key1AES192 = [ 0x8e, 0x73, 0xb0, 0xf7,
-               0xda, 0x0e, 0x64, 0x52,
-               0xc8, 0x10, 0xf3, 0x2b,
-               0x80, 0x90, 0x79, 0xe5,
-               0x62, 0xf8, 0xea, 0xd2,
-               0x52, 0x2c, 0x6b, 0x7b]
+-- key1AES192 ∷ ByteString
+-- key1AES192 = [ 0x8e, 0x73, 0xb0, 0xf7,
+--                0xda, 0x0e, 0x64, 0x52,
+--                0xc8, 0x10, 0xf3, 0x2b,
+--                0x80, 0x90, 0x79, 0xe5,
+--                0x62, 0xf8, 0xea, 0xd2,
+--                0x52, 0x2c, 0x6b, 0x7b]
 -- t = encryptoECB key1AES192 in1AES128
 -- key1AES256 ∷ ByteString
 -- key1AES256 = [0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4]

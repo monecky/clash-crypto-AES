@@ -35,42 +35,49 @@ import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import Clash.Hedgehog.Sized.Vector
 import qualified Clash.Crypto.Cipher.AES.Specification as Spec
 tastyTests ∷ TestTree
-tastyTests = testGroup "Clash.Crypto.Cipher.AES.Specification.Algorithm"
-  [  testProperty "Test verify Spec.keyExpansionAES128 with Appendix A.1 FIPS 197" $ property $ do
-        testKeyExpansionAES128,
-      testProperty "Test verify Spec.keyExpansionAES192 with Appendix A.2 FIPS 197" $ property $ do
-        testKeyExpansionAES192,
-      testProperty "Test verify Spec.keyExpansionAES256 with Appendix A.3 FIPS 197" $ property $ do
-        testKeyExpansionAES256,
-      testProperty "Test verify cipher AES128 with Appendix B.1 FIPS 197" $ property $ do
-        testCipherAES128,
-      testProperty "Test verify invcipher AES128 with Appendix B.1 FIPS 197" $ property $ do
-        testInvCipherAES128,
-    localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test verify inverse cipher and invcipher AES128 " $ property $ do
-        input ← forAll $ genVec @(Nb Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
-        key ← forAll $ genVec @(Nk Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
-        testInverseAES128 input key,
-    localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test verify inverse cipher and invcipher AES192 " $ property $ do
-        input ← forAll $ genVec @(Nb Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
-        key ← forAll $ genVec @(Nk Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
-        testInverseAES192 input key,
-    localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test verify inverse cipher and invcipher AES256 " $ property $ do
-        input ← forAll $ genVec @(Nb Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
-        key ← forAll $ genVec @(Nk Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
-        testInverseAES256 input key,
-    localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test equivalent inverse cipher AES128 " $ property $ do
-        input ← forAll $ genVec @(Nb Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
-        key ← forAll $ genVec @(Nk Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
-        testEquivalentAES128 input key,
-    localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test equivalent inverse cipher AES192 " $ property $ do
-        input ← forAll $ genVec @(Nb Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
-        key ← forAll $ genVec @(Nk Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
-        testEquivalentAES192 input key,
-    localOption (HedgehogTestLimit (Just 10)) $ testProperty "Test equivalent inverse cipher AES256 " $ property $ do
-        input ← forAll $ genVec @(Nb Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
-        key ← forAll $ genVec @(Nk Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
-        testEquivalentAES256 input key
+tastyTests = testGroup "Algorithm"
+  [ testProperty "Test verify Spec.keyExpansionAES128 with Appendix A.1 FIPS 197" $ property $ do
+      testKeyExpansionAES128
+  , testProperty "Test verify Spec.keyExpansionAES192 with Appendix A.2 FIPS 197" $ property $ do
+        testKeyExpansionAES192
+  , testProperty "Test verify Spec.keyExpansionAES256 with Appendix A.3 FIPS 197" $ property $ do
+      testKeyExpansionAES256
+  , testProperty "Test verify cipher AES128 with Appendix B.1 FIPS 197" $ property $ do
+      testCipherAES128
+  , testProperty "Test verify invcipher AES128 with Appendix B.1 FIPS 197" $ property $ do
+      testInvCipherAES128
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Test verify inverse cipher and invcipher AES128 " $ property $ do
+      input ← forAll $ genVec @(Nb Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
+      key ← forAll $ genVec @(Nk Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
+      testInverseAES128 input key
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Test verify inverse cipher and invcipher AES192 " $ property $ do
+      input ← forAll $ genVec @(Nb Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
+      key ← forAll $ genVec @(Nk Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
+      testInverseAES192 input key
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Test verify inverse cipher and invcipher AES256 " $ property $ do
+      input ← forAll $ genVec @(Nb Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
+      key ← forAll $ genVec @(Nk Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
+      testInverseAES256 input key
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Test equivalent inverse cipher AES128 " $ property $ do
+      input ← forAll $ genVec @(Nb Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
+      key ← forAll $ genVec @(Nk Spec.AES128) (genVec @(WordSize Spec.AES128) genDefinedBitVector)
+      testEquivalentAES128 input key
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Test equivalent inverse cipher AES192 " $ property $ do
+      input ← forAll $ genVec @(Nb Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
+      key ← forAll $ genVec @(Nk Spec.AES192) (genVec @(WordSize Spec.AES192) genDefinedBitVector)
+      testEquivalentAES192 input key
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Test equivalent inverse cipher AES256 " $ property $ do
+      input ← forAll $ genVec @(Nb Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
+      key ← forAll $ genVec @(Nk Spec.AES256) (genVec @(WordSize Spec.AES256) genDefinedBitVector)
+      testEquivalentAES256 input key
   ]
+
 --------------------------------------------------------------
 -- AES128
 --------------------------------------------------------------

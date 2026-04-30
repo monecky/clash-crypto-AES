@@ -82,9 +82,7 @@ import Clash.Crypto.Calculator.ISA
   )
 import Clash.Crypto.Calculator.Modulo (ℤₘ, PrimeField, ModSize, createMod)
 import Clash.Crypto.Cipher.AES
-  ( AES(..), AESKeyExpansion(..), KnownAES(..),
-   AESFacts(..), WordSize, Nb
-  )
+  ( AES(..), KnownAES(..), AESFacts(..), WordSize, Nb )
 
 import Test.Clash.Crypto.Calculator
 import Test.Clash.Crypto.Calculator.InverseModulo
@@ -110,7 +108,6 @@ import qualified Clash.Sized.Vector  as Vec
 import qualified Crypto.Hash         as Hash
 import qualified Crypto.MAC.HMAC     as HMAC
 import Crypto.ECC (Curve_P256R1, EllipticCurve (..))
-import Crypto.Error (throwCryptoError)
 import Crypto.PubKey.ECDSA
   ( signDigestWith, decodePrivate, signatureToIntegers, toPublic, encodePublic
   )
@@ -816,16 +813,16 @@ genModBounded minB maxB = do
 
 class CryptoAES (alg ∷ SpecAES.AES) where
   encryptoECB :: Proxy alg -> ByteString -> ByteString -> ByteString
-  decryptoECB :: Proxy alg -> ByteString -> ByteString -> ByteString
+--  decryptoECB :: Proxy alg -> ByteString -> ByteString -> ByteString
 instance CryptoAES SpecAES.AES128      where
   encryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
   encryptoECB _ key plainText = case cipherInit key of
     CryptoPassed (cipher1 :: AES128) -> ecbEncrypt cipher1 plainText
     CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show cipher1)
-  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
-  decryptoECB _ key cipherText = case cipherInit key of
-    CryptoPassed (cipher1 ∷ AES128)-> ecbDecrypt cipher1 cipherText
-    CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show cipher1)
+--  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
+--  decryptoECB _ key cipherText = case cipherInit key of
+--    CryptoPassed (cipher1 ∷ AES128)-> ecbDecrypt cipher1 cipherText
+--    CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show cipher1)
 
 
 instance CryptoAES SpecAES.AES192    where
@@ -833,21 +830,20 @@ instance CryptoAES SpecAES.AES192    where
   encryptoECB _ key plainText = case cipherInit key of
     CryptoPassed (cipher1 :: AES192) -> ecbEncrypt cipher1 plainText
     CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show (cipher1, BS.length key))
-  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
-  decryptoECB _ key cipherText = case cipherInit key of
-    CryptoFailed _ -> error "Cipher initialization failed"
-    CryptoPassed (cipher1 ∷ AES192)-> ecbDecrypt cipher1 cipherText
+--  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
+--  decryptoECB _ key cipherText = case cipherInit key of
+--    CryptoFailed _ -> error "Cipher initialization failed"
+--    CryptoPassed (cipher1 ∷ AES192)-> ecbDecrypt cipher1 cipherText
 
 instance CryptoAES SpecAES.AES256    where
   encryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
   encryptoECB _ key plainText = case cipherInit key of
     CryptoPassed (cipher1 :: AES256) -> ecbEncrypt cipher1 plainText
     CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show (cipher1, BS.length key))
-
-  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
-  decryptoECB _ key cipherText = case cipherInit key of
-    CryptoFailed _ -> error "Cipher initialization failed"
-    CryptoPassed (cipher1 ∷ AES256)-> ecbDecrypt cipher1 cipherText
+--  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
+--  decryptoECB _ key cipherText = case cipherInit key of
+--    CryptoFailed _ -> error "Cipher initialization failed"
+--    CryptoPassed (cipher1 ∷ AES256)-> ecbDecrypt cipher1 cipherText
 
 parseCS ∷ String → CommSpeed
 parseCS = \case

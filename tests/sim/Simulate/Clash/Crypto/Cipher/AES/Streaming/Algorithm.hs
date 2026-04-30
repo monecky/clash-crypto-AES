@@ -28,31 +28,32 @@ import Clash.Crypto.Cipher.AES
 import Clash.Crypto.Cipher.AES.Specification as Spec
 import Clash.Crypto.Cipher.AES.Streaming.Algorithm as Stream
 import qualified Data.List as List
+
 tastyTests :: TestTree
-tastyTests = testGroup "Clash.Crypto.Cipher.AES.Streaming.Algorithm"
-  [ localOption (HedgehogTestLimit (Just 10)) $ testGroup "Verification equality of hardware and functional"
-  [
-      testProperty "Cipher version AES128" $ cipherProperty @AES128 (Stream.cipherStream @AES128) Spec.cipher,
-      testProperty "Cipher version AES192" $ cipherProperty @AES192 (Stream.cipherStream @AES192) Spec.cipher,
-      testProperty "Cipher version AES256" $ cipherProperty @AES256 (Stream.cipherStream @AES256) Spec.cipher,
+tastyTests = testGroup "Algorithm"
+  [ localOption (HedgehogTestLimit (Just 10))
+  $ testGroup "Verification equality of hardware and functional"
+      [ testProperty "Cipher version AES128" $ cipherProperty @AES128 (Stream.cipherStream @AES128) Spec.cipher
+      , testProperty "Cipher version AES192" $ cipherProperty @AES192 (Stream.cipherStream @AES192) Spec.cipher
+      , testProperty "Cipher version AES256" $ cipherProperty @AES256 (Stream.cipherStream @AES256) Spec.cipher
 
-      testProperty "InvCipher version AES128" $ cipherProperty @AES128 (Stream.invCipherStream @AES128) Spec.invCipher,
-      testProperty "InvCipher version AES192" $ cipherProperty @AES192 (Stream.invCipherStream @AES192) Spec.invCipher,
-      testProperty "InvCipher version AES256" $ cipherProperty @AES256 (Stream.invCipherStream @AES256) Spec.invCipher,
+      , testProperty "InvCipher version AES128" $ cipherProperty @AES128 (Stream.invCipherStream @AES128) Spec.invCipher
+      , testProperty "InvCipher version AES192" $ cipherProperty @AES192 (Stream.invCipherStream @AES192) Spec.invCipher
+      , testProperty "InvCipher version AES256" $ cipherProperty @AES256 (Stream.invCipherStream @AES256) Spec.invCipher
 
-      testProperty "EqInvCipher version AES128" $ cipherProperty @AES128 (Stream.eqInvCipherStream @AES128) Spec.eqInvCipher,
-      testProperty "EqInvCipher version AES192" $ cipherProperty @AES192 (Stream.eqInvCipherStream @AES192) Spec.eqInvCipher,
-      testProperty "EqInvCipher version AES256" $ cipherProperty @AES256 (Stream.eqInvCipherStream @AES256) Spec.eqInvCipher,
+      , testProperty "EqInvCipher version AES128" $ cipherProperty @AES128 (Stream.eqInvCipherStream @AES128) Spec.eqInvCipher
+      , testProperty "EqInvCipher version AES192" $ cipherProperty @AES192 (Stream.eqInvCipherStream @AES192) Spec.eqInvCipher
+      , testProperty "EqInvCipher version AES256" $ cipherProperty @AES256 (Stream.eqInvCipherStream @AES256) Spec.eqInvCipher
 
-      testProperty "KeyExpansion version AES128" $ keyExpansionProperty @AES128 (Stream.keyExpansionStream @AES128) Spec.keyExpansion,
-      testProperty "KeyExpansion version AES192" $ keyExpansionProperty @AES192 (Stream.keyExpansionStream @AES192) Spec.keyExpansion,
-      testProperty "KeyExpansion version AES256" $ keyExpansionProperty @AES256 (Stream.keyExpansionStream @AES256) Spec.keyExpansion,
+      , testProperty "KeyExpansion version AES128" $ keyExpansionProperty @AES128 (Stream.keyExpansionStream @AES128) Spec.keyExpansion
+      , testProperty "KeyExpansion version AES192" $ keyExpansionProperty @AES192 (Stream.keyExpansionStream @AES192) Spec.keyExpansion
+      , testProperty "KeyExpansion version AES256" $ keyExpansionProperty @AES256 (Stream.keyExpansionStream @AES256) Spec.keyExpansion
 
-      testProperty "KeyExpansionIEC version AES128" $ keyExpansionProperty @AES128 (Stream.keyExpansionIECStream @AES128) Spec.keyExpansionIEC,
-      testProperty "KeyExpansionIEC version AES192" $ keyExpansionProperty @AES192 (Stream.keyExpansionIECStream @AES192) Spec.keyExpansionIEC,
-      testProperty "KeyExpansionIEC version AES256" $ keyExpansionProperty @AES256 (Stream.keyExpansionIECStream @AES256) Spec.keyExpansionIEC
-  ]
+      , testProperty "KeyExpansionIEC version AES128" $ keyExpansionProperty @AES128 (Stream.keyExpansionIECStream @AES128) Spec.keyExpansionIEC
+      , testProperty "KeyExpansionIEC version AES192" $ keyExpansionProperty @AES192 (Stream.keyExpansionIECStream @AES192) Spec.keyExpansionIEC
+      , testProperty "KeyExpansionIEC version AES256" $ keyExpansionProperty @AES256 (Stream.keyExpansionIECStream @AES256) Spec.keyExpansionIEC
       ]
+  ]
 
 type CipherComponent alg dom =
  HiddenClockResetEnable dom =>

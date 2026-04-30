@@ -38,30 +38,31 @@ import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import Clash.Hedgehog.Sized.Vector
 
 tastyTests ∷ TestTree
-tastyTests = testGroup "Clash.Crypto.Cipher.AES.Specification.Definitions"
-  [localOption (HedgehogTestLimit (Just 10)) $ -- Purpose is mainly to get familiar with testing.
-      testProperty "Functional equality of XOR" $ property $ do
-        a ← forAll $ genDefinedBitVector
-        b ← forAll $ genDefinedBitVector
-        testOplus a b,
-   localOption (HedgehogTestLimit (Just 10)) $
-      testProperty "Functional with subBytes" $ property $ do
-        a ← forAll $ genVec (genVec  genDefinedBitVector)
-        testsubBytes a,
-   localOption (HedgehogTestLimit (Just 10)) $
-      testProperty "Functional with mixColumns" $ property $ do
-        a ← forAll $ genVec (genVec  genDefinedBitVector)
-        testMixColumns a,
-   localOption (HedgehogTestLimit (Just 10)) $
-      testProperty "Functional with shiftRows" $ property $ do
-        a ← forAll $ genVec (genVec genDefinedBitVector)
-        testShiftRows a,
-  localOption (HedgehogTestLimit (Just 10)) $
-      testProperty "Generic functional with addRoundKey fully" $ property $ do
-        a ← forAll $ genVec (genVec  genDefinedBitVector)
-        b ← forAll $ genVec (genVec  genDefinedBitVector)
-        testAddRoundKey a b
+tastyTests = testGroup "Definitions"
+  [ localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Functional equality of XOR" $ property $ do
+      a ← forAll $ genDefinedBitVector
+      b ← forAll $ genDefinedBitVector
+      testOplus a b
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Functional with subBytes" $ property $ do
+      a ← forAll $ genVec (genVec  genDefinedBitVector)
+      testsubBytes a
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Functional with mixColumns" $ property $ do
+      a ← forAll $ genVec (genVec  genDefinedBitVector)
+      testMixColumns a
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Functional with shiftRows" $ property $ do
+      a ← forAll $ genVec (genVec genDefinedBitVector)
+      testShiftRows a
+  , localOption (HedgehogTestLimit (Just 10))
+  $ testProperty "Generic functional with addRoundKey fully" $ property $ do
+      a ← forAll $ genVec (genVec  genDefinedBitVector)
+      b ← forAll $ genVec (genVec  genDefinedBitVector)
+      testAddRoundKey a b
   ]
+
 type TestLen = 8
 testOplus ∷ (Monad m) => BitVector TestLen -> BitVector TestLen -> PropertyT m ()
 testOplus a b = a ⊕ b === xor a b

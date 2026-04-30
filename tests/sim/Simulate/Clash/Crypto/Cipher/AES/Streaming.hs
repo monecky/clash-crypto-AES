@@ -48,80 +48,71 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (First(..))
 
 tastyTests ∷ TestTree
-tastyTests = testGroup "Clash.Crypto.Cipher.AES.Streaming"
-  [Alg.tastyTests
-  , tastyTestsAESStream]
-tastyTestsAESStream ∷ TestTree
-tastyTestsAESStream = testGroup "Clash.Crypto.Cipher.AES.Streaming"
-  [ localOption (HedgehogTestLimit (Just 100)) $
-      testGroup "Streaming Sanity Checks against haskell crypton AES128 \nEncryption ECB mode"
-        [
-          testProperty "AES128" $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
-              testAESPureDecryption @Spec.AES128 key input,
-        testProperty "AES-128, specific key" $
-            property $ do
-              testAESPureEncryption @Spec.AES128 in1AES128 key1AES128
-        ]
-        ,
-        testGroup "Streaming Sanity Checks against haskell crypton AES192 \nEncryption ECB mode" $
-        [ testProperty ("AES-" <> algName) $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
-              aesPure key input
-        | (aesPure, algName) <-
-            [ (testAESPureEncryption @Spec.AES192, "192")
-            ]
-        ]
-        ,
-        testGroup "Streaming Sanity Checks against haskell crypton AES256 \nEncryption ECB mode" $
-        [ testProperty ("AES-" <> algName) $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
-              aesPure key input
-        | (aesPure, algName) <-
-            [ (testAESPureEncryption @Spec.AES256, "256")
-            ]
-        ]
-        ,
-        testGroup "Streaming Sanity Checks against haskell crypton AES128 \nDecryption ECB mode"
-        [
-          testProperty "AES128" $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
-              testAESPureDecryption @Spec.AES128 key input,
-        testProperty "AES-128, specific key" $
-            property $ do
-              testAESPureDecryption @Spec.AES128 in1AES128 key1AES128
-        ]
-        ,
-        testGroup "Streaming Sanity Checks against haskell crypton AES192 \nDecryption ECB mode" $
-        [ testProperty ("AES-" <> algName) $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
-              aesPure key input
-        | (aesPure, algName) <-
-            [ (testAESPureDecryption @Spec.AES192, "192")
-            ]
-        ]
-        ,
-        testGroup "Streaming Sanity Checks against haskell crypton AES256 \nDecryption ECB mode" $
-        [ testProperty ("AES-" <> algName) $
-            property $ do
-              key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
-              aesPure key input
-        | (aesPure, algName) <-
-            [ (testAESPureDecryption @Spec.AES256, "256")
-            ]
-        ]
+tastyTests = testGroup "Streaming"
+  [ Alg.tastyTests
+  , tastyTestsAESStream
   ]
+
+tastyTestsAESStream ∷ TestTree
+tastyTestsAESStream = testGroup "Sanity Checks against crypton"
+  [ testGroup "Encryption.ECB Mode"
+      [ testGroup "AES128"
+          [ testProperty "AES128" $ property $ do
+              key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
+              input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
+              testAESPureDecryption @Spec.AES128 key input
+          , testProperty "AES-128, specific key" $
+              property $ testAESPureEncryption @Spec.AES128 in1AES128 key1AES128
+          ]
+      , testGroup "AES192" $
+          [ testProperty ("AES-" <> algName) $ property $ do
+              key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
+              input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
+              aesPure key input
+          | (aesPure, algName) <-
+              [ (testAESPureEncryption @Spec.AES192, "192")
+              ]
+          ]
+      , testGroup "AES256" $
+          [ testProperty ("AES-" <> algName) $ property $ do
+              key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
+              input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
+              aesPure key input
+          | (aesPure, algName) <-
+              [ (testAESPureEncryption @Spec.AES256, "256")
+              ]
+          ]
+      ]
+  , testGroup "Decryption.ECB Mode"
+      [ testGroup "AES128"
+          [ testProperty "AES128" $ property $ do
+              key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
+              input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
+              testAESPureDecryption @Spec.AES128 key input
+          , testProperty "AES-128, specific key" $ property $ do
+              testAESPureDecryption @Spec.AES128 in1AES128 key1AES128
+          ]
+      , testGroup "AES192" $
+          [ testProperty ("AES-" <> algName) $ property $ do
+              key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
+              input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
+              aesPure key input
+          | (aesPure, algName) <-
+              [ (testAESPureDecryption @Spec.AES192, "192")
+              ]
+          ]
+      , testGroup "AES256"
+          [ testProperty ("AES-" <> algName) $ property $ do
+              key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
+              input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
+              aesPure key input
+          | (aesPure, algName) <-
+              [ (testAESPureDecryption @Spec.AES256, "256")
+              ]
+          ]
+      ]
+  ]
+
 genInputBlock ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
 genInputBlock
     | AESFacts _ ← knownAES @alg =

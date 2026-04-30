@@ -28,14 +28,14 @@ small letter as well.
 
 module Clash.Crypto.Cipher.AES.Specification
   ( -- All functions that are present in the FIPS.
-    AESFunctions(..),AESFacts(..), KnownAES(..),
+    AESFunctions(..),
     aesFunctional,
     -- Type of all specific AES functions.
-    AES(..), 
+    AES(..),
     -- Verification
     KnownAES(..), AESFacts(..),
     -- Types
-    InType, OutType, StateType, WType, 
+    InType, OutType, StateType, WType,
     WordType, KeyType, Nr, Nk, Nb, WordSize,
 
     -- Definitions
@@ -47,8 +47,6 @@ module Clash.Crypto.Cipher.AES.Specification
     -- Constants
     mX, aMixColumns, aInvMixColumns, xySBox, xyInvSBox
   ) where
-import Clash.Prelude
-import Data.Proxy (Proxy(..))
 
 import Clash.Crypto.Cipher.AES.Specification.Properties
 import Clash.Crypto.Cipher.AES.Specification.Algorithm
@@ -56,8 +54,7 @@ import Clash.Crypto.Cipher.AES.Specification.Constants
 import Clash.Crypto.Cipher.AES.Specification.Definitions
 import Clash.Crypto.Cipher.AES.Specification.Types
 
-aesFunctional ∷ ∀ (alg ∷ AES) . KnownAES alg ⇒ InType alg → KeyType alg → OutType alg    
-aesFunctional input key 
+aesFunctional ∷ ∀ (alg ∷ AES) . KnownAES alg ⇒ InType alg → KeyType alg → OutType alg
+aesFunctional input key
   | AESFacts alg ← knownAES @alg
   = cipher alg input (keyExpansion alg key)
-
