@@ -23,16 +23,16 @@ module Clash.Crypto.Cipher.AES.Specification
     -- * Additional Evidence
   , KnownAES(..), AESFacts(..)
     -- * Types
-  , AES(..), InType, OutType, StateType, WType
-  , WordType, KeyType, Nr, Nk, Nb, WordSize
+  , AES(..), Byte, AESWord, AESWordByteCount, Nr, Nk, Nb
+  , AESBlock, AESBlockByteCount, AESKey, AESRoundKey
+  , AESState, KeySchedule
     -- * Definitions
-  , AESConstants, (⊕), RoundWType
-  , subBytes, invSubBytes
+  , (⊕), subBytes, invSubBytes
   , mixColumns, invMixColumns
   , shiftRows, invShiftRows
   , addRoundKey, invAddRoundKey
     -- * Constants
-  , mX, aMixColumns, aInvMixColumns, xySBox, xyInvSBox
+  , aMixColumns, aInvMixColumns, xySBox, xyInvSBox
   ) where
 
 import Clash.Crypto.Cipher.AES.Specification.Properties
@@ -41,7 +41,9 @@ import Clash.Crypto.Cipher.AES.Specification.Constants
 import Clash.Crypto.Cipher.AES.Specification.Definitions
 import Clash.Crypto.Cipher.AES.Specification.Types
 
-aesFunctional ∷ ∀ (alg ∷ AES) → KnownAES alg ⇒ InType alg → KeyType alg → OutType alg
+aesFunctional ∷
+  ∀ (alg ∷ AES) → KnownAES alg ⇒
+  AESBlock alg → AESKey alg → AESBlock alg
 aesFunctional alg input key
   | AESFacts ← knownAES alg
   = cipher alg input (keyExpansion alg key)

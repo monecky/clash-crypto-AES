@@ -40,6 +40,7 @@ import qualified Development.Shake as Shake (need)
 
 import Clash.Crypto.Hash.SHA (SHA)
 import Clash.Crypto.Cipher.AES (AES)
+
 pkgName, top :: String
 pkgName = "clash-crypto"
 top     = "topEntity"
@@ -107,6 +108,7 @@ shakeRules cfgs wanted = do
 
   forM_ [minBound :: AES .. maxBound] $ \alg ->
     hitltRules "AES" (show alg) [("HITLT_AES", show alg)]
+
   -- SHA HITLT rules
 
   forM_ [minBound :: SHA .. maxBound] $ \alg ->
@@ -146,20 +148,8 @@ shakeRules cfgs wanted = do
       $ "" <//> "shake" </> "build" </> "shake" </> "shake" %> \out -> do
         sources <- getSources "app/shake"
         aesTypes <- getSources "src/Clash/Crypto/Cipher/AES.hs"
-        Shake.need $ aesTypes <> sources
-        shakePath <- getCabalBinPath "shake"
-        unless (shakePath == out) $ fail "internal error: invalid need"
-        cabal <- getCabal
-        Stdout msg <- quietly
-          $ cmd cabal "--verbose=0" "build" (pkgName <> ":shake") "--dry-run"
-        unless (startsWith "Up to date" msg) $ liftIO $ do
-          putStr msg
-          throw ShakeOutOfDate
-    when ?withBinary
-      $ "" <//> "shake" </> "build" </> "shake" </> "shake" %> \out -> do
-        sources <- getSources "app/shake"
         shaTypes <- getSources "src/Clash/Crypto/Hash/SHA.hs"
-        Shake.need $ shaTypes <> sources
+        Shake.need $ aesTypes <> shaTypes <> sources
         shakePath <- getCabalBinPath "shake"
         unless (shakePath == out) $ fail "internal error: invalid need"
         cabal <- getCabal
@@ -168,6 +158,7 @@ shakeRules cfgs wanted = do
         unless (startsWith "Up to date" msg) $ liftIO $ do
           putStr msg
           throw ShakeOutOfDate
+
   -- clean
 
   "clean" ~> do

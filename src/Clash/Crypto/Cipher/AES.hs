@@ -17,8 +17,8 @@ module Clash.Crypto.Cipher.AES
   , aesECBencryption
   , aesECBdecryption
     -- * Types
-  , InType, OutType, KeyType, StateType
-  , WordType, RoundWType, WordSize, Nk, Nb, Nr
+  , Byte, AESWord, AESWordByteCount, Nk, Nb, Nr
+  , AESBlock, AESBlockByteCount, AESRoundKey, AESKey, AESState
     -- * Definitions
   , (⊕), subBytes, invSubBytes, mixColumns, invMixColumns,
     shiftRows, invShiftRows, addRoundKey, invAddRoundKey

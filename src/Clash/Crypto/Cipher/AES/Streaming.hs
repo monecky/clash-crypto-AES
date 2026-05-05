@@ -18,34 +18,32 @@ module Clash.Crypto.Cipher.AES.Streaming
 
 import Clash.Prelude.Safe
 
-import Clash.Crypto.Cipher.AES.Streaming.Algorithm as Alg
-import Clash.Crypto.Cipher.AES.Specification as Spec
+import Clash.Crypto.Cipher.AES.Streaming.Algorithm
+import Clash.Crypto.Cipher.AES.Specification
 import Clash.Signal.Channel
 
 aesECBencryption ∷
   HiddenClockResetEnable dom ⇒
-  ∀ (alg ∷ Spec.AES) → (Spec.KnownAES alg, AESKeyExpansion alg) ⇒
-  Channel dom (Spec.InType alg, Spec.KeyType alg) →
-  -- ^ input stream ^ key stream
-  Channel dom (Spec.OutType alg)
-  -- ^ response channel
-aesECBencryption alg input
+  ∀ (alg ∷ AES) → (KnownAES alg, AESKeyExpansion alg) ⇒
+  Channel dom (AESBlock alg, AESKey alg) →
+  -- ^ input + key
+  Channel dom (AESBlock alg)
+  -- ^ response
+aesECBencryption alg (unzipC → (inp, key))
   | AESFacts ← knownAES alg
-  = Alg.cipherStream alg (zipC (fst unzipInput) expansion)
-    where
-      expansion = Alg.keyExpansionStream alg (snd unzipInput)
-      unzipInput = unzipC input
+  = cipherStream alg
+  $ zipC inp
+  $ keyExpansionStream alg key
 
 aesECBdecryption ∷
   HiddenClockResetEnable dom ⇒
-  ∀ (alg ∷ Spec.AES) → (Spec.KnownAES alg,  AESKeyExpansion alg) ⇒
-  Channel dom (Spec.InType alg, Spec.KeyType alg) →
-  -- ^ input stream ^ key stream
-  Channel dom (Spec.OutType alg)
-  -- ^ response channel
-aesECBdecryption alg input
+  ∀ (alg ∷ AES) → (KnownAES alg, AESKeyExpansion alg) ⇒
+  Channel dom (AESBlock alg, AESKey alg) →
+  -- ^ input + key
+  Channel dom (AESBlock alg)
+  -- ^ response
+aesECBdecryption alg (unzipC → (inp, key))
   | AESFacts ← knownAES alg
-  =  Alg.invCipherStream alg (zipC (fst unzipInput) expansion)
-    where
-      expansion = Alg.keyExpansionStream alg (snd unzipInput)
-      unzipInput = unzipC input
+  = invCipherStream alg
+  $ zipC inp
+  $ keyExpansionStream alg key

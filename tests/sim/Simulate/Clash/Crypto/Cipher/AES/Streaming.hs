@@ -8,230 +8,94 @@ Portability : POSIX
 Test suite for 'Clash.Crypto.Cipher.AES.Streaming'.
 -}
 
--- Used to inturper a list as Byte String
-{-# LANGUAGE OverloadedLists #-}
-
 module Simulate.Clash.Crypto.Cipher.AES.Streaming
   ( tastyTests
   ) where
 
-import Clash.Crypto.Cipher.AES
-import Clash.Prelude
+import Clash.Prelude.Safe
 
+import Clash.Signal.Channel (Channel, ProviderAction(..), channel, newsfeed)
 import Clash.Sized.Vector (unsafeFromList)
 
--- https://hackage.haskell.org/package/clash-prelude-hedgehog
-import Hedgehog
-import qualified Hedgehog.Gen as Gen
-
-import Hedgehog.Range as Range
-import Test.Tasty
-import Test.Tasty.Hedgehog
-
-
--- Test AES128
-import Simulate.Clash.Crypto.Cipher.AES.GoldenReference as Reference
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-
-import qualified Clash.Crypto.Cipher.AES.Specification as Spec
-import qualified Simulate.Clash.Crypto.Cipher.AES.Streaming.Algorithm as Alg
-import qualified Data.List as List
-import Clash.Signal.Channel
 import Data.Maybe (fromMaybe)
 import Data.Monoid (First(..))
+import Hedgehog (PropertyT, (===), forAll, property)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Hedgehog (testProperty)
 
-tastyTests ∷ TestTree
-tastyTests = testGroup "Streaming"
-  [ Alg.tastyTests
-  , tastyTestsAESStream
+import qualified Data.ByteString as BS (pack, unpack)
+import qualified Data.List       as List (repeat)
+import qualified Hedgehog.Gen    as Gen (enumBounded, list)
+import qualified Hedgehog.Range  as Range (singleton)
+
+import Clash.Crypto.Cipher.AES
+import Test.Clash.Crypto.Cipher.AES
+
+tastyTests ∷
+  ∀ (alg ∷ AES) → (KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
+  TestTree
+tastyTests alg = testGroup "Sanity Checks against crypton"
+  [ testProperty "Encryption" $ property
+  $ testAESStreaming alg aesECBencryption encryptoECB
+  , testProperty "Decryption" $ property
+  $ testAESStreaming alg aesECBdecryption decryptoECB
   ]
 
-tastyTestsAESStream ∷ TestTree
-tastyTestsAESStream = testGroup "Sanity Checks against crypton"
-  [ testGroup "Encryption.ECB Mode"
-      [ testGroup "AES128"
-          [ testProperty "AES128" $ property $ do
-              key <- forAll $ genKeyFor Spec.AES128
-              input <- forAll $ genInputBlock Spec.AES128
-              testAESPureDecryption Spec.AES128 key input
-          , testProperty "AES-128, specific key" $
-              property $ testAESPureEncryption Spec.AES128 in1AES128 key1AES128
-          ]
-      , testGroup "AES192" $
-          [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor Spec.AES192
-              input <- forAll $ genInputBlock Spec.AES192
-              aesPure key input
-          | (aesPure, algName) <-
-              [ (testAESPureEncryption Spec.AES192, "192")
-              ]
-          ]
-      , testGroup "AES256" $
-          [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor Spec.AES256
-              input <- forAll $ genInputBlock Spec.AES256
-              aesPure key input
-          | (aesPure, algName) <-
-              [ (testAESPureEncryption Spec.AES256, "256")
-              ]
-          ]
-      ]
-  , testGroup "Decryption.ECB Mode"
-      [ testGroup "AES128"
-          [ testProperty "AES128" $ property $ do
-              key <- forAll $ genKeyFor Spec.AES128
-              input <- forAll $ genInputBlock Spec.AES128
-              testAESPureDecryption Spec.AES128 key input
-          , testProperty "AES-128, specific key" $ property $ do
-              testAESPureDecryption Spec.AES128 in1AES128 key1AES128
-          ]
-      , testGroup "AES192" $
-          [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor Spec.AES192
-              input <- forAll $ genInputBlock Spec.AES192
-              aesPure key input
-          | (aesPure, algName) <-
-              [ (testAESPureDecryption Spec.AES192, "192")
-              ]
-          ]
-      , testGroup "AES256"
-          [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor Spec.AES256
-              input <- forAll $ genInputBlock Spec.AES256
-              aesPure key input
-          | (aesPure, algName) <-
-              [ (testAESPureDecryption Spec.AES256, "256")
-              ]
-          ]
-      ]
-  ]
-
-genInputBlock ∷ ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg => Gen ByteString
-genInputBlock alg
-    | AESFacts ← knownAES alg =
-    BS.pack <$> Gen.list (Range.singleton (snatToNum (SNat @(Spec.Nb alg * Spec.WordSize alg)))) Gen.enumBounded
-
-genKeyFor :: ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg => Gen ByteString
-genKeyFor alg
-  | AESFacts ← knownAES alg = do
-  BS.pack <$> Gen.list (Range.singleton (natToNum @( Spec.WordSize alg  * Spec.Nk alg ))) Gen.enumBounded
-
-
-
-
-
-testAESPureEncryption ∷
+testAESStreaming ∷
   Monad m ⇒
-  ∀ (alg ∷ Spec.AES) → (KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
-  ByteString →
-  -- ^ input data
-    ByteString →
-  -- ^ key data
+  ∀ (alg ∷ AES) → (KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
+  ( HiddenClockResetEnable System ⇒
+    ∀ (alg1 ∷ AES) → (KnownAES alg1, AESKeyExpansion alg1) ⇒
+    Channel System (AESBlock alg1, AESKey alg1) →
+    Channel System (AESBlock alg1)
+  ) →
+  (∀ x → x ~ alg ⇒ ByteString → ByteString → ByteString) →
   PropertyT m ()
-testAESPureEncryption alg key input
-  | AESFacts ← knownAES alg
-  = do
-  let
-    inputAsBv8 ∷ [BitVector 8]
-    inputAsBv8 = pack <$> BS.unpack input
+testAESStreaming alg action refAction | AESFacts ← knownAES alg = do
+  key   ← forAll $ fmap BS.pack
+        $ Gen.list (Range.singleton $ natToNum @(Nk alg * AESWordByteCount))
+                   Gen.enumBounded
+  input ← forAll $ fmap BS.pack
+        $ Gen.list (Range.singleton $ natToNum @(Nb alg * AESWordByteCount))
+                   Gen.enumBounded
 
-    inputAsVBv8 ∷ Vec (Nb alg * WordSize alg)  (BitVector 8)
-    inputAsVBv8 = unsafeFromList @(Nb alg * WordSize alg) inputAsBv8
+  let inputAsBv8 ∷ [Byte]
+      inputAsBv8 = pack <$> BS.unpack input
 
-    inputAsInType ∷ InType alg
-    inputAsInType = unconcatI inputAsVBv8
+      inputAsVBv8 ∷ Vec (AESBlockByteCount alg) Byte
+      inputAsVBv8 = unsafeFromList inputAsBv8
 
-    keyAsBv8 ∷ [BitVector 8]
-    keyAsBv8 = pack <$> BS.unpack key
+      inputAsBlock ∷ AESBlock alg
+      inputAsBlock = unconcatI inputAsVBv8
 
-    keyAsVBv8 ∷ Vec (Nk alg * WordSize alg)  (BitVector 8)
-    keyAsVBv8 = unsafeFromList @(Nk alg * WordSize alg) keyAsBv8
-    keyAsInType ∷ KeyType alg
-    keyAsInType = unconcatI keyAsVBv8
+      keyAsBv8 ∷ [Byte]
+      keyAsBv8 = pack <$> BS.unpack key
 
-    resultDigestAsBv ∷ OutType alg
-    resultDigestAsBv = compute (inputAsInType, keyAsInType)
+      keyAsVBv8 ∷ Vec (Nk alg * AESWordByteCount) Byte
+      keyAsVBv8 = unsafeFromList keyAsBv8
 
-    resultDigestAsVBv8 ∷ Vec (Nb alg * WordSize alg) (BitVector 8)
-    resultDigestAsVBv8 = concat resultDigestAsBv
+      aesKey ∷ AESKey alg
+      aesKey = unconcatI keyAsVBv8
 
-    dut = toList $ unpack <$> resultDigestAsVBv8
-    ref = BS.unpack $ Reference.encryptoECB alg key input
-  ref === dut
-    where
-      compute input1
+      resultDigestAsBv ∷ AESBlock alg
+      resultDigestAsBv
         = fromMaybe (error "The returned list was empty")
-            $ getFirst
-            $ foldMap First
-            $ sampleN @System 256
-            $ withClockResetEnable @System clockGen resetGen enableGen
-            $ newsfeed
-            $ aesECBencryption alg
-            $ channel
-            $ fmap (input1, )
-            $ fromList
-            $ Keep : Keep : Release : List.repeat Keep
+        $ getFirst
+        $ foldMap First
+        $ sampleN 10000000
+        $ withClockResetEnable clockGen resetGen enableGen
+        $ newsfeed
+        $ action alg
+        $ channel
+        $ fmap ((inputAsBlock, aesKey), )
+        $ fromList
+        $ Keep : Keep : Release : List.repeat Keep
 
-testAESPureDecryption ∷
-  Monad m ⇒
-  ∀ (alg ∷ Spec.AES) → (KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
-  ByteString →
-  -- ^ input data
-  ByteString →
-  -- ^ key data
-  PropertyT m ()
-testAESPureDecryption alg key input
-  | AESFacts ← knownAES alg
-  -- , Rewrite ← using @(CancelMultiple (MessageDigestSize alg) 8)
-  = do
+      resultDigestAsVBv8 ∷ Vec (AESBlockByteCount alg) Byte
+      resultDigestAsVBv8 = concat resultDigestAsBv
 
-  -- Just (SomeNat (_ ∷ Proxy n)) ←
-  --   return $ someNatVal $ toInteger $ BS.length input
+      dut = toList $ unpack <$> resultDigestAsVBv8
+      ref = BS.unpack $ refAction alg key input
 
-  let
-    inputAsBv8 ∷ [BitVector 8]
-    inputAsBv8 = pack <$> BS.unpack input
-
-    inputAsVBv8 ∷ Vec (Nb alg * WordSize alg)  (BitVector 8)
-    inputAsVBv8 = unsafeFromList @(Nb alg * WordSize alg) inputAsBv8
-
-    inputAsInType ∷ InType alg
-    inputAsInType = unconcatI inputAsVBv8
-
-    keyAsBv8 ∷ [BitVector 8]
-    keyAsBv8 = pack <$> BS.unpack key
-
-    keyAsVBv8 ∷ Vec (Nk alg * WordSize alg)  (BitVector 8)
-    keyAsVBv8 = unsafeFromList @(Nk alg * WordSize alg) keyAsBv8
-    keyAsInType ∷ KeyType alg
-    keyAsInType = unconcatI keyAsVBv8
-
-    resultDigestAsBv ∷ OutType alg
-    resultDigestAsBv = compute (inputAsInType, keyAsInType)
-
-    resultDigestAsVBv8 ∷ Vec (Nb alg * WordSize alg) (BitVector 8)
-    resultDigestAsVBv8 = concat resultDigestAsBv
-
-    dut = toList $ unpack <$> resultDigestAsVBv8
-    ref = BS.unpack $ Reference.decryptoECB alg key input
   ref === dut
-    where
-      compute input1
-        = fromMaybe (error "The returned list was empty")
-            $ getFirst
-            $ foldMap First
-            $ sampleN @System 10000000
-            $ withClockResetEnable @System clockGen resetGen enableGen
-            $ newsfeed
-            $ aesECBdecryption alg
-            $ channel
-            $ fmap (input1, )
-            $ fromList
-            $ Keep : Keep : Release : List.repeat Keep
-
--- | Some example input for unit testing.
-in1AES128 ∷ ByteString
-in1AES128 = [0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34]
-key1AES128 ∷ ByteString
-key1AES128 = [0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c]

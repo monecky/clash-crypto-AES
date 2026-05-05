@@ -48,7 +48,7 @@ import Data.Tuple (swap)
 import Data.Typeable (Typeable, typeRep)
 import Data.Word (Word8)
 import GHC.IO.Handle (Handle)
-import Hedgehog (PropertyT, (===), property, forAll, MonadGen, Gen)
+import Hedgehog (PropertyT, (===), property, forAll, MonadGen)
 import Language.Haskell.Unicode (type (≤))
 import System.Exit (ExitCode, exitWith)
 import System.Environment (setEnv)
@@ -68,10 +68,7 @@ import Test.Tasty.Hedgehog (HedgehogTestLimit(..), testProperty)
 import Text.Printf (printf)
 
 import Clash.Sized.Stack (StackAction(..), stack)
-import qualified Clash.Crypto.Cipher.AES.Specification as SpecAES
-import Crypto.Cipher.AES as Reference (AES128, AES192, AES256)
-import Crypto.Cipher.Types
-import Crypto.Error
+import Crypto.Error (throwCryptoError)
 
 import Clash.Crypto.Hash.SHA
   ( SHA(..), MessageDigestSize, KnownSHA, SHAFacts(..), BlockSize, knownSHA,
@@ -82,10 +79,13 @@ import Clash.Crypto.Calculator.ISA
   )
 import Clash.Crypto.Calculator.Modulo (ℤₘ, PrimeField, ModSize, createMod)
 import Clash.Crypto.Cipher.AES
-  ( AES(..), KnownAES(..), AESFacts(..), WordSize, Nb )
+  ( AES(..), KnownAES(..), AESFacts(..)
+  , AESWordByteCount, AESBlockByteCount, Nb, Nk
+  )
 
 import Test.Clash.Crypto.Calculator
 import Test.Clash.Crypto.Calculator.InverseModulo
+import Test.Clash.Crypto.Cipher.AES
 import Test.Clash.Crypto.Hash.SHA
 
 import Hitl.Clash.Crypto.Calculator.CLU (CluInput)
@@ -146,9 +146,9 @@ main = do
             [ testStack "Stack" sem dev settings
             ]
         , testGroup "Clash.Crypto.Cipher.AES"
-            [ testAES128 SpecAES.AES128 sem dev settings
-            , testAES192 SpecAES.AES192 sem dev settings
-            , testAES256 SpecAES.AES256 sem dev settings
+            [ testAES AES128 sem dev settings
+            , testAES AES192 sem dev settings
+            , testAES AES256 sem dev settings
             ]
         , testGroup "Clash.Crypto.Hash.SHA"
             [ -- we don't test the >256 variants here, as synthesis
@@ -299,56 +299,24 @@ main = do
         y ∷ PrimeField SecP256ModPrime ← genMod
         runHitltKaratsubaModulo sem dev settings x y
 
-  genInputBlock ∷ ∀ (alg ∷ SpecAES.AES) → SpecAES.KnownAES alg => Gen ByteString
-  genInputBlock alg
-      | AESFacts ← knownAES alg =
-      BS.pack <$> Gen.list (Range.singleton (natToNum @(SpecAES.Nb alg * SpecAES.WordSize alg))) Gen.enumBounded
-
-  genKeyFor :: ∀ (alg ∷ SpecAES.AES) → SpecAES.KnownAES alg => Gen ByteString
-  genKeyFor alg
-    | AESFacts ← knownAES alg = do
-    BS.pack <$> Gen.list (Range.singleton (natToNum @(SpecAES.WordSize alg * SpecAES.Nk alg ))) Gen.enumBounded
-
-  testAES128 ∷
-    ∀ (alg :: AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
+  testAES ∷
+    ∀ (alg ∷ AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
     QSem →
     FilePath →
     SerialPortSettings →
     TestTree
-  testAES128 alg sem dev settings
+  testAES alg sem dev settings
     | AESFacts ← knownAES alg
     , name ← dropWhile (== '\'') $ show $ typeRep (Proxy @alg)
     = test sem dev settings name $ do
-        key <- forAll $ genKeyFor SpecAES.AES128
-        input <- forAll $ genInputBlock SpecAES.AES128
-        runHitltAES alg sem dev settings input key
-  testAES192 ∷
-    ∀ (alg :: AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
-    QSem →
-    FilePath →
-    SerialPortSettings →
-    TestTree
-  testAES192 alg sem dev settings
-    | AESFacts ← knownAES alg
-    , name ← dropWhile (== '\'') $ show $ typeRep (Proxy @alg)
-    = test sem dev settings name $ do
-        key <- forAll $ genKeyFor SpecAES.AES192
-        input <- forAll $ genInputBlock SpecAES.AES192
+        key   ← forAll $ fmap BS.pack
+              $ Gen.list (Range.singleton (natToNum @(AESWordByteCount * Nk alg)))
+                         Gen.enumBounded
+        input ← forAll $ fmap BS.pack
+              $ Gen.list (Range.singleton (natToNum @(AESWordByteCount * Nb alg)))
+                         Gen.enumBounded
         runHitltAES alg sem dev settings input key
 
-  testAES256 ∷
-    ∀ (alg :: AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
-    QSem →
-    FilePath →
-    SerialPortSettings →
-    TestTree
-  testAES256 alg sem dev settings
-    | AESFacts ← knownAES alg
-    , name ← dropWhile (== '\'') $ show $ typeRep (Proxy @alg)
-    = test sem dev settings name $ do
-        key <- forAll $ genKeyFor SpecAES.AES256
-        input <- forAll $ genInputBlock SpecAES.AES256
-        runHitltAES alg sem dev settings input key
   testSHA ∷
     ∀ alg → (KnownSHA alg, CryptoHash alg, Typeable alg,
              Hash.HashAlgorithm (CryptoToHash alg)) ⇒
@@ -424,11 +392,9 @@ runHitltAES ∷
   ByteString →
   PropertyT IO ()
 runHitltAES alg sem dev settings input key | AESFacts ← knownAES alg =
- let
-  bs = (append input key)
-  eq = encryptoECB alg key input
- in runHitlt (type (WordSize alg * Nb alg)) sem dev settings bs eq
---  in runHitlt (type ((Nr alg + 1) * 4)) sem dev settings bs eq
+ let bs = append input key
+     eq = encryptoECB alg key input
+ in runHitlt (type (AESBlockByteCount alg)) sem dev settings bs eq
 
 callProcessSilently ∷ FilePath → [String] → IO ()
 callProcessSilently path args =
@@ -811,35 +777,6 @@ genModBounded ∷ ∀ p m. (Monad m, KnownNat p, 3 ≤ p) ⇒
 genModBounded minB maxB = do
   x ← forAll $ genIndex @p $ Range.linear minB maxB
   return $ createMod @p x
-
-class CryptoAES (alg ∷ SpecAES.AES) where
-  encryptoECB :: ∀ x → x ~ alg ⇒ ByteString → ByteString → ByteString
---  decryptoECB :: ∀ x → x ~ alg ⇒ ByteString → ByteString → ByteString
-
-instance CryptoAES SpecAES.AES128      where
-  encryptoECB _ key plainText = case cipherInit key of
-    CryptoPassed (cipher1 :: AES128) -> ecbEncrypt cipher1 plainText
-    CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show cipher1)
---  decryptoECB _ key cipherText = case cipherInit key of
---    CryptoPassed (cipher1 ∷ AES128)-> ecbDecrypt cipher1 cipherText
---    CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show cipher1)
-
-
-instance CryptoAES SpecAES.AES192    where
-  encryptoECB _ key plainText = case cipherInit key of
-    CryptoPassed (cipher1 :: AES192) -> ecbEncrypt cipher1 plainText
-    CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show (cipher1, BS.length key))
---  decryptoECB _ key cipherText = case cipherInit key of
---    CryptoFailed _ -> error "Cipher initialization failed"
---    CryptoPassed (cipher1 ∷ AES192)-> ecbDecrypt cipher1 cipherText
-
-instance CryptoAES SpecAES.AES256    where
-  encryptoECB _ key plainText = case cipherInit key of
-    CryptoPassed (cipher1 :: AES256) -> ecbEncrypt cipher1 plainText
-    CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show (cipher1, BS.length key))
---  decryptoECB _ key cipherText = case cipherInit key of
---    CryptoFailed _ -> error "Cipher initialization failed"
---    CryptoPassed (cipher1 ∷ AES256)-> ecbDecrypt cipher1 cipherText
 
 parseCS ∷ String → CommSpeed
 parseCS = \case

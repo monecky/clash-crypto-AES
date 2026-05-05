@@ -1,23 +1,36 @@
+{-|
+Module      : AES
+Copyright   : Copyright © 2025 QBayLogic B.V.
+Maintainer  : QBayLogic B.V.
+Stability   : experimental
+Portability : POSIX
+
+HITLT instance for 'Clash.Crypto.Cipher.AES'.
+-}
+
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE CPP #-}
+
 module AES (topEntity) where
 
-import Clash.Prelude
+import Clash.Prelude.Safe
 import Clash.Annotations.TH (makeTopEntity)
+import Clash.Signal.Channel (cachedFromMaybe, newsfeed)
+
+import Clash.Crypto.Cipher.AES(AES(..), aesECBencryption)
 
 import Hitl.Clash.Cores.LatticeSemi.ECP5.Domain (Dom48, Dom12)
 import Hitl.Clash.Cores.LatticeSemi.ECP5.Pll (orangePll12)
 import Hitl.Clash.Cores.Uart.Extra (bulkRead, withUartRequestResponseHandler)
-import Clash.Signal.Channel (cachedFromMaybe, newsfeed)
 
-import Clash.Crypto.Cipher.AES(AES(..), aesECBencryption)
 -- allows to select an AES variant via a CPP define
 #ifndef HITLT_AES
 type AESX = AES128
 #else
 type AESX = HITLT_AES
 #endif
+
 -- allows to select the UART baud via a CPP define
 #ifndef HITLT_BAUD
 type BAUD = 9600

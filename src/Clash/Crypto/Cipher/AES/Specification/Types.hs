@@ -14,7 +14,7 @@ module Clash.Crypto.Cipher.AES.Specification.Types where
 
 import Clash.Sized.BitVector (BitVector)
 import Clash.Sized.Vector (Vec)
-import Clash.Class.BitPack (BitPack)
+import Clash.Class.BitPack (BitPack(..))
 import Clash.XException (NFDataX)
 import Data.Eq (Eq)
 import Data.Enum (Enum, Bounded)
@@ -25,7 +25,7 @@ import GHC.Show (Show)
 import GHC.Generics (Generic)
 import GHC.TypeLits (Nat, type (*), type (+))
 
--- | Supported AES cyphers.
+-- | Supported AES ciphers.
 type AES ∷ Type
 data AES
   = AES128
@@ -43,65 +43,65 @@ data AES
     , Typeable
     )
 
--- Definination according to table 1 hex
--- I don't think it is nessary
-type NibbleSize ∷ AES → Nat
-type family NibbleSize alg where
-  NibbleSize _ = 4
-type NibbleType (alg ∷ AES) = BitVector (NibbleSize alg)
-type ByteSize (alg ∷ AES) = NibbleSize alg * 2
--- | The type of a word
-type ByteType (alg ∷ AES) = BitVector (ByteSize alg)
-type SplitByteType (alg ∷ AES) = Vec 2 (NibbleType alg)
--- | WordSize (in bytes) text chapter 5
-type WordSize ∷ AES → Nat
-type family WordSize alg where
-  WordSize _ = 4
--- | The type of a word
-type WordType (alg ∷ AES) = Vec (WordSize alg) (ByteType alg)
+-- | A sequence of eight bits.
+type Byte = BitVector 8
 
--- | Block size in words (defined in Table 3) and recommanded to be flexible 6.3.
-type Nb ∷ AES → Nat
-type family Nb alg where
-  Nb _ = 4
--- | Block size in bits (defined in Table 3) and recommanded to be flexible 6.3.
-type BlockSize (alg ∷ AES) = Nb alg * WordSize alg
--- | The type of a block
-type BlockType (alg ∷ AES) = Vec (Nb alg) (WordType alg)
--- | To expliciet refer to a state defined in 3.4 ((first 8 bits) (second 8 bits) (third 8 bits) (fourth 8 bits))
-type StateType (alg ∷ AES) = (BlockType alg)
--- | Key length in words (defined in Table 3) and recommanded to be flexible 6.3.
+-- | The number of bytes forming a word.
+type AESWordByteCount = 4
+
+-- | A group of 32 bits that is treated either as a single entity or
+-- as an array of 4 bytes.
+type AESWord = Vec AESWordByteCount Byte
+
+-- | Key length in words, as defined in Table 3 and recommended to be
+-- flexible in Section 6.3.
 type Nk ∷ AES → Nat
 type family Nk alg where
   Nk AES128 = 4
   Nk AES192 = 6
   Nk AES256 = 8
-  Nk _      = 8
--- | Key length in bits (defined in Table 3) and recommanded to be flexible 6.3.
-type KeyLength (alg ∷ AES) = Nk alg  * WordSize alg * ByteSize alg
--- | Key type based on the key length
-type KeyType (alg ∷ AES) = Vec (Nk alg) (WordType alg)
--- | Number of rounds (defined in Table 3) and recommanded to be flexible 6.3.
+
+-- | Block size in words, as defined in Table 3 and recommended to be
+-- flexible in Section 6.3.
+type Nb ∷ AES → Nat
+type Nb alg = 4
+
+-- | Number of rounds, as defined in Table 3 and recommended to be
+-- flexible in Section 6.3.
 type Nr ∷ AES → Nat
 type family Nr alg where
   Nr AES128 = 10
   Nr AES192 = 12
   Nr AES256 = 14
-  Nr _      = 14
--- | 5.1 state, w
--- since w always used in groups of 4 and cλash is not as good as python with indexes
--- and converting back and forth doesn't make any sense
-type RoundWType (alg ∷ AES) = (BlockType alg)
 
-type WType (alg ∷ AES) = Vec ((Nr alg + 1) * 4)  (WordType alg)
+-- | Block size in bytes, as defined in Table 3 and recommended to be
+-- flexible in Section 6.3.
+type AESBlockByteCount (alg ∷ AES) = Nb alg * AESWordByteCount
 
-type NFixedWords ∷ AES → Nat
+-- | A sequence of bits of a given fixed length. In this standard,
+-- blocks consist of 128 bits, sometimes represented as arrays of
+-- bytes or words.
+type AESBlock (alg ∷ AES) = Vec (Nb alg) AESWord
 
-type family NFixedWords alg where
-  NFixedWords _      = 10
+-- | Intermediate result of the AES block cipher that is represented
+-- as a two-dimensional array of bytes with four rows and _Nb_
+-- columns.
+type AESState (alg ∷ AES) = AESBlock alg
 
-type RconType  (alg ∷ AES) = Vec (NFixedWords alg) (WordType alg)
--- 3.4 definition of in, state, out
-type InType (alg ∷ AES) = BlockType alg
+-- | The parameter of a block cipher that determines the selection of
+-- a permutation from the block cipher family.
+type AESKey (alg ∷ AES) = Vec (Nk alg) AESWord
 
-type OutType (alg ∷ AES) = BlockType alg
+-- | One of the Nr + 1 arrays of four words that are derived from the
+-- block cipher key using the key expansion routine.
+type AESRoundKey (alg ∷ AES) = AESBlock alg
+
+-- | The sequence of round keys that are generated from the key by
+-- KeyExpansion().
+type KeySchedule (alg ∷ AES) = Vec ((Nr alg + 1) * 4) AESWord
+
+-- | The number of round constants according to Table 5.
+type RoundConstantCount = 10
+
+-- | The round constants according to Table 5.
+type RoundConstants = Vec RoundConstantCount AESWord

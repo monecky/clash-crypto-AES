@@ -5,172 +5,66 @@ Maintainer  : QBayLogic B.V.
 Stability   : experimental
 Portability : POSIX
 
-Test suite for 'Clash.Crypto.Cipher.AES.Specifications'.
+Test suite for 'Clash.Crypto.Cipher.AES.Specification'.
 -}
 
--- Used to inturper a list as Byte String
-{-# LANGUAGE OverloadedLists #-}
+module Simulate.Clash.Crypto.Cipher.AES.Specification
+  ( tastyTests
+  ) where
 
-module Simulate.Clash.Crypto.Cipher.AES.Specification (tastyTests) where
-
-import Clash.Crypto.Cipher.AES
-import Clash.Prelude
+import Clash.Prelude.Safe
 
 import Clash.Sized.Vector (unsafeFromList)
 
--- https://hackage.haskell.org/package/clash-prelude-hedgehog
-import Hedgehog
-import qualified Hedgehog.Gen as Gen
+import Hedgehog ((===), forAll, property)
+import Test.Tasty (TestTree)
+import Test.Tasty.Hedgehog (testProperty)
 
-import Hedgehog.Range as Range
-import Test.Tasty
-import Test.Tasty.Hedgehog
+import qualified Data.ByteString as BS (pack, unpack)
+import qualified Hedgehog.Gen    as Gen (enumBounded, list)
+import qualified Hedgehog.Range  as Range (singleton)
 
--- Test AES128
-import Simulate.Clash.Crypto.Cipher.AES.GoldenReference as Reference
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
+import Clash.Crypto.Cipher.AES
+import Clash.Crypto.Cipher.AES.Specification
+import Test.Clash.Crypto.Cipher.AES
 
-import qualified Clash.Crypto.Cipher.AES.Specification as Spec
-import qualified Simulate.Clash.Crypto.Cipher.AES.Specification.Definitions as Def
-import qualified Simulate.Clash.Crypto.Cipher.AES.Specification.Algorithm as Alg
+tastyTests ∷
+  ∀ (alg ∷ AES) → (KnownAES alg, CryptoAES alg) ⇒
+  TestTree
+tastyTests alg | AESFacts ← knownAES alg =
+  testProperty "Sanity Checks against crypton" $ property $ do
+    key   ← forAll $ fmap BS.pack
+          $ Gen.list (Range.singleton $ natToNum @(Nk alg * AESWordByteCount))
+                     Gen.enumBounded
+    input ← forAll $ fmap BS.pack
+          $ Gen.list (Range.singleton $ natToNum @(Nb alg * AESWordByteCount))
+                     Gen.enumBounded
 
-tastyTests ∷ TestTree
-tastyTests = testGroup "Specification"
-  [ Def.tastyTests
-  , Alg.tastyTests
-  , tastyTestsAESPure
-  ]
+    let inputAsBv8 ∷ [Byte]
+        inputAsBv8 = pack <$> BS.unpack input
 
-tastyTestsAESPure ∷ TestTree
-tastyTestsAESPure = testGroup "Sanity Checks against crypton"
-  [ localOption (HedgehogTestLimit (Just 10))
-  $ testGroup "AES128"
-        [ testProperty "AES128"
-        $ property $ do
-              key <- forAll $ genKeyFor Spec.AES128
-              input <- forAll $ genInputBlock Spec.AES128
-              testAESPure Spec.AES128 key input
-        , testProperty "AES-128, specific key"
-        $ property $ testAESPure Spec.AES128 in1AES128 key1AES128
-        ]
-  , testGroup "AES192"
-  $ [ testProperty ("AES-" <> algName)
-    $ property $ do
-        key <- forAll $ genKeyFor Spec.AES192
-        input <- forAll $ genInputBlock Spec.AES192
-        aesPure key input
-    | (aesPure, algName) <-
-        [ (testAESPure Spec.AES192, "192")
-        ]
-    ]
-  , testGroup "AES256"
-  $ [ testProperty ("AES-" <> algName)
-    $ property $ do
-        key <- forAll $ genKeyFor Spec.AES256
-        input <- forAll $ genInputBlock Spec.AES256
-        aesPure key input
-    | (aesPure, algName) <-
-        [ (testAESPure Spec.AES256, "256")
-        ]
-    ]
-  ]
+        inputAsVBv8 ∷ Vec (AESBlockByteCount alg) Byte
+        inputAsVBv8 = unsafeFromList inputAsBv8
 
-genInputBlock ∷ ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg ⇒ Gen ByteString
-genInputBlock alg
-  | AESFacts ← knownAES alg =
-  BS.pack <$> Gen.list (Range.singleton (snatToNum (SNat @(Spec.Nb alg * Spec.WordSize alg)))) Gen.enumBounded
+        inputAsBlock ∷ AESBlock alg
+        inputAsBlock = unconcatI inputAsVBv8
 
-genKeyFor ∷ ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg ⇒ Gen ByteString
-genKeyFor alg
-  | AESFacts ← knownAES alg = do
-  BS.pack <$> Gen.list (Range.singleton (natToNum @( Spec.WordSize alg  * Spec.Nk alg ))) Gen.enumBounded
+        keyAsBv8 ∷ [Byte]
+        keyAsBv8 = pack <$> BS.unpack key
 
-testAESPure ∷
-  Monad m ⇒
-  ∀ (alg ∷ Spec.AES) → (KnownAES alg, CryptoAES alg) ⇒
-  ByteString →
-  -- ^ input data
-    ByteString →
-  -- ^ key data
-  PropertyT m ()
-testAESPure alg key input
-  | AESFacts ← knownAES alg
-  -- , Rewrite ← using @(CancelMultiple (MessageDigestSize alg) 8)
-  = do
+        keyAsVBv8 ∷ Vec (Nk alg * AESWordByteCount) Byte
+        keyAsVBv8 = unsafeFromList keyAsBv8
 
-  -- Just (SomeNat (_ ∷ Proxy n)) ←
-  --   return $ someNatVal $ toInteger $ BS.length input
+        aesKey ∷ AESKey alg
+        aesKey = unconcatI keyAsVBv8
 
-  let
-    inputAsBv8 ∷ [BitVector 8]
-    inputAsBv8 = pack <$> BS.unpack input
+        resultDigestAsBv ∷ AESBlock alg
+        resultDigestAsBv = aesFunctional alg inputAsBlock aesKey
 
-    inputAsVBv8 ∷ Vec (Nb alg * WordSize alg)  (BitVector 8)
-    inputAsVBv8 = unsafeFromList @(Nb alg * WordSize alg) inputAsBv8
+        resultDigestAsVBv8 ∷ Vec (AESBlockByteCount alg) Byte
+        resultDigestAsVBv8 = concat resultDigestAsBv
 
-    inputAsInType ∷ InType alg
-    inputAsInType = unconcatI inputAsVBv8
+        dut = toList $ unpack <$> resultDigestAsVBv8
+        ref = BS.unpack $ encryptoECB alg key input
 
-    keyAsBv8 ∷ [BitVector 8]
-    keyAsBv8 = pack <$> BS.unpack key
-
-    keyAsVBv8 ∷ Vec (Nk alg * WordSize alg)  (BitVector 8)
-    keyAsVBv8 = unsafeFromList @(Nk alg * WordSize alg) keyAsBv8
-    keyAsInType ∷ KeyType alg
-    keyAsInType = unconcatI keyAsVBv8
-
-    resultDigestAsBv ∷ OutType alg
-    resultDigestAsBv = Spec.aesFunctional alg inputAsInType keyAsInType
-
-    resultDigestAsVBv8 ∷ Vec (Nb alg * WordSize alg) (BitVector 8)
-    resultDigestAsVBv8 = concat resultDigestAsBv
-
-    dut = toList $ unpack <$> resultDigestAsVBv8
-    ref = BS.unpack $ Reference.encryptoECB alg key input
-  -- inputAsInType === test_in1AES128
-  -- resultDigestAsBv === test_out1AES128
-  ref === dut
-
-
--- | Some example input for unit testing.
-in1AES128 ∷ ByteString
-in1AES128 = [0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d, 0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34]
-key1AES128 ∷ ByteString
-key1AES128 = [ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c ]
--- -- key1AES128 ∷ KeyType Spec.AES128
--- -- key1AES128 = (0x2b:> 0x7e:> 0x15:> 0x16:>Nil) :> (0x28:> 0xae:> 0xd2:> 0xa6:> Nil) :> (0xab:> 0xf7:> 0x15:> 0x88:> Nil) :> (0x09:> 0xcf:> 0x4f:> 0x3c:> Nil) :> Nil
--- key1AsBv8 ∷ [BitVector 8]
--- key1AsBv8 = pack <$> BS.unpack key1AES128
-
--- key1AsVBv8 ∷ Proxy Spec.AES -> Vec (Nk Spec.AES128 * WordSize Spec.AES128)  (BitVector 8)
--- key1AsVBv8 (Proxy ∷ Proxy alg Spec.AES128) = unsafeFromList @(Nk alg * WordSize alg) key1AsBv8
-
--- key1AsInType ∷  Proxy Spec.AES -> KeyType Spec.AES128
--- key1AsInType (Proxy ∷ Proxy alg Spec.AES128) = unconcatI (key1AsVBv8 alg)
--- w1AES128 ∷ Spec.WType Spec.AES128
--- w1AES128 =( (0x2b:>0x7e:>0x15:>0x16:>Nil)
---             :> (0x28:>0xae:>0xd2 :> 0xa6:>Nil)
---             :> (0xab:> 0:> :> :>Nil)
---             :> (:> :> :> :>Nil)
---             :>Nil
---             )
--- key1AES192 ∷ ByteString
--- key1AES192 = [ 0x8e, 0x73, 0xb0, 0xf7,
---                0xda, 0x0e, 0x64, 0x52,
---                0xc8, 0x10, 0xf3, 0x2b,
---                0x80, 0x90, 0x79, 0xe5,
---                0x62, 0xf8, 0xea, 0xd2,
---                0x52, 0x2c, 0x6b, 0x7b]
--- t = encryptoECB key1AES192 in1AES128
--- key1AES256 ∷ ByteString
--- key1AES256 = [0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81, 0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4]
-
--- attempt (Proxy ∷ alg Spec.AES128) = Alg.keyExpansion alg  key1AsInType
-
-
--- key1AES128 ∷ KeyType AES128
--- key1AES128 = (0x2b:> 0x7e:> 0x15:> 0x16:>Nil) :> (0x28:> 0xae:> 0xd2:> 0xa6:> Nil) :> (0xab:> 0xf7:> 0x15:> 0x88:> Nil) :> (0x09:> 0xcf:> 0x4f:> 0x3c:> Nil) :> Nil
-
-
--- try = keyExpansion (AES128 ∷  AES) key1AES128
+    ref === dut

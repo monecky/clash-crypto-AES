@@ -24,19 +24,15 @@ import Clash.Crypto.Cipher.AES.Specification.Types
 import Clash.Crypto.Cipher.AES.Specification.Algorithm
 
 -- | We collect all required properties via the 'AESFacts' class.
--- | In chapter 6 the constraints are defined.
 data AESFacts (alg ∷ AES) where
   AESFacts ∷
-    ( KnownNat (WordSize alg)
-    , KnownNat (Nb alg)
-    , KnownNat (BlockSize alg)
+    ( KnownNat (Nb alg)
     , KnownNat (Nk alg)
-    , KnownNat (KeyLength alg)
     , KnownNat (Nr alg)
+    , KnownNat (AESBlockByteCount alg)
     , AESFunctions alg
-    , 1 ≤ BlockSize alg
-    , 1 ≤ BlockSize alg `Div` 8
-    , 1 ≤ WordSize alg
+    , 1 ≤ AESBlockByteCount alg
+    , 1 ≤ AESBlockByteCount alg `Div` 8
     , 1 ≤ Nk alg -- due to the expansion algorithm
     , 1 ≤ Nr alg -- due to the expansion algorithm
     ) ⇒
