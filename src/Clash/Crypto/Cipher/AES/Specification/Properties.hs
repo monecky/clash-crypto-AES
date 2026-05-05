@@ -8,20 +8,21 @@ Portability : POSIX
 Some properties that can be proven to be valid from the FIPS 197
 specification.
 -}
-{-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExplicitNamespaces #-}
+
+{-# LANGUAGE Safe #-}
+
 module Clash.Crypto.Cipher.AES.Specification.Properties
   ( AESFacts(..)
   , KnownAES(..)
   ) where
 
-import Clash.Prelude
+import Clash.Prelude.Safe
 
-import Data.Proxy (Proxy(..))
 import Language.Haskell.Unicode (type (≤))
+
 import Clash.Crypto.Cipher.AES.Specification.Types
 import Clash.Crypto.Cipher.AES.Specification.Algorithm
+
 -- | We collect all required properties via the 'AESFacts' class.
 -- | In chapter 6 the constraints are defined.
 data AESFacts (alg ∷ AES) where
@@ -39,13 +40,16 @@ data AESFacts (alg ∷ AES) where
     , 1 ≤ Nk alg -- due to the expansion algorithm
     , 1 ≤ Nr alg -- due to the expansion algorithm
     ) ⇒
-    Proxy alg →
     AESFacts alg
 
 -- | We utilize the type checker to provide evidence for all of the
 -- required properties, which are proven automatically for each
 -- instance of the class.
-class    KnownAES alg       where knownAES ∷ AESFacts alg
-instance KnownAES AES128    where knownAES = AESFacts Proxy
-instance KnownAES AES192    where knownAES = AESFacts Proxy
-instance KnownAES AES256    where knownAES = AESFacts Proxy
+class KnownAES alg
+ where
+  -- | Returns already proven evidence in form of a dictionary.
+  knownAES ∷ ∀ x → x ~ alg ⇒ AESFacts alg
+
+instance KnownAES AES128 where knownAES _ = AESFacts
+instance KnownAES AES192 where knownAES _ = AESFacts
+instance KnownAES AES256 where knownAES _ = AESFacts

@@ -301,12 +301,13 @@ main = do
 
   genInputBlock ∷ ∀ (alg ∷ SpecAES.AES) → SpecAES.KnownAES alg => Gen ByteString
   genInputBlock alg
-      | AESFacts _ ← knownAES @alg =
+      | AESFacts ← knownAES alg =
       BS.pack <$> Gen.list (Range.singleton (natToNum @(SpecAES.Nb alg * SpecAES.WordSize alg))) Gen.enumBounded
+
   genKeyFor :: ∀ (alg ∷ SpecAES.AES) → SpecAES.KnownAES alg => Gen ByteString
   genKeyFor alg
-    | AESFacts _ ← knownAES @alg = do
-    BS.pack <$> Gen.list (Range.singleton (natToNum @(SpecAES.WordSize alg  * SpecAES.Nk alg ))) Gen.enumBounded
+    | AESFacts ← knownAES alg = do
+    BS.pack <$> Gen.list (Range.singleton (natToNum @(SpecAES.WordSize alg * SpecAES.Nk alg ))) Gen.enumBounded
 
   testAES128 ∷
     ∀ (alg :: AES) → (KnownAES alg, CryptoAES alg, Typeable alg) ⇒
@@ -315,8 +316,8 @@ main = do
     SerialPortSettings →
     TestTree
   testAES128 alg sem dev settings
-    | AESFacts aes ← knownAES @alg
-    , name ← dropWhile (== '\'') $ show $ typeRep aes
+    | AESFacts ← knownAES alg
+    , name ← dropWhile (== '\'') $ show $ typeRep (Proxy @alg)
     = test sem dev settings name $ do
         key <- forAll $ genKeyFor SpecAES.AES128
         input <- forAll $ genInputBlock SpecAES.AES128
@@ -328,8 +329,8 @@ main = do
     SerialPortSettings →
     TestTree
   testAES192 alg sem dev settings
-    | AESFacts aes ← knownAES @alg
-    , name ← dropWhile (== '\'') $ show $ typeRep aes
+    | AESFacts ← knownAES alg
+    , name ← dropWhile (== '\'') $ show $ typeRep (Proxy @alg)
     = test sem dev settings name $ do
         key <- forAll $ genKeyFor SpecAES.AES192
         input <- forAll $ genInputBlock SpecAES.AES192
@@ -342,8 +343,8 @@ main = do
     SerialPortSettings →
     TestTree
   testAES256 alg sem dev settings
-    | AESFacts aes ← knownAES @alg
-    , name ← dropWhile (== '\'') $ show $ typeRep aes
+    | AESFacts ← knownAES alg
+    , name ← dropWhile (== '\'') $ show $ typeRep (Proxy @alg)
     = test sem dev settings name $ do
         key <- forAll $ genKeyFor SpecAES.AES256
         input <- forAll $ genInputBlock SpecAES.AES256
@@ -422,10 +423,10 @@ runHitltAES ∷
   ByteString →
   ByteString →
   PropertyT IO ()
-runHitltAES alg sem dev settings input key | AESFacts aes ← knownAES @alg =
+runHitltAES alg sem dev settings input key | AESFacts ← knownAES alg =
  let
   bs = (append input key)
-  eq = encryptoECB aes key input
+  eq = encryptoECB alg key input
  in runHitlt (type (WordSize alg * Nb alg)) sem dev settings bs eq
 --  in runHitlt (type ((Nr alg + 1) * 4)) sem dev settings bs eq
 
@@ -812,35 +813,30 @@ genModBounded minB maxB = do
   return $ createMod @p x
 
 class CryptoAES (alg ∷ SpecAES.AES) where
-  encryptoECB :: Proxy alg -> ByteString -> ByteString -> ByteString
---  decryptoECB :: Proxy alg -> ByteString -> ByteString -> ByteString
+  encryptoECB :: ∀ x → x ~ alg ⇒ ByteString → ByteString → ByteString
+--  decryptoECB :: ∀ x → x ~ alg ⇒ ByteString → ByteString → ByteString
+
 instance CryptoAES SpecAES.AES128      where
-  encryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
   encryptoECB _ key plainText = case cipherInit key of
     CryptoPassed (cipher1 :: AES128) -> ecbEncrypt cipher1 plainText
     CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show cipher1)
---  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
 --  decryptoECB _ key cipherText = case cipherInit key of
 --    CryptoPassed (cipher1 ∷ AES128)-> ecbDecrypt cipher1 cipherText
 --    CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show cipher1)
 
 
 instance CryptoAES SpecAES.AES192    where
-  encryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
   encryptoECB _ key plainText = case cipherInit key of
     CryptoPassed (cipher1 :: AES192) -> ecbEncrypt cipher1 plainText
     CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show (cipher1, BS.length key))
---  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
 --  decryptoECB _ key cipherText = case cipherInit key of
 --    CryptoFailed _ -> error "Cipher initialization failed"
 --    CryptoPassed (cipher1 ∷ AES192)-> ecbDecrypt cipher1 cipherText
 
 instance CryptoAES SpecAES.AES256    where
-  encryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
   encryptoECB _ key plainText = case cipherInit key of
     CryptoPassed (cipher1 :: AES256) -> ecbEncrypt cipher1 plainText
     CryptoFailed cipher1 -> error ("Cipher initialization failed" <> show (cipher1, BS.length key))
---  decryptoECB ∷ Proxy alg → ByteString -> ByteString -> ByteString
 --  decryptoECB _ key cipherText = case cipherInit key of
 --    CryptoFailed _ -> error "Cipher initialization failed"
 --    CryptoPassed (cipher1 ∷ AES256)-> ecbDecrypt cipher1 cipherText

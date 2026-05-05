@@ -7,15 +7,9 @@ Portability : POSIX
 
 Basic types covering the fundamentals of FIPS 197.
 -}
-{-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE NoTemplateHaskell #-}
-{-# LANGUAGE NoGeneralizedNewtypeDeriving #-}
+
 {-# LANGUAGE Safe #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DeriveAnyClass #-}
+
 module Clash.Crypto.Cipher.AES.Specification.Types where
 
 import Clash.Sized.BitVector (BitVector)
@@ -29,11 +23,12 @@ import Data.Ord (Ord)
 import Data.Typeable (Typeable)
 import GHC.Show (Show)
 import GHC.Generics (Generic)
-import GHC.TypeLits
--- | Supported hash algorithms.
+import GHC.TypeLits (Nat, type (*), type (+))
+
+-- | Supported AES cyphers.
 type AES ∷ Type
-data AES =
-    AES128
+data AES
+  = AES128
   | AES192
   | AES256
   deriving
@@ -83,7 +78,7 @@ type family Nk alg where
   Nk AES256 = 8
   Nk _      = 8
 -- | Key length in bits (defined in Table 3) and recommanded to be flexible 6.3.
-type KeyLength (alg ∷ AES) = Nk alg  GHC.TypeLits.* WordSize alg GHC.TypeLits.* ByteSize alg
+type KeyLength (alg ∷ AES) = Nk alg  * WordSize alg * ByteSize alg
 -- | Key type based on the key length
 type KeyType (alg ∷ AES) = Vec (Nk alg) (WordType alg)
 -- | Number of rounds (defined in Table 3) and recommanded to be flexible 6.3.

@@ -31,6 +31,6 @@ topEntity ∷
   "PMOD1_5" ::: Signal Dom12 Bit
 topEntity (orangePll12 → (clk, rst))
   = withUartRequestResponseHandler clk rst (SNat @BAUD)
-  $ newsfeed . aesECBencryption @AESX . cachedFromMaybe . bulkRead
+  $ newsfeed . aesECBencryption AESX . cachedFromMaybe . bulkRead
 
 makeTopEntity 'topEntity

@@ -7,17 +7,9 @@ Portability : POSIX
 
 Test suite for 'Clash.Crypto.Cipher.AES.Specifications'.
 -}
-{-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedLists #-} -- Used to inturper a list as Byte String
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
-{-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExplicitNamespaces #-}
+
+-- Used to inturper a list as Byte String
+{-# LANGUAGE OverloadedLists #-}
 
 module Simulate.Clash.Crypto.Cipher.AES.Specification (tastyTests) where
 
@@ -56,53 +48,54 @@ tastyTestsAESPure = testGroup "Sanity Checks against crypton"
   $ testGroup "AES128"
         [ testProperty "AES128"
         $ property $ do
-              key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
-              testAESPure @Spec.AES128 key input
+              key <- forAll $ genKeyFor Spec.AES128
+              input <- forAll $ genInputBlock Spec.AES128
+              testAESPure Spec.AES128 key input
         , testProperty "AES-128, specific key"
-        $ property $ testAESPure @Spec.AES128 in1AES128 key1AES128
+        $ property $ testAESPure Spec.AES128 in1AES128 key1AES128
         ]
   , testGroup "AES192"
   $ [ testProperty ("AES-" <> algName)
     $ property $ do
-        key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
-        input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
+        key <- forAll $ genKeyFor Spec.AES192
+        input <- forAll $ genInputBlock Spec.AES192
         aesPure key input
     | (aesPure, algName) <-
-        [ (testAESPure @Spec.AES192, "192")
+        [ (testAESPure Spec.AES192, "192")
         ]
     ]
   , testGroup "AES256"
   $ [ testProperty ("AES-" <> algName)
     $ property $ do
-        key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
-        input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
+        key <- forAll $ genKeyFor Spec.AES256
+        input <- forAll $ genInputBlock Spec.AES256
         aesPure key input
     | (aesPure, algName) <-
-        [ (testAESPure @Spec.AES256, "256")
+        [ (testAESPure Spec.AES256, "256")
         ]
     ]
   ]
 
-genInputBlock ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg ⇒ Gen ByteString
-genInputBlock
-  | AESFacts _ ← knownAES @alg =
+genInputBlock ∷ ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg ⇒ Gen ByteString
+genInputBlock alg
+  | AESFacts ← knownAES alg =
   BS.pack <$> Gen.list (Range.singleton (snatToNum (SNat @(Spec.Nb alg * Spec.WordSize alg)))) Gen.enumBounded
 
-genKeyFor ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
-genKeyFor
-  | AESFacts _ ← knownAES @alg = do
+genKeyFor ∷ ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg ⇒ Gen ByteString
+genKeyFor alg
+  | AESFacts ← knownAES alg = do
   BS.pack <$> Gen.list (Range.singleton (natToNum @( Spec.WordSize alg  * Spec.Nk alg ))) Gen.enumBounded
 
-testAESPure ∷ ∀ (alg ∷ Spec.AES) m.
-  (Monad m, KnownAES alg, CryptoAES alg) ⇒
+testAESPure ∷
+  Monad m ⇒
+  ∀ (alg ∷ Spec.AES) → (KnownAES alg, CryptoAES alg) ⇒
   ByteString →
   -- ^ input data
     ByteString →
   -- ^ key data
   PropertyT m ()
-testAESPure key input
-  | AESFacts alg ← knownAES @alg
+testAESPure alg key input
+  | AESFacts ← knownAES alg
   -- , Rewrite ← using @(CancelMultiple (MessageDigestSize alg) 8)
   = do
 
@@ -128,7 +121,7 @@ testAESPure key input
     keyAsInType = unconcatI keyAsVBv8
 
     resultDigestAsBv ∷ OutType alg
-    resultDigestAsBv = Spec.aesFunctional @alg inputAsInType keyAsInType
+    resultDigestAsBv = Spec.aesFunctional alg inputAsInType keyAsInType
 
     resultDigestAsVBv8 ∷ Vec (Nb alg * WordSize alg) (BitVector 8)
     resultDigestAsVBv8 = concat resultDigestAsBv

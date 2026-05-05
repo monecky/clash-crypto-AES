@@ -1,5 +1,5 @@
 {-|
-Module      : Simulate.Clash.Crypto.Cipher.AES.Specification.Defintions
+Module      : Simulate.Clash.Crypto.Cipher.AES.Specification.Definitions
 Copyright   : Copyright © 2025 QBayLogic B.V.
 Maintainer  : QBayLogic B.V.
 Stability   : experimental
@@ -7,21 +7,10 @@ Portability : POSIX
 
 Test suite for 'Clash.Crypto.Cipher.AES'.
 -}
-{-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE MagicHash #-}
-{-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
-{-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExplicitNamespaces #-}
-
-module Simulate.Clash.Crypto.Cipher.AES.Specification.Definitions (tastyTests) where
-
+module Simulate.Clash.Crypto.Cipher.AES.Specification.Definitions
+  ( tastyTests
+  ) where
 
 import Clash.Crypto.Cipher.AES
 import Clash.Prelude
@@ -31,7 +20,6 @@ import Clash.Prelude
 import Hedgehog
 import Test.Tasty
 import Test.Tasty.Hedgehog
-
 
 -- Generate BitVecor and Vector
 import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)

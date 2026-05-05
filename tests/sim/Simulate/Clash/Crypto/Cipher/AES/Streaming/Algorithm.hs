@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-|
 Module      : Simulate.Clash.Crypto.Cipher.AES.Streaming.Algorithm
 Copyright   : Copyright © 2025 QBayLogic B.V.
@@ -11,13 +8,15 @@ Portability : POSIX
 Test suite for 'Clash.Crypto.Cipher.AES.Streaming.Algorithm'.
 -}
 
-module Simulate.Clash.Crypto.Cipher.AES.Streaming.Algorithm (tastyTests) where
+module Simulate.Clash.Crypto.Cipher.AES.Streaming.Algorithm
+  ( tastyTests
+  ) where
+
 import Clash.Prelude
 import Clash.Signal.Channel
 import Data.Maybe (fromMaybe)
 import Data.Monoid (First(..))
 
-import Data.Proxy(Proxy(..))
 import Clash.Hedgehog.Sized.BitVector (genDefinedBitVector)
 import Clash.Hedgehog.Sized.Vector
 import Hedgehog
@@ -33,37 +32,50 @@ tastyTests :: TestTree
 tastyTests = testGroup "Algorithm"
   [ localOption (HedgehogTestLimit (Just 10))
   $ testGroup "Verification equality of hardware and functional"
-      [ testProperty "Cipher version AES128" $ cipherProperty @AES128 (Stream.cipherStream @AES128) Spec.cipher
-      , testProperty "Cipher version AES192" $ cipherProperty @AES192 (Stream.cipherStream @AES192) Spec.cipher
-      , testProperty "Cipher version AES256" $ cipherProperty @AES256 (Stream.cipherStream @AES256) Spec.cipher
+      [ testProperty "Cipher version AES128" $ cipherProperty AES128 Stream.cipherStream Spec.cipher
+      , testProperty "Cipher version AES192" $ cipherProperty AES192 Stream.cipherStream Spec.cipher
+      , testProperty "Cipher version AES256" $ cipherProperty AES256 Stream.cipherStream Spec.cipher
 
-      , testProperty "InvCipher version AES128" $ cipherProperty @AES128 (Stream.invCipherStream @AES128) Spec.invCipher
-      , testProperty "InvCipher version AES192" $ cipherProperty @AES192 (Stream.invCipherStream @AES192) Spec.invCipher
-      , testProperty "InvCipher version AES256" $ cipherProperty @AES256 (Stream.invCipherStream @AES256) Spec.invCipher
+      , testProperty "InvCipher version AES128" $ cipherProperty AES128 Stream.invCipherStream Spec.invCipher
+      , testProperty "InvCipher version AES192" $ cipherProperty AES192 Stream.invCipherStream Spec.invCipher
+      , testProperty "InvCipher version AES256" $ cipherProperty AES256 Stream.invCipherStream Spec.invCipher
 
-      , testProperty "EqInvCipher version AES128" $ cipherProperty @AES128 (Stream.eqInvCipherStream @AES128) Spec.eqInvCipher
-      , testProperty "EqInvCipher version AES192" $ cipherProperty @AES192 (Stream.eqInvCipherStream @AES192) Spec.eqInvCipher
-      , testProperty "EqInvCipher version AES256" $ cipherProperty @AES256 (Stream.eqInvCipherStream @AES256) Spec.eqInvCipher
+      , testProperty "EqInvCipher version AES128" $ cipherProperty AES128 Stream.eqInvCipherStream Spec.eqInvCipher
+      , testProperty "EqInvCipher version AES192" $ cipherProperty AES192 Stream.eqInvCipherStream Spec.eqInvCipher
+      , testProperty "EqInvCipher version AES256" $ cipherProperty AES256 Stream.eqInvCipherStream Spec.eqInvCipher
 
-      , testProperty "KeyExpansion version AES128" $ keyExpansionProperty @AES128 (Stream.keyExpansionStream @AES128) Spec.keyExpansion
-      , testProperty "KeyExpansion version AES192" $ keyExpansionProperty @AES192 (Stream.keyExpansionStream @AES192) Spec.keyExpansion
-      , testProperty "KeyExpansion version AES256" $ keyExpansionProperty @AES256 (Stream.keyExpansionStream @AES256) Spec.keyExpansion
+      , testProperty "KeyExpansion version AES128" $ keyExpansionProperty AES128 Stream.keyExpansionStream Spec.keyExpansion
+      , testProperty "KeyExpansion version AES192" $ keyExpansionProperty AES192 Stream.keyExpansionStream Spec.keyExpansion
+      , testProperty "KeyExpansion version AES256" $ keyExpansionProperty AES256 Stream.keyExpansionStream Spec.keyExpansion
 
-      , testProperty "KeyExpansionIEC version AES128" $ keyExpansionProperty @AES128 (Stream.keyExpansionIECStream @AES128) Spec.keyExpansionIEC
-      , testProperty "KeyExpansionIEC version AES192" $ keyExpansionProperty @AES192 (Stream.keyExpansionIECStream @AES192) Spec.keyExpansionIEC
-      , testProperty "KeyExpansionIEC version AES256" $ keyExpansionProperty @AES256 (Stream.keyExpansionIECStream @AES256) Spec.keyExpansionIEC
+      , testProperty "KeyExpansionIEC version AES128" $ keyExpansionProperty AES128 Stream.keyExpansionIECStream Spec.keyExpansionIEC
+      , testProperty "KeyExpansionIEC version AES192" $ keyExpansionProperty AES192 Stream.keyExpansionIECStream Spec.keyExpansionIEC
+      , testProperty "KeyExpansionIEC version AES256"
+      $ keyExpansionProperty AES256 Stream.keyExpansionIECStream Spec.keyExpansionIEC
       ]
   ]
 
-type CipherComponent alg dom =
- HiddenClockResetEnable dom =>
+type CipherComponent dom =
+ HiddenClockResetEnable dom ⇒
+ ∀ (alg ∷ AES) → KnownAES alg ⇒
  Channel dom (InType alg, WType alg) ->
  Channel dom (OutType alg)
+
 type CipherRefComponent alg =
-  Proxy alg -> InType alg -> WType alg -> OutType alg
-cipherProperty ∷ ∀ (alg ∷ AES). (KnownAES alg) ⇒ KnownDomain System ⇒  CipherComponent alg System → CipherRefComponent alg → Property
-cipherProperty cipherComp cipherComp1
-  | AESFacts alg ← knownAES @alg
+  AESFunctions alg ⇒
+  ∀ x → x ~ alg ⇒
+  InType alg ->
+  WType alg ->
+  OutType alg
+
+cipherProperty ∷
+  KnownDomain System ⇒
+  ∀ (alg ∷ AES) → KnownAES alg ⇒
+  CipherComponent System →
+  CipherRefComponent alg →
+  Property
+cipherProperty alg cipherComp cipherComp1
+  | AESFacts ← knownAES alg
   = property $ do
     inputAsInType ← forAll $ genVec @(Nb alg) (genVec @(WordSize alg) genDefinedBitVector)
     wAsInType     ← forAll $ genVec @((Nr alg + 1) * 4) (genVec @(WordSize alg) genDefinedBitVector)
@@ -77,21 +89,32 @@ cipherProperty cipherComp cipherComp1
             $ sampleN @System 10000000
             $ withClockResetEnable @System clockGen resetGen enableGen
             $ newsfeed
-            $ cipherComp
+            $ cipherComp alg
             $ channel
             $ fmap (input, )
             $ fromList
             $ Keep : Keep : Release : List.repeat Keep
 
-type KeyExpansionComponent alg dom =
- HiddenClockResetEnable dom ⇒
+type KeyExpansionComponent dom alg =
+ (HiddenClockResetEnable dom, AESKeyExpansion alg) ⇒
+ ∀ x → (x ~ alg, KnownAES alg) ⇒
  Channel dom (KeyType alg) →
  Channel dom (WType alg)
+
 type KeyExpansionRefComponent alg =
-  Proxy alg -> KeyType alg → WType alg
-keyExpansionProperty ∷ ∀ (alg ∷ AES). (KnownAES alg,KnownNat (Nr alg)) ⇒ KnownDomain System ⇒  KeyExpansionComponent alg System → KeyExpansionRefComponent alg → Property
-keyExpansionProperty keyComp keyComp1
-  | AESFacts alg ← knownAES @alg
+  AESFunctions alg ⇒
+  ∀ x → x ~ alg ⇒
+  KeyType alg →
+  WType alg
+
+keyExpansionProperty ∷
+  KnownDomain System ⇒
+  ∀ (alg ∷ AES) → (KnownAES alg, AESKeyExpansion alg, KnownNat (Nr alg)) ⇒
+  KeyExpansionComponent System alg →
+  KeyExpansionRefComponent alg →
+  Property
+keyExpansionProperty alg keyComp keyComp1
+  | AESFacts ← knownAES alg
   = property $ do
     keyAsInType   ← forAll $ genVec @(Nk alg) (genVec @(WordSize alg) genDefinedBitVector)
     let f' = compute keyAsInType
@@ -104,7 +127,7 @@ keyExpansionProperty keyComp keyComp1
             $ sampleN @System 10000000
             $ withClockResetEnable @System clockGen resetGen enableGen
             $ newsfeed
-            $ keyComp
+            $ keyComp alg
             $ channel
             $ fmap (input, )
             $ fromList

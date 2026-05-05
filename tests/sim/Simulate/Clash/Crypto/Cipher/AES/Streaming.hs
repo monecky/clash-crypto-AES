@@ -7,19 +7,13 @@ Portability : POSIX
 
 Test suite for 'Clash.Crypto.Cipher.AES.Streaming'.
 -}
-{-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedLists #-} -- Used to inturper a list as Byte String
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
-{-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExplicitNamespaces #-}
 
-module Simulate.Clash.Crypto.Cipher.AES.Streaming (tastyTests) where
+-- Used to inturper a list as Byte String
+{-# LANGUAGE OverloadedLists #-}
+
+module Simulate.Clash.Crypto.Cipher.AES.Streaming
+  ( tastyTests
+  ) where
 
 import Clash.Crypto.Cipher.AES
 import Clash.Prelude
@@ -58,83 +52,85 @@ tastyTestsAESStream = testGroup "Sanity Checks against crypton"
   [ testGroup "Encryption.ECB Mode"
       [ testGroup "AES128"
           [ testProperty "AES128" $ property $ do
-              key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
-              testAESPureDecryption @Spec.AES128 key input
+              key <- forAll $ genKeyFor Spec.AES128
+              input <- forAll $ genInputBlock Spec.AES128
+              testAESPureDecryption Spec.AES128 key input
           , testProperty "AES-128, specific key" $
-              property $ testAESPureEncryption @Spec.AES128 in1AES128 key1AES128
+              property $ testAESPureEncryption Spec.AES128 in1AES128 key1AES128
           ]
       , testGroup "AES192" $
           [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
+              key <- forAll $ genKeyFor Spec.AES192
+              input <- forAll $ genInputBlock Spec.AES192
               aesPure key input
           | (aesPure, algName) <-
-              [ (testAESPureEncryption @Spec.AES192, "192")
+              [ (testAESPureEncryption Spec.AES192, "192")
               ]
           ]
       , testGroup "AES256" $
           [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
+              key <- forAll $ genKeyFor Spec.AES256
+              input <- forAll $ genInputBlock Spec.AES256
               aesPure key input
           | (aesPure, algName) <-
-              [ (testAESPureEncryption @Spec.AES256, "256")
+              [ (testAESPureEncryption Spec.AES256, "256")
               ]
           ]
       ]
   , testGroup "Decryption.ECB Mode"
       [ testGroup "AES128"
           [ testProperty "AES128" $ property $ do
-              key <- forAll $ genKeyFor @(Spec.AES128 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES128 ∷ Spec.AES)
-              testAESPureDecryption @Spec.AES128 key input
+              key <- forAll $ genKeyFor Spec.AES128
+              input <- forAll $ genInputBlock Spec.AES128
+              testAESPureDecryption Spec.AES128 key input
           , testProperty "AES-128, specific key" $ property $ do
-              testAESPureDecryption @Spec.AES128 in1AES128 key1AES128
+              testAESPureDecryption Spec.AES128 in1AES128 key1AES128
           ]
       , testGroup "AES192" $
           [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor @(Spec.AES192 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES192 ∷ Spec.AES)
+              key <- forAll $ genKeyFor Spec.AES192
+              input <- forAll $ genInputBlock Spec.AES192
               aesPure key input
           | (aesPure, algName) <-
-              [ (testAESPureDecryption @Spec.AES192, "192")
+              [ (testAESPureDecryption Spec.AES192, "192")
               ]
           ]
       , testGroup "AES256"
           [ testProperty ("AES-" <> algName) $ property $ do
-              key <- forAll $ genKeyFor @(Spec.AES256 ∷ Spec.AES)
-              input <- forAll $ genInputBlock @(Spec.AES256 ∷ Spec.AES)
+              key <- forAll $ genKeyFor Spec.AES256
+              input <- forAll $ genInputBlock Spec.AES256
               aesPure key input
           | (aesPure, algName) <-
-              [ (testAESPureDecryption @Spec.AES256, "256")
+              [ (testAESPureDecryption Spec.AES256, "256")
               ]
           ]
       ]
   ]
 
-genInputBlock ∷ ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
-genInputBlock
-    | AESFacts _ ← knownAES @alg =
+genInputBlock ∷ ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg => Gen ByteString
+genInputBlock alg
+    | AESFacts ← knownAES alg =
     BS.pack <$> Gen.list (Range.singleton (snatToNum (SNat @(Spec.Nb alg * Spec.WordSize alg)))) Gen.enumBounded
-genKeyFor :: ∀ (alg ∷ Spec.AES). Spec.KnownAES alg => Gen ByteString
-genKeyFor
-  | AESFacts _ ← knownAES @alg = do
+
+genKeyFor :: ∀ (alg ∷ Spec.AES) → Spec.KnownAES alg => Gen ByteString
+genKeyFor alg
+  | AESFacts ← knownAES alg = do
   BS.pack <$> Gen.list (Range.singleton (natToNum @( Spec.WordSize alg  * Spec.Nk alg ))) Gen.enumBounded
 
 
 
 
 
-testAESPureEncryption ∷ ∀ (alg ∷ Spec.AES) m.
-  (Monad m, KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
+testAESPureEncryption ∷
+  Monad m ⇒
+  ∀ (alg ∷ Spec.AES) → (KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
   ByteString →
   -- ^ input data
     ByteString →
   -- ^ key data
   PropertyT m ()
-testAESPureEncryption key input
-  | AESFacts alg ← knownAES @alg
+testAESPureEncryption alg key input
+  | AESFacts ← knownAES alg
   = do
   let
     inputAsBv8 ∷ [BitVector 8]
@@ -171,21 +167,22 @@ testAESPureEncryption key input
             $ sampleN @System 256
             $ withClockResetEnable @System clockGen resetGen enableGen
             $ newsfeed
-            $ aesECBencryption @alg
+            $ aesECBencryption alg
             $ channel
             $ fmap (input1, )
             $ fromList
             $ Keep : Keep : Release : List.repeat Keep
 
-testAESPureDecryption ∷ ∀ (alg ∷ Spec.AES) m.
-  (Monad m, KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
+testAESPureDecryption ∷
+  Monad m ⇒
+  ∀ (alg ∷ Spec.AES) → (KnownAES alg, AESKeyExpansion alg, CryptoAES alg) ⇒
   ByteString →
   -- ^ input data
-    ByteString →
+  ByteString →
   -- ^ key data
   PropertyT m ()
-testAESPureDecryption key input
-  | AESFacts alg ← knownAES @alg
+testAESPureDecryption alg key input
+  | AESFacts ← knownAES alg
   -- , Rewrite ← using @(CancelMultiple (MessageDigestSize alg) 8)
   = do
 
@@ -227,7 +224,7 @@ testAESPureDecryption key input
             $ sampleN @System 10000000
             $ withClockResetEnable @System clockGen resetGen enableGen
             $ newsfeed
-            $ aesECBdecryption @alg
+            $ aesECBdecryption alg
             $ channel
             $ fmap (input1, )
             $ fromList

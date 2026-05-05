@@ -7,26 +7,22 @@ Portability : POSIX
 
 Basic definitions covering the fundamentals of FIPS 197.
 -}
-{-# LANGUAGE UnicodeSyntax #-}
+
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE MagicHash #-}
-{-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-
-{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
-{-# OPTIONS_GHC -fconstraint-solver-iterations=20 #-}
+{-# LANGUAGE Trustworthy #-}
 
 module Clash.Crypto.Cipher.AES.Specification.Definitions where
 
+import Clash.Prelude.Safe
 
-import Clash.Prelude
-import Data.Proxy (Proxy)
+import Data.Proxy (Proxy(..))
 
 import Clash.Crypto.Cipher.AES.Specification.Types
 import Clash.Crypto.Cipher.AES.Specification.Constants
-import GHC.TypeLits ()
--- Explanation of infix can be found here https://www.haskell.org/onlinereport/decls.html#prelude-fixities
+
+-- Explanation of infix can be found here
+-- https://www.haskell.org/onlinereport/decls.html#prelude-fixities
 -- It is basically defining the ordering of execution. 9 is used standard.
 
 -------------------------------------------
@@ -47,34 +43,35 @@ import GHC.TypeLits ()
 -------------------------------------------
 -- Section 4: Preliminaries              --
 -------------------------------------------
--- Section 4.1: Addition in GF(2⁸)
+
+-- | Section 4.1: Addition in GF(2⁸)
 (⊕) ∷ KnownNat w ⇒ BitVector w → BitVector w → BitVector w
 (⊕) = xor
--- Section 4.2: Multiplication in GF(2⁸)
 
-
-xTimes ∷  (KnownNat w) ⇒ BitVector w → BitVector w
-xTimes a =  if y == 0x01 then z ⊕ resize mX else z
-    where x = finiteBitSize a - 1
-          y = shiftR a x
-          z = resize (a .<<+ 0)
+-- | Section 4.2: Multiplication in GF(2⁸)
+xTimes ∷ KnownNat w ⇒ BitVector w → BitVector w
+xTimes a = if y == 0x01 then z ⊕ resize mX else z
+ where
+  x = finiteBitSize a - 1
+  y = shiftR a x
+  z = resize (a .<<+ 0)
 
 -- To convert BitVector to vector bv2v, and v2bv.
 
 -- | Section 4.2: Multiplication in GF(2⁸), the documentation suggests that we use xTimes
 -- | to generate by successsibely applying xTimes(), since there is a module 0x57 envolved
 -- | the result will be no bigger then 0x57 thus not bigger as 1 byte.
+
 -- | Equation 4.4
 (•) ∷ (KnownNat w) ⇒ BitVector w →  BitVector w →  BitVector w
 (•) b c = foldl (⊕) (0x00) (zipWith (\f g →  if f then g else (0x00)) (bv2vbool b) (list_xtimes c))
-    where
-        list_xtimes ∷  (KnownNat n, KnownNat w) ⇒ BitVector w → Vec n (BitVector w)
-        list_xtimes = iterateI xTimes
-        -- | function that transform from bitvector to vector of booleans.
-        bv2vbool ∷  (KnownNat w) ⇒ BitVector w → Vec w Bool
-        bv2vbool b1 = fmap (testBit b1) (iterateI (+1) 0)
+ where
+  list_xtimes ∷ (KnownNat n, KnownNat w) ⇒ BitVector w → Vec n (BitVector w)
+  list_xtimes = iterateI xTimes
 
-
+  -- | function that transform from bitvector to vector of booleans.
+  bv2vbool ∷  (KnownNat w) ⇒ BitVector w → Vec w Bool
+  bv2vbool b1 = fmap (testBit b1) (iterateI (+1) 0)
 
 -- | Section 4.3: Multiplication of Words by a Fixed Matrix in GF(2⁸)
 -- | Generic multiplication
@@ -159,6 +156,7 @@ invAddRoundKey = addRoundKey
 --------------------------------------------------------------------------------------
 -- Section 5.2 and 5.3: keyexpansion support functions                              --
 --------------------------------------------------------------------------------------
+
 rotWord ∷ WordType alg → WordType alg
 rotWord word = rotateLeft word (1 ∷ Integer)
 
@@ -168,14 +166,20 @@ subWord = map (sBox xySBox)
 xorWord ∷ WordType alg → WordType alg → WordType alg
 xorWord = zipWith (⊕)
 
-
 -- 5.2 table 5
 class AESConstants (alg ∷ AES) where
-  _Rcon ∷ Proxy alg → RconType alg
-  _Rcon¹ ∷ Proxy alg → WordType alg
+  _Rcon#  ∷ Proxy alg → RconType alg
+  _Rcon¹# ∷ Proxy alg → WordType alg
 
 instance AESConstants AES128 where
-    _Rcon¹ _ = 0x01:>0x00:>0x00:>0x00:>Nil
-    _Rcon alg = transpose (fmap (iterateI xTimes) (_Rcon¹ alg))
+  _Rcon¹# _   = 0x01 :> 0x00 :> 0x00 :> 0x00 :> Nil
+  _Rcon#  alg = transpose (fmap (iterateI xTimes) (_Rcon¹# alg))
+
 deriving via AES128 instance AESConstants AES192
 deriving via AES128 instance AESConstants AES256
+
+_Rcon ∷ ∀ (alg ∷ AES) → AESConstants alg ⇒ RconType alg
+_Rcon alg = _Rcon# (Proxy @alg)
+
+_Rcon¹ ∷ ∀ (alg ∷ AES) → AESConstants alg ⇒ WordType alg
+_Rcon¹ alg = _Rcon¹# (Proxy @alg)
