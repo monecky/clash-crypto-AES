@@ -23,7 +23,7 @@ import Language.Haskell.Unicode (type (≤))
 import Clash.Crypto.Cipher.AES.Specification.Types
 import Clash.Crypto.Cipher.AES.Specification.Algorithm
 
--- | We collect all required properties via the 'AESFacts' class.
+-- | We collect all required properties via the t'AESFacts' class.
 data AESFacts (alg ∷ AES) where
   AESFacts ∷
     ( KnownNat (Nb alg)

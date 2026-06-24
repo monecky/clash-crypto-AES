@@ -53,20 +53,20 @@ type AESWordByteCount = 4
 -- as an array of 4 bytes.
 type AESWord = Vec AESWordByteCount Byte
 
--- | Key length in words, as defined in Table 3 and recommended to be
--- flexible in Section 6.3.
+-- | The key length in words, as defined in Table 3 and recommended to
+-- be flexible in Section 6.3.
 type Nk ∷ AES → Nat
 type family Nk alg where
   Nk AES128 = 4
   Nk AES192 = 6
   Nk AES256 = 8
 
--- | Block size in words, as defined in Table 3 and recommended to be
--- flexible in Section 6.3.
+-- | The block size in words, as defined in Table 3 and recommended to
+-- be flexible in Section 6.3.
 type Nb ∷ AES → Nat
 type Nb alg = 4
 
--- | Number of rounds, as defined in Table 3 and recommended to be
+-- | The number of rounds, as defined in Table 3 and recommended to be
 -- flexible in Section 6.3.
 type Nr ∷ AES → Nat
 type family Nr alg where
@@ -74,30 +74,29 @@ type family Nr alg where
   Nr AES192 = 12
   Nr AES256 = 14
 
--- | Block size in bytes, as defined in Table 3 and recommended to be
--- flexible in Section 6.3.
+-- | The block size in bytes, as defined in Table 3 and recommended to
+-- be flexible in Section 6.3.
 type AESBlockByteCount (alg ∷ AES) = Nb alg * AESWordByteCount
 
--- | A sequence of bits of a given fixed length. In this standard,
--- blocks consist of 128 bits, sometimes represented as arrays of
--- bytes or words.
+-- | A sequence of bits of a given fixed length. In FIPS 197, blocks
+-- consist of 128 bits, sometimes represented as arrays of bytes or
+-- words.
 type AESBlock (alg ∷ AES) = Vec (Nb alg) AESWord
 
 -- | Intermediate result of the AES block cipher that is represented
--- as a two-dimensional array of bytes with four rows and _Nb_
--- columns.
+-- as a two-dimensional array of bytes with four rows and /Nb/ columns.
 type AESState (alg ∷ AES) = AESBlock alg
 
 -- | The parameter of a block cipher that determines the selection of
 -- a permutation from the block cipher family.
 type AESKey (alg ∷ AES) = Vec (Nk alg) AESWord
 
--- | One of the Nr + 1 arrays of four words that are derived from the
--- block cipher key using the key expansion routine.
+-- | One of the /Nr + 1/ arrays of four words that are derived from
+-- the block cipher key using the key expansion routine.
 type AESRoundKey (alg ∷ AES) = AESBlock alg
 
 -- | The sequence of round keys that are generated from the key by
--- KeyExpansion().
+-- @KeyExpansion()@.
 type KeySchedule (alg ∷ AES) = Vec ((Nr alg + 1) * 4) AESWord
 
 -- | The number of round constants according to Table 5.

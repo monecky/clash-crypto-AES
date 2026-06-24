@@ -5,7 +5,7 @@ Maintainer  : QBayLogic B.V.
 Stability   : experimental
 Portability : POSIX
 
-Streaming based implementation of FIPS 197,
+Streaming based implementation of
 [FIPS PUB 197: Advanced Encryption Standard
 (AES)](https://doi.org/10.6028/NIST.FIPS.197-upd1).
 -}
@@ -22,6 +22,7 @@ import Clash.Crypto.Cipher.AES.Streaming.Algorithm
 import Clash.Crypto.Cipher.AES.Specification
 import Clash.Signal.Channel
 
+-- | AES encryption primitive.
 aesECBencryption ∷
   HiddenClockResetEnable dom ⇒
   ∀ (alg ∷ AES) → (KnownAES alg, AESKeyExpansion alg) ⇒
@@ -35,6 +36,7 @@ aesECBencryption alg (unzipC → (inp, key))
   $ zipC inp
   $ keyExpansionStream alg key
 
+-- | AES decryption primitive.
 aesECBdecryption ∷
   HiddenClockResetEnable dom ⇒
   ∀ (alg ∷ AES) → (KnownAES alg, AESKeyExpansion alg) ⇒

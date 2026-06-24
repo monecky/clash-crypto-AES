@@ -9,8 +9,8 @@ Algorithm implementations of FIPS 197 using the enchance method.
 -}
 
 module Clash.Crypto.Cipher.AES.Streaming.Algorithm
-  ( AESKeyExpansion(..)
-  , cipherStream
+  ( cipherStream
+  , AESKeyExpansion(..)
   , invCipherStream
   , eqInvCipherStream
   , keyExpansionIECStream
@@ -31,7 +31,9 @@ data CipherMode (alg ∷ AES)
   | CipherEnd
   deriving (Generic, NFDataX, Show, Eq)
 
--- | Algorithm 1, streamlined version
+-- | Algorithm 1: @Cipher()@
+--
+-- /Section 5.1, streamlined version/
 cipherStream ∷
   HiddenClockResetEnable dom ⇒
   ∀ (alg ∷ AES) → KnownAES alg ⇒
@@ -84,123 +86,12 @@ cipherStream alg | AESFacts ← knownAES alg = enhance put get compute
         CipherRounds _ _ → ( state, CipherFin )
         CipherLast _     → ( state, CipherFin )
 
--- | Algorithm 4, streamlined version
-eqInvCipherStream ∷
-  HiddenClockResetEnable dom ⇒
-  ∀ (alg ∷ AES) → KnownAES alg ⇒
-  Channel dom (AESBlock alg, KeySchedule alg) →
-  -- ^ input + key
-  Channel dom (AESBlock alg)
-  -- ^ response
-eqInvCipherStream alg | AESFacts ← knownAES alg = enhance put get compute
- where
-  put ∷
-    (AESBlock alg, KeySchedule alg) →
-    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg)
-  put (input, w)
-    | AESFacts ← knownAES alg
-    = ((input, reverse $ unconcatI w), CipherStart)
-
-  get ∷
-    (AESBlock alg, KeySchedule alg) →
-    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
-    AESBlock alg
-  get _ ((output, _), _) = output
-
-  compute ∷
-    (AESBlock alg, KeySchedule alg) →
-    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
-    CompMode
-      ( (AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg))
-      , CipherMode alg
-      )
-  compute _ ((state, w), mode0)
-    | AESFacts ← knownAES alg
-    = ( , mode0 /= CipherEnd)
-    $ (\(s,m) → ((s, w), m))
-    $ case mode0 of
-        CipherEnd        → ( state, mode0 )
-        CipherFin        → ( state, CipherEnd )
-        CipherStart      → ( invAddRoundKey state $ head w
-                           , CipherRounds 3 maxBound
-                           )
-        CipherRounds 3 1 → ( state, CipherLast 2 )
-        CipherRounds 3 i → ( invSubBytes state, CipherRounds 2 i )
-        CipherRounds 2 i → ( invShiftRows state, CipherRounds 1 i )
-        CipherRounds 1 i → ( invMixColumns state, CipherRounds 0 i )
-        CipherRounds 0 i → ( invAddRoundKey state $ w !! (maxBound - i + 1)
-                           , CipherRounds 3 $ i - 1
-                           )
-        CipherLast 2     → ( invSubBytes state, CipherLast 1 )
-        CipherLast 1     → ( invShiftRows state, CipherLast 0 )
-        CipherLast 0     → ( invAddRoundKey state $ last w, CipherFin )
-        CipherRounds _ _ → ( state, CipherFin )
-        CipherLast _     → ( state, CipherFin )
-
--- | Algorithm 3, streamlined version
-invCipherStream ∷
-  HiddenClockResetEnable dom ⇒
-  ∀ (alg ∷ AES) → KnownAES alg ⇒
-  Channel dom (AESBlock alg, KeySchedule alg) →
-  -- ^ input + key
-  Channel dom (AESBlock alg)
-  -- ^ response
-invCipherStream alg | AESFacts ← knownAES alg  = enhance put get compute
- where
-  put ∷
-    (AESBlock alg, KeySchedule alg) →
-    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg)
-  put (input, w)
-    | AESFacts ← knownAES alg
-    = ((input, reverse $ unconcatI w), CipherStart)
-
-  get ∷
-    (AESBlock alg, KeySchedule alg) →
-    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
-    AESBlock alg
-  get _ ((output, _), _) = output
-
-  compute ∷
-    (AESBlock alg, KeySchedule alg) →
-    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
-    CompMode
-      ( (AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg))
-      , CipherMode alg
-      )
-  compute _ ((state, w), mode0)
-    | AESFacts ← knownAES alg
-    = ( , mode0 /= CipherEnd)
-    $ (\(s,m) → ((s, w), m))
-    $ case mode0 of
-        CipherEnd        → ( state, mode0 )
-        CipherFin        → ( state, CipherEnd )
-        CipherStart      → ( invAddRoundKey state $ head w
-                           , CipherRounds 3 maxBound
-                           )
-        CipherRounds 3 1 → ( state, CipherLast 2 )
-        CipherRounds 3 i → ( invShiftRows state, CipherRounds 2 i )
-        CipherRounds 2 i → ( invSubBytes state, CipherRounds 1 i )
-        CipherRounds 1 i → ( invAddRoundKey state $ w !! (maxBound - i + 1)
-                           , CipherRounds 0 i
-                           )
-        CipherRounds 0 i → ( invMixColumns state, CipherRounds 3 $ i - 1 )
-        CipherLast 2     → ( invShiftRows state, CipherLast 1 )
-        CipherLast 1     → ( invSubBytes state,  CipherLast 0 )
-        CipherLast 0     → ( invAddRoundKey state $ last w, CipherFin )
-        CipherRounds _ _ → ( state, CipherFin )
-        CipherLast   _   → ( state, CipherFin )
-
--- | KeyExpansion() as in Algorithm 2, as depicted in Figure 6, 7, and
--- 8, streamlined version
-data KeyMode (alg ∷ AES)
-  = KeyStart
-  | KeyProsXOR (Index 3) (Index (Nr alg + 1))
-  | KeyProsLastW (Index 4) (Index (Nr alg + 1))
-  | KeyFin
-  | KeyEnd
-  deriving (Generic, NFDataX, Show, Eq)
-
+-- | The implementation of @KeyExpansion()@ slightly differs for each
+-- AES variant, which is captured via this class.
 class AESKeyExpansion (alg ∷ AES) where
+  -- | Algorithm 2: @KeyExpansion()@
+  --
+  -- /Section 5.2, as depicted in Figure 6 & 7, streamlined version/
   keyExpansionStream ∷
     HiddenClockResetEnable dom ⇒
     ∀ x → (x ~ alg, KnownAES alg) ⇒
@@ -208,6 +99,14 @@ class AESKeyExpansion (alg ∷ AES) where
     -- ^ key
     Channel dom (KeySchedule alg)
     -- ^ response
+
+data KeyMode (alg ∷ AES)
+  = KeyStart
+  | KeyProsXOR (Index 3) (Index (Nr alg + 1))
+  | KeyProsLastW (Index 4) (Index (Nr alg + 1))
+  | KeyFin
+  | KeyEnd
+  deriving (Generic, NFDataX, Show, Eq)
 
 instance AESKeyExpansion AES128 where
   keyExpansionStream alg = enhance put get compute
@@ -242,7 +141,8 @@ instance AESKeyExpansion AES128 where
           KeyProsLastW 3 i → ( (state, rotWord lastState, w), KeyProsLastW 2 i )
           KeyProsLastW 2 i → ( (state, subWord lastState, w), KeyProsLastW 1 i )
           KeyProsLastW 1 i → ( ( state
-                               , xorWord lastState $ _Rcon !! (maxBound - i)
+                               , xorWord lastState
+                               $ roundConstants !! (maxBound - i)
                                , w
                                )
                              , KeyProsLastW 0 i
@@ -307,7 +207,8 @@ instance AESKeyExpansion AES192 where
           KeyProsLastW 3 i → ( (state, rotWord lastState, w), KeyProsLastW 2 i )
           KeyProsLastW 2 i → ( (state, subWord lastState, w), KeyProsLastW 1 i )
           KeyProsLastW 1 i → ( ( state
-                               , xorWord lastState $ _Rcon !! (maxBound - i)
+                               , xorWord lastState
+                               $ roundConstants !! (maxBound - i)
                                , w
                                )
                              , KeyProsLastW 0 i
@@ -371,7 +272,8 @@ instance AESKeyExpansion AES256 where
           KeyProsLastW 3 i → ( (state, rotWord lastState, w), KeyProsLastW 2 i)
           KeyProsLastW 2 i → ( (state, subWord lastState, w), KeyProsLastW 1 i)
           KeyProsLastW 1 i → ( ( state
-                               , xorWord lastState $ _Rcon !! (maxBound - i)
+                               , xorWord lastState
+                               $ roundConstants !! (maxBound - i)
                                , w
                                )
                              , KeyProsLastW 0 i
@@ -406,8 +308,119 @@ instance AESKeyExpansion AES256 where
       Vec (Nk alg * Nr alg) AESWord
     shiftNewPart ws = fst . shiftInAtN ws
 
--- | Alternative keyExpansion Algorithm as written in Algorithm 5,
--- streamlined version
+-- | Algorithm 3: @InvCipher()@
+--
+-- /Section 5.3, streamlined version/
+invCipherStream ∷
+  HiddenClockResetEnable dom ⇒
+  ∀ (alg ∷ AES) → KnownAES alg ⇒
+  Channel dom (AESBlock alg, KeySchedule alg) →
+  -- ^ input + key
+  Channel dom (AESBlock alg)
+  -- ^ response
+invCipherStream alg | AESFacts ← knownAES alg  = enhance put get compute
+ where
+  put ∷
+    (AESBlock alg, KeySchedule alg) →
+    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg)
+  put (input, w)
+    | AESFacts ← knownAES alg
+    = ((input, reverse $ unconcatI w), CipherStart)
+
+  get ∷
+    (AESBlock alg, KeySchedule alg) →
+    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
+    AESBlock alg
+  get _ ((output, _), _) = output
+
+  compute ∷
+    (AESBlock alg, KeySchedule alg) →
+    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
+    CompMode
+      ( (AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg))
+      , CipherMode alg
+      )
+  compute _ ((state, w), mode0)
+    | AESFacts ← knownAES alg
+    = ( , mode0 /= CipherEnd)
+    $ (\(s,m) → ((s, w), m))
+    $ case mode0 of
+        CipherEnd        → ( state, mode0 )
+        CipherFin        → ( state, CipherEnd )
+        CipherStart      → ( invAddRoundKey state $ head w
+                           , CipherRounds 3 maxBound
+                           )
+        CipherRounds 3 1 → ( state, CipherLast 2 )
+        CipherRounds 3 i → ( invShiftRows state, CipherRounds 2 i )
+        CipherRounds 2 i → ( invSubBytes state, CipherRounds 1 i )
+        CipherRounds 1 i → ( invAddRoundKey state $ w !! (maxBound - i + 1)
+                           , CipherRounds 0 i
+                           )
+        CipherRounds 0 i → ( invMixColumns state, CipherRounds 3 $ i - 1 )
+        CipherLast 2     → ( invShiftRows state, CipherLast 1 )
+        CipherLast 1     → ( invSubBytes state,  CipherLast 0 )
+        CipherLast 0     → ( invAddRoundKey state $ last w, CipherFin )
+        CipherRounds _ _ → ( state, CipherFin )
+        CipherLast   _   → ( state, CipherFin )
+
+-- | Algorithm 4: @EqInvCipher()@
+--
+-- /Section 5.3.5, streamlined version/
+eqInvCipherStream ∷
+  HiddenClockResetEnable dom ⇒
+  ∀ (alg ∷ AES) → KnownAES alg ⇒
+  Channel dom (AESBlock alg, KeySchedule alg) →
+  -- ^ input + key
+  Channel dom (AESBlock alg)
+  -- ^ response
+eqInvCipherStream alg | AESFacts ← knownAES alg = enhance put get compute
+ where
+  put ∷
+    (AESBlock alg, KeySchedule alg) →
+    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg)
+  put (input, w)
+    | AESFacts ← knownAES alg
+    = ((input, reverse $ unconcatI w), CipherStart)
+
+  get ∷
+    (AESBlock alg, KeySchedule alg) →
+    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
+    AESBlock alg
+  get _ ((output, _), _) = output
+
+  compute ∷
+    (AESBlock alg, KeySchedule alg) →
+    ((AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg)), CipherMode alg) →
+    CompMode
+      ( (AESBlock alg, Vec (Nr alg + 1) (AESRoundKey alg))
+      , CipherMode alg
+      )
+  compute _ ((state, w), mode0)
+    | AESFacts ← knownAES alg
+    = ( , mode0 /= CipherEnd)
+    $ (\(s,m) → ((s, w), m))
+    $ case mode0 of
+        CipherEnd        → ( state, mode0 )
+        CipherFin        → ( state, CipherEnd )
+        CipherStart      → ( invAddRoundKey state $ head w
+                           , CipherRounds 3 maxBound
+                           )
+        CipherRounds 3 1 → ( state, CipherLast 2 )
+        CipherRounds 3 i → ( invSubBytes state, CipherRounds 2 i )
+        CipherRounds 2 i → ( invShiftRows state, CipherRounds 1 i )
+        CipherRounds 1 i → ( invMixColumns state, CipherRounds 0 i )
+        CipherRounds 0 i → ( invAddRoundKey state $ w !! (maxBound - i + 1)
+                           , CipherRounds 3 $ i - 1
+                           )
+        CipherLast 2     → ( invSubBytes state, CipherLast 1 )
+        CipherLast 1     → ( invShiftRows state, CipherLast 0 )
+        CipherLast 0     → ( invAddRoundKey state $ last w, CipherFin )
+        CipherRounds _ _ → ( state, CipherFin )
+        CipherLast _     → ( state, CipherFin )
+
+-- | Algorithm 5: @KeyExpansionEIC()@
+--
+-- /Section 5.3.5, streamlined version/
 keyExpansionIECStream ∷
   (HiddenClockResetEnable dom, AESKeyExpansion alg) ⇒
   ∀ x → (x ~ alg, KnownAES alg) ⇒

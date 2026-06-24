@@ -16,15 +16,17 @@ import Clash.Prelude.Safe
 
 import Clash.Crypto.Cipher.AES.Specification.Types
 
--- | Equation 5.6
+-- | The constant in Equation 5.6.
 aMixColumns ∷ AESWord
 aMixColumns = 0x02 :> 0x01 :> 0x01 :> 0x03 :> Nil
 
--- | Equation 5.13
+-- | The constant in Equation 5.13.
 aInvMixColumns ∷ AESWord
 aInvMixColumns = 0x0e :> 0x09 :> 0x0d :> 0x0b :> Nil
 
--- | Section 5.1.1, Table 4: SBox(); first x and then y
+-- | The constants from Table 4 in Section 5.1.1: @SBox()@
+--
+-- /order: first x and then y/
 xySBox ∷ Vec (2 * BitSize Byte) (Vec (2 * BitSize Byte) Byte)
 xySBox =
   (  0x63 :> 0x7c :> 0x77 :> 0x7b :> 0xf2 :> 0x6b :> 0x6f :> 0xc5
@@ -76,7 +78,9 @@ xySBox =
   :> 0x41 :> 0x99 :> 0x2d :> 0x0f :> 0xb0 :> 0x54 :> 0xbb :> 0x16
   :> Nil) :> Nil
 
--- | Section 5.3.2, Table 6: InvSBox(); first x and then y
+-- | The constants from Table 6 in Section 5.3.2: @InvSBox()@
+--
+-- /order: first x and then y/
 xyInvSBox ∷ Vec (2 * BitSize Byte) (Vec (2 * BitSize Byte) Byte)
 xyInvSBox =
   (  0x52 :> 0x09 :> 0x6a :> 0xd5 :> 0x30 :> 0x36 :> 0xa5 :> 0x38

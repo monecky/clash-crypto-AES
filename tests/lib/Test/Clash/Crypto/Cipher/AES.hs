@@ -22,6 +22,8 @@ import qualified Crypto.Cipher.AES as Reference (AES128, AES192, AES256)
 
 import Clash.Crypto.Cipher.AES.Specification (AES(..))
 
+-- | Class based interface to the golden reference for AES encryption
+-- and decryption from the @crypton@ library.
 class CryptoAES (alg ∷ AES) where
   encryptoECB ∷ ∀ x → x ~ alg ⇒ ByteString → ByteString → ByteString
   decryptoECB ∷ ∀ x → x ~ alg ⇒ ByteString → ByteString → ByteString

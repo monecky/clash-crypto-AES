@@ -21,25 +21,35 @@ import Clash.Prelude.Safe
 import Clash.Crypto.Cipher.AES.Specification.Types
 import Clash.Crypto.Cipher.AES.Specification.Definitions
 
--- | Implementation of the Algorithms 1 to 5 from FIPS 197
+-- | Purely functional implementation of the Algorithms 1 to 5 from FIPS 197.
 class AESFunctions (alg ∷ AES) where
-  -- | Algorithm 1
+  -- | Algorithm 1: @Cipher()@
+  --
+  -- /Section 5.1/
   cipher ∷ ∀ x → x ~ alg ⇒ AESBlock alg → KeySchedule alg → AESBlock alg
 
-  -- | Algorithm 2
+  -- | Algorithm 2: @KeyExpansion()@
+  --
+  -- /Section 5.2/
   keyExpansion ∷ ∀ x → x ~ alg ⇒ AESKey alg → KeySchedule alg
 
-  -- | Algorithm 3
+  -- | Algorithm 3: @InvCipher()@
+  --
+  -- /Section 5.3/
   invCipher ∷ ∀ x → x ~ alg ⇒ AESBlock alg → KeySchedule alg → AESBlock alg
 
-  -- | Algorithm 4
+  -- | Algorithm 4: @EqInvCipher()@
+  --
+  -- /Section 5.3.5/
   eqInvCipher ∷ ∀ x → x ~ alg ⇒ AESBlock alg → KeySchedule alg → AESBlock alg
 
-  -- | Algorithm 5
+  -- | Algorithm 5: @KeyExpansionEIC()@
+  --
+  -- /Section 5.3.5/
   keyExpansionIEC ∷ ∀ x → x ~ alg ⇒ AESKey alg → KeySchedule alg
 
 instance AESFunctions AES128 where
-  keyExpansion _ key = concat $ scanl middelCalculation key _Rcon
+  keyExpansion _ key = concat $ scanl middelCalculation key roundConstants
    where
     middelCalculation ws i = postscanl xorWord partWord ws
      where
@@ -52,7 +62,7 @@ instance AESFunctions AES128 where
 
 instance AESFunctions AES192 where
   keyExpansion _ key =
-    takeI $ concat $ scanl middelCalculation key _Rcon
+    takeI $ concat $ scanl middelCalculation key roundConstants
    where
     middelCalculation ws i = postscanl xorWord partWord ws
      where
@@ -65,7 +75,7 @@ instance AESFunctions AES192 where
 
 instance AESFunctions AES256 where
   keyExpansion _ key =
-    takeI $ concat $ scanl middelCalculation key _Rcon
+    takeI $ concat $ scanl middelCalculation key roundConstants
    where
     middelCalculation ws i = firstPart ++ secondPart
      where
@@ -81,7 +91,7 @@ instance AESFunctions AES256 where
   eqInvCipher alg = eqInvCipher# alg
   keyExpansionIEC alg = keyExpansionIEC# alg
 
--- | Algorithm 1 of FIPS 197
+-- | Shareable parts of Algorithm 1.
 cipher# ∷
   ∀ x → x ~ alg ⇒
   (KnownNat (Nr alg), 1 <= Nr alg) ⇒
@@ -97,7 +107,7 @@ cipher# alg input (unconcatI → ws)
     mutation ∷ AESState alg → AESRoundKey alg → AESState alg
     mutation = addRoundKey . mixColumns . shiftRows . subBytes
 
--- | Algorithm 3 of FIPS 197
+-- | Shareable parts of Algorithm 3.
 invCipher# ∷
   ∀ x → x ~ alg ⇒
   (KnownNat (Nr alg), 1 <= Nr alg) ⇒
@@ -114,7 +124,7 @@ invCipher# alg input (reverse . unconcatI → ws)
     mutation state =
       invMixColumns . invAddRoundKey (invSubBytes $ invShiftRows state)
 
--- | Algorithm 4 of FIPS 197
+-- | Shareable parts of Algorithm 4.
 eqInvCipher# ∷
   ∀ x → x ~ alg ⇒
   (KnownNat (Nr alg), 1 <= Nr alg) ⇒
@@ -130,7 +140,7 @@ eqInvCipher# alg input (reverse . unconcatI → ws)
     mutation ∷ AESState alg → AESRoundKey alg → AESState alg
     mutation = invAddRoundKey . invMixColumns . invShiftRows . invSubBytes
 
--- | Algorithm 5 of FIPS 197
+-- | Shareable parts of Algorithm 5.
 keyExpansionIEC# ∷
   ∀ x → x ~ alg ⇒
   (AESFunctions alg, KnownNat (Nr alg), 1 <= Nr alg) ⇒
